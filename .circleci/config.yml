@@ -22,9 +22,11 @@ jobs:
             - run:
                 name: Install Packages
                 command: |
-                    sudo curl -fsSL https://deb.nodesource.com/setup_13.x | sudo -E bash -
+                    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.38.0/install.sh | bash
+                    command -v nvm
+                    nvm install 13
                     sudo apt --allow-unauthenticated --allow-insecure-repositories update
-                    sudo apt --allow-unauthenticated --allow-insecure-repositories install -y ca-certificates nodejs git build-essential
+                    sudo apt --allow-unauthenticated --allow-insecure-repositories install -y ca-certificates git build-essential
             - run:
                 name: Setup Testing Environment
                 command: |
