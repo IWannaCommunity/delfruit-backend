@@ -1,9 +1,12 @@
 version: '3'
+
 services:
   df2-server:
     build:
       context: .
       dockerfile: dev.Dockerfile
+    expose:
+      - "4201"
     ports:
      - "4201:4201"
     depends_on:
@@ -12,6 +15,11 @@ services:
       - memcache
     volumes:
       - ./src:/app/src
+    healthcheck:
+        test: [ "CMD", "curl", "localhost:4201/api/ping/" ]
+        timeout: 5s
+        interval: 3s
+        retries: 10
     #command: ["ls", "-al", "src"]
   mysql:
     image: mysql:8.0.20
@@ -23,12 +31,15 @@ services:
       - "33061:3306"
     command: --default-authentication-plugin=mysql_native_password
   minio:
-    image: minio/minio
+    image: minio/minio:RELEASE.2021-06-17T00-10-46Z-28-gac7697426
+    expose:
+      - "9000"
     ports:
      - "9000:9000"
     command: ["server", "/data"]
   memcache:
-    image: memcached
+    image: memcached:1.6.9
     expose: # exposes 3306 on the internal container network for the server
       - "11211"
-
+    ports:
+      - "11211:11211"
