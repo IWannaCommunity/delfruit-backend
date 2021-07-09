@@ -71,7 +71,7 @@ jobs:
                         command: |
                             echo $CONTAINER_REGISTRY_PASS | docker login ghcr.io -u $CONTAINER_REGISTRY_USER --password-stdin
                             docker push $CONTAINER_REGISTRY_URL/$CONTAINER_REGISTRY/delfruit-backend:latest
-                            docker push $CONTAINER_REGISTRY_URL/$CONTAINER_REGISTRY/delfruit-backend:$(git describe)
+                            docker push $CONTAINER_REGISTRY_URL/$CONTAINER_REGISTRY/delfruit-backend:$(git describe --tags)
                             
 workflows:
     version: 2
