@@ -1,0 +1,89 @@
+version: 2.1
+
+executors:
+  node:
+    working_directory: /tmp/int_tests
+    machine:
+        image: ubuntu-1604:201903-01
+  docker:
+    working_directory: /tmp/workspace
+    docker:
+      - image: docker:latest
+
+jobs:
+    integration-tests:
+        executor: node
+        steps:
+            - checkout
+            - run:
+                name: Get Configuration
+                command: |
+                    cp src/config/config.dev.json src/config/config.json
+            - run:
+                name: Install Packages
+                command: |
+                    sudo curl -fsSL https://deb.nodesource.com/setup_12.x | sudo -E bash -
+                    sudo apt --allow-unauthenticated --allow-insecure-repositories update
+                    sudo apt --allow-unauthenticated --allow-insecure-repositories install -y ca-certificates nodejs git build-essential
+            - run:
+                name: Setup Testing Environment
+                command: |
+                    docker-compose up -d
+                    docker-compose ps
+                    docker-compose logs -t --tail="all" df2-server
+                    docker ps
+            - run:
+                name: Wait For Server Warmup
+                command: |
+                    npm i -d
+                    git clone https://github.com/vishnubob/wait-for-it
+                    chmod +x ./wait-for-it/wait-for-it.sh
+                    until ./wait-for-it/wait-for-it.sh localhost:4201 -t 3
+                    do
+                        docker-compose ps
+                        docker-compose logs -t --tail="all" df2-server
+                    done
+            - run:
+                name: Run Integration Tests
+                command: |
+                    npm run test-int
+    docker:
+        parameters:
+            with_publish:
+                type: boolean
+                default: false
+        executor: docker
+        steps:
+            - checkout
+            - setup_remote_docker:
+                version: 17.09.0-ce
+            - run:
+                name: Build
+                command: |
+                    apk add --no-cache git
+                    git fetch --tags
+                    docker build -t $CONTAINER_REGISTRY_URL/$CONTAINER_REGISTRY/reimagined-succotash:latest -t $CONTAINER_REGISTRY_URL/$CONTAINER_REGISTRY/reimagined-succotash:$(git describe) .
+            - when:
+                condition: <<parameters.with_publish>>
+                steps:
+                    - run:
+                        name: Publish
+                        command: |
+                            echo $CONTAINER_REGISTRY_PASS | docker login ghcr.io -u $CONTAINER_REGISTRY_USER --password-stdin
+                            docker push $CONTAINER_REGISTRY_URL/$CONTAINER_REGISTRY/reimagined-succotash:latest
+                            docker push $CONTAINER_REGISTRY_URL/$CONTAINER_REGISTRY/reimagined-succotash:$(git describe)
+                            
+workflows:
+    version: 2
+    testing:
+        jobs:
+            - docker:
+                name: Build & Publish
+                with_publish: true
+                filters:
+                    branches:
+                        only: master
+            - integration-tests:
+                name: Integration Tests
+                requires:
+                    - Build & Publish
