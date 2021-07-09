@@ -22,7 +22,6 @@ jobs:
             - run:
                 name: Install Packages
                 command: |
-                    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.38.0/install.sh | bash
                     echo 'export NVM_DIR="/opt/circleci/.nvm"' >> $BASH_ENV
                     echo ' [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> $BASH_ENV
                     nvm install 13
