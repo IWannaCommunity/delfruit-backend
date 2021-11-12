@@ -89,6 +89,10 @@ workflows:
     version: 2
     testing:
         jobs:
+            - integration-tests:
+                name: Integration Tests
+                requires:
+                    - Build & Publish
             - docker:
                 name: Build
                 with_publish: false
@@ -103,7 +107,3 @@ workflows:
                     branches:
                         only:
                             - master
-            - integration-tests:
-                name: Integration Tests
-                requires:
-                    - Build & Publish
