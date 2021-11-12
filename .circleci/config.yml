@@ -87,15 +87,15 @@ jobs:
                             
 workflows:
     version: 2
-    testing:
+    cicd:
         jobs:
             - integration-tests:
                 name: Integration Tests
-                requires:
-                    - Build & Publish
             - docker:
                 name: Build
                 with_publish: false
+                requires:
+                    - Integration Tests
                 filters:
                     branches:
                         ignore:
@@ -103,6 +103,8 @@ workflows:
             - docker:
                 name: Build & Publish
                 with_publish: true
+                requires:
+                    - Integration Tests
                 filters:
                     branches:
                         only:
