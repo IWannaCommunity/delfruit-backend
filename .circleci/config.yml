@@ -75,19 +75,34 @@ jobs:
                         name: Publish
                         command: |
                             echo $CONTAINER_REGISTRY_PASS | docker login ghcr.io -u $CONTAINER_REGISTRY_USER --password-stdin
-                            docker push $CONTAINER_REGISTRY_URL/$CONTAINER_REGISTRY/delfruit-backend:latest
                             docker push $CONTAINER_REGISTRY_URL/$CONTAINER_REGISTRY/delfruit-backend:$(git describe --tags)
+            - when:
+                condition:
+                    equal: [ master, << pipeline.git.branch >> ]
+                steps:
+                    - run:
+                            name: Publish Latest
+                            command: |
+                                docker push $CONTAINER_REGISTRY_URL/$CONTAINER_REGISTRY/delfruit-backend:latest
                             
 workflows:
     version: 2
     testing:
         jobs:
             - docker:
+                name: Build
+                with_publish: false
+                filters:
+                    branches:
+                        ignore:
+                            - master
+            - docker:
                 name: Build & Publish
                 with_publish: true
                 filters:
                     branches:
-                        only: master
+                        only:
+                            - master
             - integration-tests:
                 name: Integration Tests
                 requires:
