@@ -67,7 +67,7 @@ jobs:
                 command: |
                     apk add --no-cache git
                     git fetch --tags
-                    docker build -t $CONTAINER_REGISTRY_URL/$CONTAINER_REGISTRY/delfruit-backend:latest -t $CONTAINER_REGISTRY_URL/$CONTAINER_REGISTRY/delfruit-backend:$(git describe) .
+                    docker build -t $CONTAINER_REGISTRY_URL/$CONTAINER_REGISTRY/delfruit-backend:latest -t $CONTAINER_REGISTRY_URL/$CONTAINER_REGISTRY/delfruit-backend:$(git describe --tags --abbrev=0) .
             - when:
                 condition: <<parameters.with_publish>>
                 steps:
@@ -75,7 +75,7 @@ jobs:
                         name: Publish
                         command: |
                             echo $CONTAINER_REGISTRY_PASS | docker login ghcr.io -u $CONTAINER_REGISTRY_USER --password-stdin
-                            docker push $CONTAINER_REGISTRY_URL/$CONTAINER_REGISTRY/delfruit-backend:$(git describe --tags)
+                            docker push $CONTAINER_REGISTRY_URL/$CONTAINER_REGISTRY/delfruit-backend:$(git describe --tags --abbrev=0)
             - when:
                 condition:
                     equal: [ master, << pipeline.git.branch >> ]
