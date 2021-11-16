@@ -11,7 +11,7 @@
         "start-ts-node": "ts-node src/server.ts",
         "dev": "nodemon",
         "test": "ts-mocha -R spec src/test/**/*.ts",
-        "test-int": "ts-mocha -R spec src/int-test/**/*.ts",
+        "test-int": "ts-mocha -R spec src/int-test/**/*.ts --reporter mocha-junit-reporter",
         "tsc": "tsc",
         "start-plain": "node build/server.js",
         "docker-reboot": "docker build -t delfruit-server . && docker kill df-server & docker rm df-server & docker run -d --name df-server --network df-network -p 4201:4201 -v D:\\Projects\\delfruit2-server\\config:/home/node/app/config delfruit-server"
@@ -61,6 +61,7 @@
         "chai-as-promised": "^7.1.1",
         "form-data": "^2.5.0",
         "mocha": "^6.1.4",
+        "mocha-junit-reporter": "^2.0.2",
         "moniker": "^0.1.2",
         "nodemon": "^1.19.0",
         "nyc": "^14.1.1",
