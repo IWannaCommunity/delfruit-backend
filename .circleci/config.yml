@@ -77,6 +77,7 @@ jobs:
                             echo $CONTAINER_REGISTRY_PASS | docker login ghcr.io -u $CONTAINER_REGISTRY_USER --password-stdin
                             docker tag app $CONTAINER_REGISTRY_URL/$CONTAINER_REGISTRY/delfruit-backend:latest
                             docker push $CONTAINER_REGISTRY_URL/$CONTAINER_REGISTRY/delfruit-backend:latest
+                            docker tag app $CONTAINER_REGISTRY_URL/$CONTAINER_REGISTRY/delfruit-backend:$(git describe --tags --abbrev=0)
                             docker push $CONTAINER_REGISTRY_URL/$CONTAINER_REGISTRY/delfruit-backend:$(git describe --tags --abbrev=0)
                     - when:
                         condition:
