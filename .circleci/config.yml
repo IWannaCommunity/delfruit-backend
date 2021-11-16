@@ -67,23 +67,35 @@ jobs:
                 command: |
                     apk add --no-cache git
                     git fetch --tags
-                    docker build -t $CONTAINER_REGISTRY_URL/$CONTAINER_REGISTRY/delfruit-backend:latest -t $CONTAINER_REGISTRY_URL/$CONTAINER_REGISTRY/delfruit-backend:$(git describe --tags --abbrev=0) .
+                    docker build -t app .
             - when:
                 condition: <<parameters.with_publish>>
                 steps:
                     - run:
-                        name: Publish
+                        name: Publish Latest & Tagged
                         command: |
                             echo $CONTAINER_REGISTRY_PASS | docker login ghcr.io -u $CONTAINER_REGISTRY_USER --password-stdin
+                            docker tag app $CONTAINER_REGISTRY_URL/$CONTAINER_REGISTRY/delfruit-backend:latest
+                            docker push $CONTAINER_REGISTRY_URL/$CONTAINER_REGISTRY/delfruit-backend:latest
                             docker push $CONTAINER_REGISTRY_URL/$CONTAINER_REGISTRY/delfruit-backend:$(git describe --tags --abbrev=0)
-            - when:
-                condition:
-                    equal: [ master, << pipeline.git.branch >> ]
-                steps:
-                    - run:
-                            name: Publish Latest
-                            command: |
-                                docker push $CONTAINER_REGISTRY_URL/$CONTAINER_REGISTRY/delfruit-backend:latest
+                    - when:
+                        condition:
+                            equal: [ develop, << pipeline.git.branch >> ]
+                        steps:
+                            - run:
+                                    name: Publish Beta
+                                    command: |
+                                        docker tag app $CONTAINER_REGISTRY_URL/$CONTAINER_REGISTRY/delfruit-backend:beta 
+                                        docker push $CONTAINER_REGISTRY_URL/$CONTAINER_REGISTRY/delfruit-backend:beta
+                    - when:
+                        condition:
+                            equal: [ release, << pipeline.git.branch >> ]
+                        steps:
+                            - run:
+                                    name: Publish Stable
+                                    command: |
+                                        docker tag app $CONTAINER_REGISTRY_URL/$CONTAINER_REGISTRY/delfruit-backend:stable
+                                        docker push $CONTAINER_REGISTRY_URL/$CONTAINER_REGISTRY/delfruit-backend:stable
                             
 workflows:
     version: 2
@@ -100,6 +112,8 @@ workflows:
                     branches:
                         ignore:
                             - master
+                            - develop
+                            - release
             - docker:
                 name: Build & Publish
                 with_publish: true
@@ -109,3 +123,5 @@ workflows:
                     branches:
                         only:
                             - master
+                            - develop
+                            - release
