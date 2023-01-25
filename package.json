@@ -3,7 +3,7 @@
     "version": "2.0.0-rc0",
     "description": "delfruit 2.0 server in node",
     "engines": {
-        "node": ">=13"
+        "node": ">=14"
     },
     "main": "server.js",
     "scripts": {

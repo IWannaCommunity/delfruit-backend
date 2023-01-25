@@ -23,7 +23,7 @@ jobs:
                 name: Install Packages
                 command: |
                     source /opt/circleci/.nvm/nvm.sh
-                    nvm install 13
+                    nvm install 14.21.2
                     echo 'export NVM_DIR="/opt/circleci/.nvm"' >> $BASH_ENV
                     echo ' [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> $BASH_ENV
                     sudo apt-get update
@@ -41,8 +41,8 @@ jobs:
             - run:
                 name: Wait For Server Warmup
                 command: |
-                    nvm alias default 13
-                    nvm use 13
+                    nvm alias default 14.21.2
+                    nvm use 14.21.2
                     npm i -d
                     git clone https://github.com/vishnubob/wait-for-it
                     chmod +x ./wait-for-it/wait-for-it.sh
