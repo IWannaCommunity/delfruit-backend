@@ -44,18 +44,12 @@ jobs:
                     nvm alias default 14.21.2
                     nvm use 14.21.2
                     npm i -d
-                    git clone https://github.com/vishnubob/wait-for-it
-                    chmod +x ./wait-for-it/wait-for-it.sh
-                    until ./wait-for-it/wait-for-it.sh localhost:4201 -t 3
-                    do
-                        docker-compose ps
-                        docker-compose logs -t --tail="all" df2-server
-                    done
+                    sleep 30
                     npm uninstall bcrypt && npm install bcrypt@=3.0.6 # temporary, remove this later
             - run:
                 name: Run Integration Tests
                 command: |
-                    npm run test-int || npm run test-int || npm run test-int || true
+                    npm run test-int || true
             - save_cache:
                 key: node-v1-{{ checksum "package-lock.json" }}
                 paths:
