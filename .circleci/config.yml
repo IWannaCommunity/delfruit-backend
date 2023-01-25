@@ -51,7 +51,7 @@ jobs:
                         docker-compose ps
                         docker-compose logs -t --tail="all" df2-server
                     done
-                    npm rebuild bcrypt --update-binary # temporary, remove this later
+                    npm uninstall bcrypt && npm install bcrypt@3.0.6 # temporary, remove this later
             - run:
                 name: Run Integration Tests
                 command: |
