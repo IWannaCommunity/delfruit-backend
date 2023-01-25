@@ -25,6 +25,15 @@ let config: Config = require('./config/config.json');
 var Memcached = require('memcached');
 var memcached = new Memcached(config.memcache.hosts, config.memcache.options);
 
+for (let host of config.memcache.hosts) {
+    memcached.connect(host, function(err: Error, conn: any) {
+        if (err) {
+            console.error(`memcached instance was unreachable: ${err}`);
+        }
+        console.log("memcached instance:", conn.server);
+    });
+}
+
 console.log("Memcached version:", memcached.version());
 
 export default {
