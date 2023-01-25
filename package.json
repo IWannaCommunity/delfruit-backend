@@ -7,7 +7,7 @@
     },
     "main": "server.js",
     "scripts": {
-        "start": "ts-node-dev --respawn --transpileOnly ./src/server.ts",
+        "start": "ts-node-dev --poll --respawn --transpileOnly ./src/server.ts",
         "start-ts-node": "ts-node src/server.ts",
         "dev": "nodemon",
         "test": "ts-mocha -R spec src/test/**/*.ts",
