@@ -51,10 +51,10 @@ jobs:
                         docker-compose ps
                         docker-compose logs -t --tail="all" df2-server
                     done
+                    npm rebuild bcrypt --update-binary # temporary, remove this later
             - run:
                 name: Run Integration Tests
                 command: |
-                    npm rebuild bcrypt --update-binary # temporary, remove this later
                     npm run test-int
             - save_cache:
                 key: node-v1-{{ checksum "package-lock.json" }}
