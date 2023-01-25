@@ -4,7 +4,7 @@ executors:
   node:
     working_directory: /tmp/int_tests
     machine:
-        image: ubuntu-1604:201903-01
+        image: ubuntu-2004:2022.10.1
   docker:
     working_directory: /tmp/workspace
     docker:
