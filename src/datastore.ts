@@ -25,7 +25,7 @@ let config: Config = require('./config/config.json');
 var Memcached = require('memcached');
 var memcached = new Memcached(config.memcache.hosts, config.memcache.options);
 
-console.log("Memcached version:", memcached.version);
+console.log("Memcached version:", memcached.version());
 
 export default {
     /**

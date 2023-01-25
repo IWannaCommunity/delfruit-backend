@@ -1,4 +1,4 @@
-FROM node:13.14.0
+FROM node:14.21.2
 
 RUN mkdir -p /home/node/app/node_modules && chown -R node:node /home/node/app
 
