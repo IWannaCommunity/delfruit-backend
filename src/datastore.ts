@@ -23,7 +23,7 @@ import Config from './model/config';
 let config: Config = require('./config/config.json');
 
 var Memcached = require('memjs');
-const memcached = new memjs.Client.create(config.memcache.hosts[0]);
+const memcached = new Memcached.Client.create(config.memcache.hosts[0]);
 
 memcached.stats(function(err: Error, server: String, stats: Object) {
     if (err) {
