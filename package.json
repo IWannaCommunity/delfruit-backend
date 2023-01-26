@@ -60,7 +60,7 @@
         "chai": "^4.2.0",
         "chai-as-promised": "^7.1.1",
         "form-data": "^2.5.0",
-        "mocha": "^6.1.4",
+        "mocha": "^10.2.0",
         "mocha-junit-reporter": "^2.0.2",
         "moniker": "^0.1.2",
         "nodemon": "^1.19.0",
