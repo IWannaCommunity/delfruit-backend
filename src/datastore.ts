@@ -22,19 +22,16 @@ import { Permission, DEFAULT_PERMISSIONS } from './model/Permission';
 import Config from './model/config';
 let config: Config = require('./config/config.json');
 
-var Memcached = require('memcached');
-var memcached = new Memcached(config.memcache.hosts, config.memcache.options);
+var Memcached = require('memjs');
+const memcached = new memjs.Client.create(config.memcache.hosts[0]);
 
-for (let host of config.memcache.hosts) {
-    memcached.connect(host, function(err: Error, conn: any) {
-        if (err) {
-            console.error(`memcached instance was unreachable: ${err}`);
-        }
-        console.log("memcached instance:", conn.server);
-    });
-}
+memcached.stats(function(err: Error, server: String, stats: Object) {
+    if (err) {
+        console.log(`memcached instance stats could not be fetched: ${err}`);
+    }
 
-console.log("Memcached version:", memcached.version());
+    console.log(`memcached instance stats: ${stats}`);
+});
 
 export default {
     /**
