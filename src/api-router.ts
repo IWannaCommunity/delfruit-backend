@@ -19,18 +19,39 @@ export default app;
  *     responses:
  *       200:
  *         description: returns a list of api users
+ *         content:
+ *              application/json:
+ *                      schema:
+ *                              $ref: '#/components/schemas/ApiUser'
+ * components:
+ *      schemas:
+ *              ApiUser:
+ *                      type: object
+ *                      properties:
+ *                          id:
+ *                              type: integer
+ *                              format: int64
+ *                          api_key:
+ *                              type: string
+ *                          description:
+ *                              type: string
+ *                          date_created:
+ *                              type: string
+ *                              format: date
+ *                          origin:
+ *                              type: string
  */
-app.route('/users').get(adminCheck(), handle(async (req,res,next) => {
-  var page = +req.query.page || 0;
-  var limit = +req.query.limit || 50;
-  const users = await datastore.getApiUsers({page,limit});
-  users.forEach(u => {
-    delete u.email;
-    delete u.canReport;
-    delete u.canSubmit;
-    delete u.canReview;
-    delete u.canScreenshot;
-    delete u.banned;
-  });
-  return res.send(users);
+app.route('/users').get(adminCheck(), handle(async (req, res, next) => {
+    var page = +req.query.page || 0;
+    var limit = +req.query.limit || 50;
+    const users = await datastore.getApiUsers({ page, limit });
+    users.forEach(u => {
+        delete u.email;
+        delete u.canReport;
+        delete u.canSubmit;
+        delete u.canReview;
+        delete u.canScreenshot;
+        delete u.banned;
+    });
+    return res.send(users);
 }));
