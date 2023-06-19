@@ -22,7 +22,9 @@ export default app;
  *         content:
  *              application/json:
  *                      schema:
- *                              $ref: '#/components/schemas/ApiUser'
+ *                              type: array
+ *                              items:
+ *                                      $ref: '#/components/schemas/ApiUser'
  * components:
  *      schemas:
  *              ApiUser:
@@ -40,6 +42,10 @@ export default app;
  *                              format: date
  *                          origin:
  *                              type: string
+ *                      required:
+ *                              - id
+ *                              - api_key
+ *                              - date_created
  */
 app.route('/users').get(adminCheck(), handle(async (req, res, next) => {
     var page = +req.query.page || 0;
