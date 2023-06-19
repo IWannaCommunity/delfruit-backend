@@ -45,53 +45,100 @@ export default app;
  *     responses:
  *       200:
  *         description: logged in
+ *         content:
+ *              application/json:
+ *                      schema:
+ *                              $ref: '#/components/schemas/UserLogin'
  *       401:
  *         description: username/password invalid
- * 
+ *         content:
+ *              application/json:
+ *                      schema:
+ *                              $ref: '#/components/schemas/Error'
+ *
+ * components:
+ *      schemas:
+ *              UserLogin:
+ *                      type: object
+ *                      properties:
+ *                              id:
+ *                                      type: integer
+ *                                      format: int64
+ *                              name:
+ *                                      type: string
+ *                              dateCreated:
+ *                                      type: string
+ *                                      format: date
+ *                              twitchLink:
+ *                                      type: string
+ *                              youtubeLink:
+ *                                      type: string
+ *                              nicoLink:
+ *                                      type: string
+ *                              twitterLink:
+ *                                      type: string
+ *                                      format: url
+ *                              bio:
+ *                                      type: string
+ *                              isAdmin:
+ *                                      type: boolean
+ *                              email:
+ *                                      type: string
+ *                                      format: email
+ *                              banned:
+ *                                      type: boolean
+ *                              selected_badge:
+ *                                      type: integer
+ *                      required:
+ *                              - id
+ *                              - name
+ *                              - dateCreated
+ *                              - isAdmin
+ *                              - banned
  */
-app.route('/login').post(handle(async (req,res,next) => {
+app.route('/login').post(handle(async (req, res, next) => {
     const username = req.body.username;
     const password = req.body.password;
 
     const rcptoken = req.body.rcptoken;
-    const verified = await recaptchaVerify('login',rcptoken,req.ip);
+    const verified = await recaptchaVerify('login', rcptoken, req.ip);
     if (!verified) {
-      console.log('recaptcha verify failed!')
-      return res.sendStatus(403);
+        console.log('recaptcha verify failed!')
+        return res.sendStatus(403);
     }
-    
+
     const database = new Database();
     try {
-      const users = await database.query('SELECT id,name,phash2,is_admin as isAdmin FROM User WHERE name = ?',[username]);
-      if (users.length == 0) {
-        res.status(401).send({error: 'Invalid Credentials'});
-      }
-      const user = users[0];
-      const verified = await auth.verifyPassword(user.phash2,password)
-          
-      if (!verified) {
-        const u = await datastore.getUser(user.id);
-        datastore.updateUser({
-          id: user.id,
-          unsuccessfulLogins: u.unsuccessfulLogins+1
-        });
-        return res.status(401).send({error: 'Invalid Credentials'});
-      } else {
-        datastore.updateUser({
-          id: user.id,
-          dateLastLogin:moment().format('YYYY-MM-DD HH:mm:ss'),
-          lastIp: req.headers['x-forwarded-for'] || req.connection.remoteAddress,
-          unsuccessfulLogins:0
-        });
-        user.token = auth.getToken(user.name,user.id,user.isAdmin);
-        res.setHeader('token',user.token);
-        return res.send(user);
-      }
+        const users = await database.query('SELECT id,name,phash2,is_admin as isAdmin FROM User WHERE name = ?', [username]);
+        if (users.length == 0) {
+            res.status(401).send({ error: 'Invalid Credentials' });
+        }
+        const user = users[0];
+        const verified = await auth.verifyPassword(user.phash2, password)
+
+        if (!verified) {
+            const u = await datastore.getUser(user.id);
+            datastore.updateUser({
+                id: user.id,
+                unsuccessfulLogins: u.unsuccessfulLogins + 1
+            });
+            return res.status(401).send({ error: 'Invalid Credentials' });
+        } else {
+            datastore.updateUser({
+                id: user.id,
+                dateLastLogin: moment().format('YYYY-MM-DD HH:mm:ss'),
+                lastIp: req.headers['x-forwarded-for'] || req.connection.remoteAddress,
+                unsuccessfulLogins: 0
+            });
+            user.token = auth.getToken(user.name, user.id, user.isAdmin);
+            res.setHeader('token', user.token);
+            return res.send(user);
+        }
     } finally {
-      database.close();
+        database.close();
     }
 }));
-  
+
 /**
  * @swagger
  * 
@@ -113,45 +160,48 @@ app.route('/login').post(handle(async (req,res,next) => {
  *         description: request accepted
  *       400:
  *         description: invalid username or username missing
- * 
+ *         content:
+ *              application/json:
+ *                      schema:
+ *                              $ref: '#/components/schemas/Error'
  */
-app.route('/request-reset').post(handle(async (req,res,next) => {
-  const username = req.body.username;
-  if (!username) return res.sendStatus(400);
-  const email = req.body.email;
-  if (!email) return res.sendStatus(400);
+app.route('/request-reset').post(handle(async (req, res, next) => {
+    const username = req.body.username;
+    if (!username) return res.status(400).send({ error: "missing username in request body" });
+    const email = req.body.email;
+    if (!email) return res.status(400).send({ error: "missing email in request body" });
 
-  const rcptoken = req.body.rcptoken;
-  const verified = await recaptchaVerify('requestPwReset',rcptoken,req.ip);
-  if (!verified) {
-    console.log('recaptcha verify failed!')
-    return res.sendStatus(403);
-  }
-
-  const token = crypto.randomBytes(126).toString('hex');
-
-  const database = new Database();
-  try {
-    const results = await database.query('SELECT reset_token_set_time FROM User WHERE name = ? AND email = ?',[username,email])
-
-    //204 if no user by name
-    if (results.length === 0) return res.sendStatus(204);
-    const result = results[0]
-
-    //204 if already requested reset within the hour
-    const rsts = result.reset_token_set_time;
-    if (rsts && moment(rsts).isAfter(moment().subtract(1, 'hours'))) {
-      console.log(`Attempt to reset password too quickly for ${username}!`);
-      return res.sendStatus(204);
+    const rcptoken = req.body.rcptoken;
+    const verified = await recaptchaVerify('requestPwReset', rcptoken, req.ip);
+    if (!verified) {
+        console.log('recaptcha verify failed!')
+        return res.sendStatus(403);
     }
 
-    await database.execute(
-      `UPDATE User SET reset_token = ?, reset_token_set_time = CURRENT_TIMESTAMP
-      WHERE name = ?`,[token,username]);
+    const token = crypto.randomBytes(126).toString('hex');
 
-  let transporter = nodemailer.createTransport(config.smtp);
-  //let html = fs.readFileSync('pword-reset-email.html', 'utf8');
-  let html = `<html>
+    const database = new Database();
+    try {
+        const results = await database.query('SELECT reset_token_set_time FROM User WHERE name = ? AND email = ?', [username, email])
+
+        //204 if no user by name
+        if (results.length === 0) return res.sendStatus(204);
+        const result = results[0]
+
+        //204 if already requested reset within the hour
+        const rsts = result.reset_token_set_time;
+        if (rsts && moment(rsts).isAfter(moment().subtract(1, 'hours'))) {
+            console.log(`Attempt to reset password too quickly for ${username}!`);
+            return res.sendStatus(204);
+        }
+
+        await database.execute(
+            `UPDATE User SET reset_token = ?, reset_token_set_time = CURRENT_TIMESTAMP
+      WHERE name = ?`, [token, username]);
+
+        let transporter = nodemailer.createTransport(config.smtp);
+        // TODO: no html email!!! email was designed for plaintext only!
+        let html = `<html>
   <head>
       <style>
           body {
@@ -198,32 +248,32 @@ app.route('/request-reset').post(handle(async (req,res,next) => {
       </div>
   </body>
 </html>`;
-  html = util.format(html,username,token);
+        html = util.format(html, username, token);
 
-  //sendmail is being called non-synchronously here (without await) because it can take a second
-  //we're not telling the client anything different whether it succeeds or fails
-  //so just send the 204 at this point
-  transporter.sendMail({
-    from:"webmaster@delicious-fruit.com",
-    to:email,
-    subject:`Delicious-Fruit Password Reset`,
-    html,
-    text:`Greetings from Delicious Fruit!\n
+        //sendmail is being called non-synchronously here (without await) because it can take a second
+        //we're not telling the client anything different whether it succeeds or fails
+        //so just send the 204 at this point
+        transporter.sendMail({
+            from: "webmaster@delicious-fruit.com",
+            to: email,
+            subject: `Delicious-Fruit Password Reset`,
+            html,
+            text: `Greetings from Delicious Fruit!\n
 A password reset request was made on your behalf. If this wasn't you, you can safely ignore this message.\n
 To reset your password, visit this link: http://delicious-fruit.com/password_reset.php?name=${username}&token=${token} \n
 This link is valid for 2 hours since making the request.\n
 -The staff at Delicious-Fruit ❤️`
-  }).then(mailResult => {
-    console.log(mailResult);
-  }).catch(err => {
-    console.log("Error sending mail!");
-    console.log(err);
-  });
-  return res.sendStatus(204);
+        }).then(mailResult => {
+            console.log(mailResult);
+        }).catch(err => {
+            console.log("Error sending mail!");
+            console.log(err);
+        });
+        return res.sendStatus(204);
 
-  } finally {
-    database.close();
-  }
+    } finally {
+        database.close();
+    }
 }));
 
 /**
@@ -261,52 +311,74 @@ This link is valid for 2 hours since making the request.\n
  *     responses:
  *       204:
  *         description: password reset
+ *         content:
+ *              application/json:
+ *                      schema:
+ *                              $ref: '#/components/schemas/PassResetResp'
  *       400:
  *         description: invalid username/token
- * 
+ *         content:
+ *              application/json:
+ *                      schema:
+ *                              $ref: '#/components/schemas/Error'
+ * components:
+ *      schemas:
+ *              PassResetResp:
+ *                      type: object
+ *                      properties:
+ *                              id:
+ *                                      type: integer
+ *                                      format: int64
+ *                              name:
+ *                                      type: string
+ *                              token:
+ *                                      type: string
+  *                      required:
+ *                              - id
+ *                              - name
+ *                              - token
+
  */
-app.route('/reset').post(handle(async (req,res,next) => {
-  const username = req.body.username;
-  if (!username) {
-    console.log('no username!')
-    return res.sendStatus(401);
-  }
-  const token = req.body.token;
-  if (!token) {
-    console.log('no token!')
-    return res.sendStatus(401);
-  }
+app.route('/reset').post(handle(async (req, res, next) => {
+    const username = req.body.username;
+    if (!username) {
+        return res.status(401).send({ error: "no username in request body" });
+    }
+    const token = req.body.token;
+    if (!token) {
+        return res.status(401).send({ error: "no token in request body" });
+    }
 
-  const rcptoken = req.body.rcptoken;
-  const verified = await recaptchaVerify('resetPW',rcptoken,req.ip);
-  if (!verified) {
-    console.log('recaptcha verify failed!')
-    return res.sendStatus(403);
-  }
+    const rcptoken = req.body.rcptoken;
+    const verified = await recaptchaVerify('resetPW', rcptoken, req.ip);
+    if (!verified) {
+        console.log('recaptcha verify failed!')
+        return res.sendStatus(403);
+    }
 
-  const database = new Database();
-  try {
-    const results = await database.query(`
+    const database = new Database();
+    try {
+        const results = await database.query(`
     SELECT id,reset_token_set_time,is_admin,reset_token_set_time FROM User 
-    WHERE name = ? AND reset_token = ?`,[username,token])
-    if (results.length == 0) {
-      console.log('no db match!')
-      return res.sendStatus(401);
-    }
-    if (results.length > 1) {
-      console.log(`retrieved multiple users! username:[${username}] token:[${token}]`);
-      return res.sendStatus(401);
-    }
+    WHERE name = ? AND reset_token = ?`, [username, token])
+        if (results.length == 0) {
+            console.log('no db match!')
+            return res.sendStatus(401);
+        }
+        if (results.length > 1) {
+            console.log(`retrieved multiple users! username:[${username}] token:[${token}]`);
+            return res.sendStatus(401);
+        }
 
-    if (results[0].reset_token_set_time 
-      && moment(results[0].reset_token_set_time).isBefore(moment().subtract(2, 'hours'))) {
-      console.log(`Attempted to use an old reset token for ${username}`);
-      return res.sendStatus(401);
-    }
+        if (results[0].reset_token_set_time
+            && moment(results[0].reset_token_set_time).isBefore(moment().subtract(2, 'hours'))) {
+            console.log(`Attempted to use an old reset token for ${username}`);
+            return res.sendStatus(401);
+        }
 
-    const phash = await auth.hashPassword(req.body.password);
-    await database.execute(
-      `UPDATE User SET 
+        const phash = await auth.hashPassword(req.body.password);
+        await database.execute(
+            `UPDATE User SET 
       phash2 = ? ,
       phash = '' ,
       salt = '' ,
@@ -314,28 +386,28 @@ app.route('/reset').post(handle(async (req,res,next) => {
       reset_token_set_time = null,
       ali_token = null,
       ali_date_set = null
-    WHERE id = ? `,[phash,results[0].id]);
+    WHERE id = ? `, [phash, results[0].id]);
 
-    //get user for login
-    const users = await database.query('SELECT id,name,phash2,is_admin as isAdmin FROM User WHERE name = ?',[username]);
-    if (users.length == 0) {
-      res.status(401).send({error: 'Invalid Credentials'});
+        //get user for login
+        const users = await database.query('SELECT id,name,phash2,is_admin as isAdmin FROM User WHERE name = ?', [username]);
+        if (users.length == 0) {
+            res.status(401).send({ error: 'Invalid Credentials' });
+        }
+        const user = users[0];
+        user.token = auth.getToken(user.name, user.id, user.isAdmin);
+
+        datastore.addReport({
+            type: "user_password_change",
+            targetId: "" + user.id,
+            report: "User password changed"
+        }, user.id);
+
+
+        res.setHeader('token', user.token);
+        return res.send(user);
+    } finally {
+        database.close();
     }
-    const user = users[0];
-    user.token = auth.getToken(user.name,user.id,user.isAdmin);
-
-    datastore.addReport({
-      type:"user_password_change",
-      targetId:""+user.id,
-      report:"User password changed"
-    },user.id);
-
-
-    res.setHeader('token',user.token);
-    return res.send(user);
-  } finally {
-    database.close();
-  }
 }));
 
 /**
@@ -361,49 +433,95 @@ app.route('/reset').post(handle(async (req,res,next) => {
  *     responses:
  *       200:
  *         description: Latest user data with fresh token
+ *         content:
+ *              application/json:
+ *                      schema:
+ *                              $ref: '#/components/schemas/UserWithTokenResp'
  *       401:
  *         description: Unauthorized (Not logged in or token expired)
- * 
+ * components:
+ *      schemas:
+ *              UserWithTokenResp:
+ *                      type: object
+ *                      properties:
+ *                              id:
+ *                                      type: integer
+ *                                      format: int64
+ *                              name:
+ *                                      type: string
+ *                              dateCreated:
+ *                                      type: string
+ *                                      format: date
+ *                              twitchLink:
+ *                                      type: string
+ *                              youtubeLink:
+ *                                      type: string
+ *                              nicoLink:
+ *                                      type: string
+ *                              twitterLink:
+ *                                      type: string
+ *                                      format: url
+ *                              bio:
+ *                                      type: string
+ *                              isAdmin:
+ *                                      type: boolean
+ *                              email:
+ *                                      type: string
+ *                                      format: email
+ *                              banned:
+ *                                      type: boolean
+ *                              selected_badge:
+ *                                      type: integer
+ *                              token:
+ *                                      type: string
+ *                      required:
+ *                              - id
+ *                              - name
+ *                              - dateCreated
+ *                              - isAdmin
+ *                              - banned
+ *                              - token
+
  */
-app.route('/refresh').post(userCheck(), handle(async (req,res,next) => {
-  const user = await datastore.getUser(req.user.sub);
-  if (!user) return res.sendStatus(401);
-  user.token = auth.getToken(user.name,user.id,user.isAdmin);
-  res.setHeader('token',user.token);
-  return res.send(user);
+app.route('/refresh').post(userCheck(), handle(async (req, res, next) => {
+    const user = await datastore.getUser(req.user.sub);
+    if (!user) return res.sendStatus(401);
+    user.token = auth.getToken(user.name, user.id, user.isAdmin);
+    res.setHeader('token', user.token);
+    return res.send(user);
 }));
 
 export async function recaptchaVerify(action: string, token: string, remoteIp?: string): Promise<boolean> {
-  if (!config.recaptcha_secret) {
-    //console.log('recaptcha secret missing, skipping validation');
-    return true;
-  }
-  const request: any = {
-    'secret' : config.recaptcha_secret,
-    'response' : token,
-  };
-  if (remoteIp) request.remoteip = remoteIp;
-  try {
-    const rsp = await axios.post("https://www.google.com/recaptcha/api/siteverify",request);
-    if (!rsp.data.success) {
-      console.log("reCaptcha: Invalid token!")
-      console.log(rsp.data)
-      return false;
+    if (!config.recaptcha_secret) {
+        //console.log('recaptcha secret missing, skipping validation');
+        return true;
     }
-    if (rsp.data.action != action) {
-      console.log("reCaptcha: Action doesn't match expected action! expected: "+action)
-      console.log(rsp.data)
-      return false;
+    const request: any = {
+        'secret': config.recaptcha_secret,
+        'response': token,
+    };
+    if (remoteIp) request.remoteip = remoteIp;
+    try {
+        const rsp = await axios.post("https://www.google.com/recaptcha/api/siteverify", request);
+        if (!rsp.data.success) {
+            console.log("reCaptcha: Invalid token!")
+            console.log(rsp.data)
+            return false;
+        }
+        if (rsp.data.action != action) {
+            console.log("reCaptcha: Action doesn't match expected action! expected: " + action)
+            console.log(rsp.data)
+            return false;
+        }
+        if (rsp.data.score < config.recaptcha_threshold) {
+            console.log("reCaptcha: score under threshold!")
+            console.log(rsp.data)
+            return false;
+        }
+        return true;
+    } catch (err) {
+        console.log('recaptcha verify error! allowing request')
+        console.log(err);
+        return true;
     }
-    if (rsp.data.score < config.recaptcha_threshold) {
-      console.log("reCaptcha: score under threshold!")
-      console.log(rsp.data)
-      return false;
-    }
-    return true;
-  } catch (err) {
-    console.log('recaptcha verify error! allowing request')
-    console.log(err);
-    return true;
-  }
 }
