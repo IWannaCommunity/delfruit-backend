@@ -33,6 +33,19 @@ enum ExitCode {
     S3_INIT_FAIL = 2
 }
 
+/**
+ * @swagger
+ * components:
+ *      schemas:
+ *              Error:
+ *                      type: object
+ *                      properties:
+ *                              error:
+ *                                      type: string
+ *                      required:
+ *                              - error
+*/
+
 async function main(): Promise<number> {
 
     console.log('Welcome to delfruit server 2.0!');
