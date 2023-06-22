@@ -4,204 +4,146 @@ import AuthModule from './lib/auth';
 import datastore from './datastore';
 import moment = require('moment');
 import crypto from 'crypto';
-import handle from './lib/express-async-catch';
-import { userCheck } from './lib/auth-check';
 import nodemailer from 'nodemailer';
+import * as jwt from "jsonwebtoken";
 import util from 'util';
 import axios from 'axios';
 import Config from './model/config';
+import { Body, Controller, Get, Header, Post, Response, Route, SuccessResponse, Tags } from 'tsoa';
 let config: Config = require('./config/config.json');
 
 const app = express.Router();
 const auth = new AuthModule();
 export default app;
 
-/**
- * @swagger
- * 
- * /auth/login:
- *   post:
- *     summary: Login
- *     description: Login
- *     headers:
- *      token:
- *        schema:
- *          type: string
- *        description: User's token. Send in the Authorization header 
- *                     as 'Bearer {token}' to execute requests as this user.
- *     tags: 
- *       - Authentication
- *     produces:
- *       - application/json
- *     parameters:
- *       - name: username
- *         in: formData
- *         required: true
- *         type: string
- *       - name: password
- *         in: formData
- *         required: true
- *         type: string
- *     responses:
- *       200:
- *         description: logged in
- *         content:
- *              application/json:
- *                      schema:
- *                              $ref: '#/components/schemas/UserLogin'
- *       401:
- *         description: username/password invalid
- *         content:
- *              application/json:
- *                      schema:
- *                              $ref: '#/components/schemas/Error'
- *
- * components:
- *      schemas:
- *              UserLogin:
- *                      type: object
- *                      properties:
- *                              id:
- *                                      type: integer
- *                                      format: int64
- *                              name:
- *                                      type: string
- *                              dateCreated:
- *                                      type: string
- *                                      format: date
- *                              twitchLink:
- *                                      type: string
- *                              youtubeLink:
- *                                      type: string
- *                              nicoLink:
- *                                      type: string
- *                              twitterLink:
- *                                      type: string
- *                                      format: url
- *                              bio:
- *                                      type: string
- *                              isAdmin:
- *                                      type: boolean
- *                              email:
- *                                      type: string
- *                                      format: email
- *                              banned:
- *                                      type: boolean
- *                              selected_badge:
- *                                      type: integer
- *                      required:
- *                              - id
- *                              - name
- *                              - dateCreated
- *                              - isAdmin
- *                              - banned
- */
-app.route('/login').post(handle(async (req, res, next) => {
-    const username = req.body.username;
-    const password = req.body.password;
 
-    const rcptoken = req.body.rcptoken;
-    const verified = await recaptchaVerify('login', rcptoken, req.ip);
-    if (!verified) {
-        console.log('recaptcha verify failed!')
-        return res.sendStatus(403);
+interface AuthResponse {
+    /** @isInt @format int64 */
+    id: number,
+    name: string,
+    phash2: string, // TODO: REMOVE THIS!!!!
+    /** @isDate @format date */
+    dateCreated: string,
+    twitchLink?: string,
+    youtubeLink?: string,
+    nicoLink?: string,
+    twitterLink?: string,
+    bio?: string,
+    isAdmin: boolean,
+    email?: string,
+    banned: boolean,
+    /** @isInt @format int8 */
+    selected_badge?: number,
+    token: string,
+}
+
+interface UserCredentials {
+    username: string,
+    password: string,
+}
+
+interface ResetRequestParams {
+    username: string,
+    email: string,
+}
+
+interface FinalizePassResetParams {
+    username: string,
+    token: string,
+    password: string,
+}
+
+interface APIError {
+    error: string,
+}
+
+@Route("auth")
+@Tags("Authentication")
+export class AuthController extends Controller {
+    /**
+     * Login
+     * @summary Login
+     */
+    @SuccessResponse(200, "Logged In")
+    @Response<APIError>(401, "Invalid Credentials")
+    @Post("login")
+    public async postLogin(@Body() requestBody: UserCredentials): Promise<AuthResponse> {
+        const username = requestBody.username;
+        const password = requestBody.password;
+
+        const database = new Database();
+        try {
+            // TODO:stop grabbing phash2 or is_admin here
+            const users = await database.query('SELECT id,name,phash2,is_admin as isAdmin FROM User WHERE name = ?', [username]);
+            if (users.length == 0) {
+                this.setStatus(401);
+                return { error: 'user does not exist' };
+            }
+            const user = users[0];
+            const verified = await auth.verifyPassword(user.phash2, password)
+
+            if (!verified) {
+                const u = await datastore.getUser(user.id);
+                datastore.updateUser({
+                    id: user.id,
+                    unsuccessfulLogins: u.unsuccessfulLogins + 1
+                });
+                this.setStatus(401);
+                return { error: 'bad credentials' };
+            } else {
+                datastore.updateUser({
+                    id: user.id,
+                    dateLastLogin: moment().format('YYYY-MM-DD HH:mm:ss'),
+                    lastIp: this.getHeaders()['x-forwarded-for'],
+                    unsuccessfulLogins: 0
+                });
+                user.token = auth.getToken(user.name, user.id, user.isAdmin);
+                this.setHeader('token', user.token);
+                return user;
+            }
+        } finally {
+            database.close();
+        }
     }
 
-    const database = new Database();
-    try {
-        const users = await database.query('SELECT id,name,phash2,is_admin as isAdmin FROM User WHERE name = ?', [username]);
-        if (users.length == 0) {
-            res.status(401).send({ error: 'Invalid Credentials' });
-        }
-        const user = users[0];
-        const verified = await auth.verifyPassword(user.phash2, password)
+    /**
+     * Request Password Reset
+     * @summary Request Password Reset
+     */
+    @SuccessResponse(204, "Request Accepted")
+    @Response<APIError>(400, "Invalid Username")
+    @Post("reset-request")
+    public async postResetRequest(@Body() requestBody: ResetRequestParams): Promise<void> {
 
-        if (!verified) {
-            const u = await datastore.getUser(user.id);
-            datastore.updateUser({
-                id: user.id,
-                unsuccessfulLogins: u.unsuccessfulLogins + 1
-            });
-            return res.status(401).send({ error: 'Invalid Credentials' });
-        } else {
-            datastore.updateUser({
-                id: user.id,
-                dateLastLogin: moment().format('YYYY-MM-DD HH:mm:ss'),
-                lastIp: req.headers['x-forwarded-for'] || req.connection.remoteAddress,
-                unsuccessfulLogins: 0
-            });
-            user.token = auth.getToken(user.name, user.id, user.isAdmin);
-            res.setHeader('token', user.token);
-            return res.send(user);
-        }
-    } finally {
-        database.close();
-    }
-}));
+        const token = crypto.randomBytes(126).toString('hex');
 
-/**
- * @swagger
- * 
- * /auth/reset-request:
- *   post:
- *     summary: Request Password Reset
- *     description: Request Password Reset
- *     tags: 
- *       - Authentication
- *     produces:
- *       - application/json
- *     parameters:
- *       - name: username
- *         in: formData
- *         required: true
- *         type: string
- *     responses:
- *       204:
- *         description: request accepted
- *       400:
- *         description: invalid username or username missing
- *         content:
- *              application/json:
- *                      schema:
- *                              $ref: '#/components/schemas/Error'
- */
-app.route('/request-reset').post(handle(async (req, res, next) => {
-    const username = req.body.username;
-    if (!username) return res.status(400).send({ error: "missing username in request body" });
-    const email = req.body.email;
-    if (!email) return res.status(400).send({ error: "missing email in request body" });
+        const database = new Database();
+        try {
+            const results = await database.query('SELECT reset_token_set_time FROM User WHERE name = ? AND email = ?', [requestBody.username, requestBody.email])
 
-    const rcptoken = req.body.rcptoken;
-    const verified = await recaptchaVerify('requestPwReset', rcptoken, req.ip);
-    if (!verified) {
-        console.log('recaptcha verify failed!')
-        return res.sendStatus(403);
-    }
+            // if no user by name, return OK anyway
+            if (results.length === 0) return this.setStatus(204);
+            const result = results[0]
 
-    const token = crypto.randomBytes(126).toString('hex');
+            // because we sent a email on each request,
+            // this could be used to involentarily spam
+            // someone's inbox, which is usually frowned
+            // upon by email providers. so we only allow
+            // resets every hour.
+            const rsts = result.reset_token_set_time;
+            if (rsts && moment(rsts).isAfter(moment().subtract(1, 'hours'))) {
+                console.log(`Attempt to reset password too quickly for ${requestBody.username}!`);
+                this.setStatus(425);
+                return { error: "too soon to reset, try later" }
+            }
 
-    const database = new Database();
-    try {
-        const results = await database.query('SELECT reset_token_set_time FROM User WHERE name = ? AND email = ?', [username, email])
+            await database.execute(
+                `UPDATE User SET reset_token = ?, reset_token_set_time = CURRENT_TIMESTAMP
+      WHERE name = ?`, [token, requestBody.username]);
 
-        //204 if no user by name
-        if (results.length === 0) return res.sendStatus(204);
-        const result = results[0]
-
-        //204 if already requested reset within the hour
-        const rsts = result.reset_token_set_time;
-        if (rsts && moment(rsts).isAfter(moment().subtract(1, 'hours'))) {
-            console.log(`Attempt to reset password too quickly for ${username}!`);
-            return res.sendStatus(204);
-        }
-
-        await database.execute(
-            `UPDATE User SET reset_token = ?, reset_token_set_time = CURRENT_TIMESTAMP
-      WHERE name = ?`, [token, username]);
-
-        let transporter = nodemailer.createTransport(config.smtp);
-        // TODO: no html email!!! email was designed for plaintext only!
-        let html = `<html>
+            let transporter = nodemailer.createTransport(config.smtp);
+            // TODO: no html email!!! email was designed for plaintext only!
+            let html = `<html>
   <head>
       <style>
           body {
@@ -248,137 +190,68 @@ app.route('/request-reset').post(handle(async (req, res, next) => {
       </div>
   </body>
 </html>`;
-        html = util.format(html, username, token);
+            html = util.format(html, requestBody.username, token);
 
-        //sendmail is being called non-synchronously here (without await) because it can take a second
-        //we're not telling the client anything different whether it succeeds or fails
-        //so just send the 204 at this point
-        transporter.sendMail({
-            from: "webmaster@delicious-fruit.com",
-            to: email,
-            subject: `Delicious-Fruit Password Reset`,
-            html,
-            text: `Greetings from Delicious Fruit!\n
+            //sendmail is being called non-synchronously here (without await) because it can take a second
+            //we're not telling the client anything different whether it succeeds or fails
+            //so just send the 204 at this point
+            transporter.sendMail({
+                from: "webmaster@delicious-fruit.com",
+                to: requestBody.email,
+                subject: `Delicious-Fruit Password Reset`,
+                html,
+                text: `Greetings from Delicious Fruit!\n
 A password reset request was made on your behalf. If this wasn't you, you can safely ignore this message.\n
-To reset your password, visit this link: http://delicious-fruit.com/password_reset.php?name=${username}&token=${token} \n
+To reset your password, visit this link: http://delicious-fruit.com/password_reset.php?name=${requestBody.username}&token=${token} \n
 This link is valid for 2 hours since making the request.\n
 -The staff at Delicious-Fruit ❤️`
-        }).then(mailResult => {
-            console.log(mailResult);
-        }).catch(err => {
-            console.log("Error sending mail!");
-            console.log(err);
-        });
-        return res.sendStatus(204);
+            }).then(mailResult => {
+                console.log(mailResult);
+            }).catch(err => {
+                console.log("Error sending mail!");
+                console.log(err);
+            });
+            return this.setStatus(204);
 
-    } finally {
-        database.close();
-    }
-}));
-
-/**
- * @swagger
- * 
- * /auth/reset:
- *   post:
- *     summary: Submit Password Reset
- *     description: Should be called with the token the user received in their reset email. 
- *                  Generates a token after successful completion.
- *     headers:
- *      token:
- *        schema:
- *          type: string
- *        description: User's token. Send in the Authorization header 
- *                     as 'Bearer {token}' to execute requests as this user.
- *     tags: 
- *       - Authentication
- *     produces:
- *       - application/json
- *     parameters:
- *       - name: username
- *         in: formData
- *         required: true
- *         type: string
- *       - name: token
- *         in: formData
- *         required: true
- *         type: string
- *       - name: password
- *         in: formData
- *         required: true
- *         type: string
- *         description: the new password
- *     responses:
- *       204:
- *         description: password reset
- *         content:
- *              application/json:
- *                      schema:
- *                              $ref: '#/components/schemas/PassResetResp'
- *       400:
- *         description: invalid username/token
- *         content:
- *              application/json:
- *                      schema:
- *                              $ref: '#/components/schemas/Error'
- * components:
- *      schemas:
- *              PassResetResp:
- *                      type: object
- *                      properties:
- *                              id:
- *                                      type: integer
- *                                      format: int64
- *                              name:
- *                                      type: string
- *                              token:
- *                                      type: string
-  *                      required:
- *                              - id
- *                              - name
- *                              - token
-
- */
-app.route('/reset').post(handle(async (req, res, next) => {
-    const username = req.body.username;
-    if (!username) {
-        return res.status(401).send({ error: "no username in request body" });
-    }
-    const token = req.body.token;
-    if (!token) {
-        return res.status(401).send({ error: "no token in request body" });
+        } finally {
+            database.close();
+        }
     }
 
-    const rcptoken = req.body.rcptoken;
-    const verified = await recaptchaVerify('resetPW', rcptoken, req.ip);
-    if (!verified) {
-        console.log('recaptcha verify failed!')
-        return res.sendStatus(403);
-    }
-
-    const database = new Database();
-    try {
-        const results = await database.query(`
+    /**
+     * Should be called with the token the user received in their reset email. Generates a token after successful completion.
+ *     @summary Finalize Password Reset
+    * */
+    @SuccessResponse(200, "Password Reset")
+    @Response<APIError>(401, "Bad Username/Token Pair")
+    @Response<APIError>(422, "Unusable Token")
+    @Post("reset")
+    public async postFinalizePassReset(@Body() requestBody: FinalizePassResetParams): Promise<AuthResponse> {
+        const database = new Database();
+        try {
+            const results = await database.query(`
     SELECT id,reset_token_set_time,is_admin,reset_token_set_time FROM User 
-    WHERE name = ? AND reset_token = ?`, [username, token])
-        if (results.length == 0) {
-            console.log('no db match!')
-            return res.sendStatus(401);
-        }
-        if (results.length > 1) {
-            console.log(`retrieved multiple users! username:[${username}] token:[${token}]`);
-            return res.sendStatus(401);
-        }
+    WHERE name = ? AND reset_token = ?`, [requestBody.username, requestBody.token])
+            if (results.length == 0) {
+                this.setStatus(401);
+                return { error: "no matching reset request with provided name and token" }
+            }
+            if (results.length > 1) {
+                console.log(`retrieved multiple users! username:[${requestBody.username}] token:[${requestBody.token}]`);
+                this.setStatus(422);
+                return { error: "token is unusable, generate a new one" }
+            }
 
-        if (results[0].reset_token_set_time
-            && moment(results[0].reset_token_set_time).isBefore(moment().subtract(2, 'hours'))) {
-            console.log(`Attempted to use an old reset token for ${username}`);
-            return res.sendStatus(401);
-        }
+            if (results[0].reset_token_set_time
+                && moment(results[0].reset_token_set_time).isBefore(moment().subtract(2, 'hours'))) {
+                console.log(`Attempted to use an old reset token for ${requestBody.username}`);
+                this.setStatus(422);
+                return { error: "token was already used" }
+            }
 
-        const phash = await auth.hashPassword(req.body.password);
-        await database.execute(
-            `UPDATE User SET 
+            const phash = await auth.hashPassword(requestBody.password);
+            await database.execute(
+                `UPDATE User SET 
       phash2 = ? ,
       phash = '' ,
       salt = '' ,
@@ -388,108 +261,73 @@ app.route('/reset').post(handle(async (req, res, next) => {
       ali_date_set = null
     WHERE id = ? `, [phash, results[0].id]);
 
-        //get user for login
-        const users = await database.query('SELECT id,name,phash2,is_admin as isAdmin FROM User WHERE name = ?', [username]);
-        if (users.length == 0) {
-            res.status(401).send({ error: 'Invalid Credentials' });
+            //get user for login
+            // TODO: don't grab phash2 or isAdmin
+            const users = await database.query('SELECT id,name,phash2,is_admin as isAdmin FROM User WHERE name = ?', [requestBody.username]);
+            // QUEST: i think the predicate below has a 0% chance of ever happening, right?
+            if (users.length == 0) {
+                this.setStatus(401)
+                return { error: 'invalid credentials' };
+            }
+            const user = users[0];
+            user.token = auth.getToken(user.name, user.id, user.isAdmin);
+
+            datastore.addReport({
+                type: "user_password_change",
+                targetId: "" + user.id,
+                report: "User password changed"
+            }, user.id);
+
+            this.setHeader('token', user.token);
+            return user;
+        } finally {
+            database.close();
         }
-        const user = users[0];
-        user.token = auth.getToken(user.name, user.id, user.isAdmin);
-
-        datastore.addReport({
-            type: "user_password_change",
-            targetId: "" + user.id,
-            report: "User password changed"
-        }, user.id);
-
-
-        res.setHeader('token', user.token);
-        return res.send(user);
-    } finally {
-        database.close();
     }
-}));
 
-/**
- * @swagger
- * 
- * /auth/refresh:
- *   post:
- *     summary: Refresh Token
- *     description: Allows a user with a valid token to request a fresh token
- *                  with a new expiration date. This should be invoked whenever
- *                  the 'useExp' timestamp in the token payload has been
- *                  exceeded.
- *     headers:
- *      token:
- *        schema:
- *          type: string
- *        description: User's token. Send in the Authorization header 
- *                     as 'Bearer {token}' to execute requests as this user.
- *     tags: 
- *       - Authentication
- *     produces:
- *       - application/json
- *     responses:
- *       200:
- *         description: Latest user data with fresh token
- *         content:
- *              application/json:
- *                      schema:
- *                              $ref: '#/components/schemas/UserWithTokenResp'
- *       401:
- *         description: Unauthorized (Not logged in or token expired)
- * components:
- *      schemas:
- *              UserWithTokenResp:
- *                      type: object
- *                      properties:
- *                              id:
- *                                      type: integer
- *                                      format: int64
- *                              name:
- *                                      type: string
- *                              dateCreated:
- *                                      type: string
- *                                      format: date
- *                              twitchLink:
- *                                      type: string
- *                              youtubeLink:
- *                                      type: string
- *                              nicoLink:
- *                                      type: string
- *                              twitterLink:
- *                                      type: string
- *                                      format: url
- *                              bio:
- *                                      type: string
- *                              isAdmin:
- *                                      type: boolean
- *                              email:
- *                                      type: string
- *                                      format: email
- *                              banned:
- *                                      type: boolean
- *                              selected_badge:
- *                                      type: integer
- *                              token:
- *                                      type: string
- *                      required:
- *                              - id
- *                              - name
- *                              - dateCreated
- *                              - isAdmin
- *                              - banned
- *                              - token
+    /**
+     * Allows a user with a valid token to request a fresh token with a new expiration date. This should be invoked whenever the 'useExp' timestamp in the token payload has been exceeded.
+     * @summary Refresh Token
+     * */
+    @SuccessResponse(200, "Latest user data with a fresh token")
+    @Response(401, "Expired or Invalid Token")
+    @Post("refresh")
+    public async postRefresh(@Header("Authorization") authorization: string): Promise<AuthResponse> {
+        let token = null;
+        try {
+            token = extractBearerJWT(authorization);
+        } catch (e) {
+            this.setStatus(401);
+            return { error: "expired or invalid token" }
+        }
+        const user = await datastore.getUser(token.sub);
+        if (!user) {
+            this.setStatus(401);
+            return { error: "specified user with this token does not exist" }
+        }
+        user.token = auth.getToken(user.name, user.id, user.isAdmin);
+        this.setHeader('token', user.token);
+        return user;
+    }
+}
 
- */
-app.route('/refresh').post(userCheck(), handle(async (req, res, next) => {
-    const user = await datastore.getUser(req.user.sub);
-    if (!user) return res.sendStatus(401);
-    user.token = auth.getToken(user.name, user.id, user.isAdmin);
-    res.setHeader('token', user.token);
-    return res.send(user);
-}));
+
+
+
+
+function extractBearerJWT(header_token: string): string | object {
+    if (!header_token.includes("Bearer ")) {
+        throw new Error("missing prefix")
+    }
+    const unverified_token = header_token.split(" ")[1];
+
+    try {
+        return jwt.verify(unverified_token, config.app_jwt_secret);
+    } catch (e) {
+        throw new Error(`invalid token: ${e}`)
+    }
+}
+
 
 export async function recaptchaVerify(action: string, token: string, remoteIp?: string): Promise<boolean> {
     if (!config.recaptcha_secret) {
