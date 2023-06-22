@@ -1,4 +1,4 @@
-import express, { ErrorRequestHandler } from 'express';
+import express, { ErrorRequestHandler, urlencoded } from 'express';
 import bodyParser from 'body-parser';
 import uuid from 'uuid/v4';
 import cors from 'cors';
@@ -22,7 +22,11 @@ import swaggerUi from 'swagger-ui-express';
 import * as Minio from 'minio';
 import { refreshToken } from './lib/auth-check';
 import Config from './model/config';
+import { RegisterRoutes } from "../build/routes";
 let config: Config = require('./config/config.json');
+
+import fs from "fs";
+import path from "path";
 
 /** Exit codes for fatal errors. */
 enum ExitCode {
@@ -126,18 +130,8 @@ async function main(): Promise<number> {
 
     console.log('Initializing routers...');
 
-    app.use('/api/games', game_router);
-    app.use('/api/users', user_router);
-    app.use('/api/reviews', review_router);
-    app.use('/api/lists', list_router);
-    app.use('/api/auth', auth_router);
-    app.use('/api/ping', ping_router);
-    app.use('/api/message', message_router);
-    app.use('/api/screenshots', screenshot_router);
-    app.use('/api/news', news_router);
-    app.use('/api/reports', report_router);
-    app.use('/api/tags', tag_router);
-    app.use('/api/api', api_router);
+    app.use(urlencoded({ extended: true, }));
+    RegisterRoutes(app);
 
     console.log('Initializing object storage...');
 
@@ -187,36 +181,13 @@ async function main(): Promise<number> {
 
     console.log('Initializing swagger...');
 
-    const options = {
-        swaggerDefinition: {
-            // Like the one described here: https://swagger.io/specification/#infoObject
-            info: {
-                title: 'Delicious Fruit API',
-                version: '2.0.0',
-                description: 'The API you should use instead of throwing your monitor out the window',
-            },
-            components: {
-                securitySchemes: {
-                    bearerAuth: {
-                        type: 'http',
-                        scheme: 'bearer',
-                        bearerFormat: 'JWT',
-                    }
-                }
-            },
-            openapi: "3.0.0",
-            security: [{
-                bearerAuth: []
-            }],
-            basePath: '/api',
-            scheme: "http",
-            host: "localhost:4201",
-        },
-        apis: [__dirname + '/*.ts'],
-    };
-
-    const specs = swaggerJsdoc(options);
-    app.use('/api/swagger', swaggerUi.serve, swaggerUi.setup(specs));
+    fs.readFile(path.join(__dirname, "../build/swagger.json"), { encoding: "utf-8" }, (err, data) => {
+        if (err) {
+            return console.error(`OpenAPI definition could not be opened or found: ${err}`);
+        }
+        const specs = JSON.parse(data);
+        app.use('/', swaggerUi.serve, swaggerUi.setup(specs));
+    });
 
     if (config.bcrypt_rounds < 10) {
         console.log("WARNING!! bcrypt_rounds is less than 10. " +
