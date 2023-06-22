@@ -1,7 +1,7 @@
 {
-    "name": "delfruit2-server",
+    "name": "Delicious Fruit API",
     "version": "2.0.0-rc0",
-    "description": "delfruit 2.0 server in node",
+    "description": "The API you should use instead of throwing your monitor out the window",
     "engines": {
         "node": ">=16"
     },
