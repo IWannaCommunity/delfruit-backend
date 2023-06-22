@@ -2,7 +2,7 @@ import { RequestHandler } from "express";
 import AuthModule from "./auth";
 
 export function refreshToken(): RequestHandler {
-    return (req,res,next) => {
+    return (req, res, next) => {
         //only refresh if there's a user in context
         if (req.user && req.user.sub) {
             const newToken = new AuthModule().getToken(
@@ -10,11 +10,17 @@ export function refreshToken(): RequestHandler {
                 req.user.sub,
                 req.user.isAdmin
             );
-            res.setHeader('token',newToken);
+            res.setHeader('token', newToken);
         }
 
         next();
     }
+}
+
+export enum AuthnCheck {
+    Unauthorized = -1,
+    Forbidden = 0,
+    Authorized,
 }
 
 /**
@@ -26,27 +32,19 @@ export function refreshToken(): RequestHandler {
  * 
  * @param roles optional set of roles, the user must have at least one of these
  */
-export function userCheck(...roles: string[]): RequestHandler {
-    return (req,res,next) => {
-        if (!req.user || !req.user.sub) return res.sendStatus(401);
+export function userCheck(token: any, ...roles: string[]): AuthnCheck {
+    if (!token.user || !token.user.sub) return AuthnCheck.Unauthorized;
 
-        if (req.user.useExp < Math.floor(Date.now() / 1000)) {
-            //TODO: generate a new token
-            const newToken = new AuthModule().getToken(
-                req.user.username,
-                req.user.sub,
-                req.user.isAdmin
-            );
-            res.setHeader('token',newToken);
-            //TODO: replace the user in context
-        }
-
-        if (roles.length > 0) {
-            const userRoles = req.user.roles as string[];
-            if (!roles.some(r => userRoles.includes(r))) return res.sendStatus(403);
-        }
-        next();
+    if (token.user.useExp < Math.floor(Date.now() / 1000)) {
+        //TODO: generate a new token
+        //TODO: replace the user in context
     }
+
+    if (roles.length > 0) {
+        const userRoles = token.user.roles as string[];
+        if (!roles.some(r => userRoles.includes(r))) return AuthnCheck.Forbidden;
+    }
+    return AuthnCheck.Authorized;
 }
 
 /**
@@ -58,14 +56,17 @@ export function userCheck(...roles: string[]): RequestHandler {
  * 
  * @param roles optional set of roles, the user must have at least one of these
  */
-export function adminCheck(...roles: string[]): RequestHandler {
-    return (req,res,next) => {
-        if (!req.user || !req.user.sub) return res.sendStatus(401);
-        if (!req.user.isAdmin) return res.sendStatus(403);
-        if (roles.length > 0) {
-            const userRoles = req.user.roles as string[];
-            if (!roles.some(r => userRoles.includes(r))) return res.sendStatus(403);
-        }
-        next();
+export function adminCheck(token: any, ...roles: string[]): AuthnCheck {
+    if (token === undefined) {
+        return AuthnCheck.Unauthorized;
     }
+    if (!token.user || !token.user.sub) return AuthnCheck.Unauthorized;
+    if (!token.user.isAdmin) return AuthnCheck.Forbidden;
+    if (roles.length > 0) {
+        const userRoles = token.user.roles as string[];
+        if (!roles.some(r => userRoles.includes(r))) return AuthnCheck.Forbidden;
+    }
+    return AuthnCheck.Authorized;
 }
+
+
