@@ -14,7 +14,9 @@
         "test-int": "ts-mocha -R spec src/int-test/**/*.ts --reporter mocha-junit-reporter",
         "tsc": "tsc",
         "start-plain": "node build/server.js",
-        "docker-reboot": "docker build -t delfruit-server . && docker kill df-server & docker rm df-server & docker run -d --name df-server --network df-network -p 4201:4201 -v D:\\Projects\\delfruit2-server\\config:/home/node/app/config delfruit-server"
+        "docker-reboot": "docker build -t delfruit-server . && docker kill df-server & docker rm df-server & docker run -d --name df-server --network df-network -p 4201:4201 -v D:\\Projects\\delfruit2-server\\config:/home/node/app/config delfruit-server",
+        "build-routes": "tsoa routes",
+        "build-openapi-spec": "tsoa spec"
     },
     "author": "klazen108",
     "license": "ISC",
@@ -43,6 +45,7 @@
         "multer": "1.4.1",
         "mysql2": "3.3.5",
         "nodemailer": "6.4.16",
+        "option-t": "38.0.7",
         "swagger-jsdoc": "3.2.9",
         "swagger-ui-express": "4.0.5",
         "typescript": "5.0.4",
@@ -67,6 +70,7 @@
         "supertest": "^4.0.2",
         "ts-mocha": "^6.0.0",
         "ts-node": "^8.10.0",
-        "ts-node-dev": "^1.0.0-pre.44"
+        "ts-node-dev": "^1.0.0-pre.44",
+        "tsoa": "5.1.1"
     }
 }
