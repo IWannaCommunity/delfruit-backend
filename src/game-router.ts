@@ -15,12 +15,15 @@ import Config from './model/config';
 let config: Config = require('./config/config.json');
 
 import { Permission, hasPermission } from './model/Permission';
-const upload = multer({storage:multer.diskStorage({
-   //If no destination is given, the operating system's default directory for temporary files is used.
-  filename: function (req, file, cb) {
-    cb(null, file.fieldname + '-' + Date.now())
-  }
-})})
+import { Body, Controller, Delete, FormField, Get, Header, Patch, Path, Post, Put, Query, Response, Route, Security, SuccessResponse, Tags, UploadedFile } from 'tsoa';
+const upload = multer({
+    storage: multer.diskStorage({
+        //If no destination is given, the operating system's default directory for temporary files is used.
+        filename: function(req, file, cb) {
+            cb(null, file.fieldname + '-' + Date.now())
+        }
+    })
+})
 console.log("config:")
 console.log(config);
 const minioClient = new Minio.Client(config.s3);
@@ -28,815 +31,471 @@ const minioClient = new Minio.Client(config.s3);
 const app = express.Router();
 export default app;
 
-/**
- * @swagger
- * 
- * /games/{id}:
- *   post:
- *     summary: Add Game (Admin Only)
- *     description: Add Game (Admin Only)
- *     tags: 
- *       - Games
- *     produces:
- *       - application/json
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: integer
- *           minimum: 1
- *         required: true
- *         description: The exact id of the game to return
- * 
- *     requestBody:
- *       description: Optional description in *Markdown*
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               name: 
- *                 type: string
- *               url: 
- *                 type: string
- *               urlSpdrn: 
- *                 type: string
- *               author: 
- *                 type: string
- *               collab: 
- *                 type: boolean
- *               dateCreated: 
- *                 type: string
- *               ownerId: 
- *                 type: integer
- * 
- *     responses:
- *       200:
- *         description: The Game object, after creation
- *       403:
- *         description: Insufficient privileges (requires an admin account)
- */
-app.route('/').post(adminCheck(), handle(async (req,res,next) => {
-  if (!req.user || !req.user.sub || !req.user.isAdmin) {
-    res.status(403).send({error:'unauthorized access'});
-    return;
-  }
-  const uid = req.user.sub;
+import * as jwt from "jsonwebtoken";
+import { Review } from './model/Review';
+function extractBearerJWT(header_token: string): string | object {
+    if (!header_token.includes("Bearer ")) {
+        throw new Error("missing prefix")
+    }
+    const unverified_token = header_token.split(" ")[1];
 
-  const game = await datastore.addGame(req.body,uid);
-
-  datastore.addReport({
-    type:"game_add",
-    targetId:""+game.id,
-    report:"Game added"
-  },req.user.sub);
-
-  res.send(game);
-}));
-
-/**
- * @swagger
- * 
- * /games:
- *   get:
- *     summary: Game List
- *     description: Game List
- *     tags: 
- *       - Games
- *     produces:
- *       - application/json
- *     parameters:
- *       - in: query
- *         name: id
- *         schema:
- *           type: integer
- *         description: The exact id of the game to return
- *       - in: query
- *         name: removed
- *         schema:
- *           type: boolean
- *         description: (admin only) Whether to return removed games. Forced to false (non-removed only) for users
- *       - in: query
- *         name: name
- *         schema:
- *           type: string
- *         description: Game name (allows partial match)
- *       - in: query
- *         name: tags
- *         schema:
- *           type: string
- *         description: Comma-separated list of tags to filter by
- *       - in: query
- *         name: author
- *         schema:
- *           type: string
- *         description: Author name (allows partial search)
- *       - in: query
- *         name: hasDownload
- *         schema:
- *           type: boolean
- *         description: Whether or not the game has a download associated
- *       - in: query
- *         name: createdFrom
- *         schema:
- *           type: date
- *         description: The earliest creation date to filter games by
- *       - in: query
- *         name: createdTo
- *         schema:
- *           type: date
- *         description: The latest creation date to filter games by
- *       - in: query
- *         name: clearedByUserId
- *         schema:
- *           type: integer
- *         description: The user id of a user who has indicated they have cleared the game
- *       - in: query
- *         name: reviewedByUserId
- *         schema:
- *           type: integer
- *         description: The user id of a user who has reviewed the game
- *       - in: query
- *         name: ratingFrom
- *         schema:
- *           type: integer
- *         description: A minimum rating
- *       - in: query
- *         name: ratedTo
- *         schema:
- *           type: integer
- *         description: A maximum rating
- *       - in: query
- *         name: difficultyFrom
- *         schema:
- *           type: integer
- *         description: A minimum difficulty
- *       - in: query
- *         name: difficultyTo
- *         schema:
- *           type: integer
- *         description: A maximum difficulty
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           minimum: 0
- *         description: The page of results to return (default 0)
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 50
- *         description: The number of results per page (default 50, maximum 50)
- *     responses:
- *       200:
- *         description: returns a list of games matching filters
- */
-app.route('/').get(handle(async (req,res,next) => {
-  var order_col = whitelist(
-    req.query.order_col,
-    ['name','date_created','rating','difficulty'],
-    'name');
-  let order_dir = whitelist(
-    req.query.order_dir,
-    ['asc','desc'],
-    'asc') as 'asc'|'desc';
-  var isAdmin = req.user && req.user.isAdmin;
-
-  const params: GetGamesParms = {
-    page: +req.query.page || 0,
-    limit: +req.query.limit || 50,
-    orderCol: order_col,
-    orderDir: order_dir
-  };
-  if (!isAdmin) params.removed = false;
-
-  params.q = req.query.q;
-  params.id = req.query.id;
-  params.removed = false;
-  params.name = req.query.name;
-
-  if (req.query.tags) {
     try {
-      params.tags = <string[]>JSON.parse(req.query.tags);
-      params.tags.forEach((s,i)=> {
-        if (+s === NaN) throw 'tag #'+i+' was not a number -> '+s
-      });
+        return jwt.verify(unverified_token, config.app_jwt_secret);
     } catch (e) {
-      res.status(400).send({error:'tags must be an array of numbers'});
+        throw new Error(`invalid token: ${e}`)
     }
-  }
-  params.author = req.query.author;
-  params.hasDownload = req.query.hasDownload;
-  params.createdFrom = req.query.createdFrom;
-  params.createdTo = req.query.createdTo;
-  params.clearedByUserId = req.query.clearedByUserId;
-  params.reviewedByUserId = req.query.reviewedByUserId;
+}
 
-  params.ratingFrom = req.query.ratingFrom;
-  params.ratingTo = req.query.ratingTo;
-  params.difficultyFrom = req.query.difficultyFrom;
-  params.difficultyTo = req.query.difficultyTo;
-  params.ownerUserId = req.query.ownerUserId;
+interface APIError {
+    error: string,
+}
 
-  const rows = await datastore.getGames(params);
-  if (!params.page) {
-    const total = await datastore.countGames(params);
-    res.header('total-count',total);
-  }
-  res.send(rows);
-}));
+@Route("games")
+@Tags("Games")
+export class GameController extends Controller {
+    /**
+     * Add Game (Admin Only)
+     * @summary Add Game (Admin Only)
+     */
+    @Security("bearerAuth", ["admin"])
+    @SuccessResponse(200, "Populated Game Object")
+    @Response<APIError>(403, "Insufficient Privileges")
+    @Post()
+    public async postGame(@Header("Authorization") authorization: string, @Body() requestBody: Pick<Game, "name" | "url" | "urlSpdrn" | "author" | "collab" | "dateCreated" | "ownerId">): Promise<Game> {
+        const user = extractBearerJWT(authorization);
 
-/**
- * @swagger
- * 
- * /games/{id}:
- *   get:
- *     summary: Get Game
- *     description: Get Game
- *     tags: 
- *       - Games
- *     produces:
- *       - application/json
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: integer
- *           minimum: 1
- *         required: true
- *         description: The exact id of the game to return 
- *           (or the literal 'random' for a random game)
- *     responses:
- *       200:
- *         description: Object describing the game
- *       404:
- *         description: Game not found
- */
-app.route('/:id').get(handle(async (req,res,next) => {
-  let game;
-  if (req.params.id === 'random') {
-    game = await datastore.getRandomGame();
-  } else if (!isNaN(+req.params.id)) {
-    var id = parseInt(req.params.id, 10);
-    game = await datastore.getGame(id);
-  } else {
-    res.status(400).send({error:'id must be a number'});
-    return;
-  }
+        const uid = user.sub;
 
-  if (!game) {
-    res.sendStatus(404);
-    return;
-  }
+        const game = await datastore.addGame(requestBody, uid);
 
-  //get owner review
-  if (game.ownerId) {
-    const ownerReviews = await datastore.getReviews({
-      game_id:game.id,
-      user_id:+game.ownerId,
-      includeOwnerReview: true,
-      removed: false,
-    })
-    if (ownerReviews.length == 1) {
-      game.ownerBio = ownerReviews[0];
+        datastore.addReport({
+            type: "game_add",
+            targetId: "" + game.id,
+            report: "Game added"
+        }, user.sub);
+
+        return game;
     }
-  }
 
-  res.send(game); 
-}));
+    /**
+     * Game List
+     * @summary Game List
+     */
+    @SuccessResponse(200, "List of Games matching filters")
+    @Response<APIError>(400, "Invalid Parameters")
+    @Get()
+    public async getGames(@Header("Authorization") authorization?: string, @Query() id?: number, @Query() removed?: boolean, @Query() name?: string, @Query() tags?: string, @Query() author?: string, @Query() ownerUserId?: number, @Query() hasDownload?: boolean, @Query() createdFrom?: Date, @Query() createdTo?: Date, @Query() clearedByUserId?: number, @Query() reviewedByUserId?: number, @Query() ratingFrom?: number, @Query() ratingTo?: number, @Query() difficultyFrom?: number, @Query() difficultyTo?: number, @Query() page?: number, @Query() limit?: number, @Query() order_col?: string, @Query() order_dir?: string): Promise<Game[]> {
+        // TODO: do type restrictions in method definition
+        order_col = whitelist(
+            order_col,
+            ['name', 'date_created', 'rating', 'difficulty'],
+            'name');
+        order_dir = whitelist(
+            order_dir,
+            ['asc', 'desc'],
+            'asc') as 'asc' | 'desc';
+        let isAdmin = false;
+        try {
+            const user = extractBearerJWT(authorization);
+            isAdmin = user.isAdmin;
+        } catch (_) {
+            console.warn("user provided authorization, but it was invalid")
+        }
 
-/**
- * @swagger
- * 
- * /games/{id}:
- *   delete:
- *     summary: Remove Game (Admin only)
- *     description: Remove Game. This is idempotent - repeated deletions of the 
- *       same game have no effect.
- *     tags: 
- *       - Games
- *     produces:
- *       - application/json
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: integer
- *           minimum: 1
- *         required: true
- *         description: The exact id of the game to return 
- *           (or the literal 'random' for a random game)
- *     responses:
- *       204:
- *         description: Object describing the game
- *       400:
- *         description: Invalid game id
- *       403:
- *         description: Insufficient privileges (requires an admin account)
- *       404:
- *         description: Game not found
- */
-app.route('/:id').delete(adminCheck(), handle(async (req,res,next) => {
-  if (isNaN(+req.params.id)) return res.status(400).send({error:'id must be a number'});
+        const params: GetGamesParms = {
+            page: +(page || 0),
+            limit: +(limit || 50),
+            orderCol: order_col,
+            orderDir: order_dir
+        };
+        if (!isAdmin) params.removed = false;
 
-  var id = parseInt(req.params.id, 10);
-  let game = await datastore.getGame(id);
+        //params.q = req.query.q; // QUEST: what the hell is Q?
+        params.id = id;
+        params.removed = false; // QUEST: shouldn't this just use the removed query parameter?
+        params.name = name;
 
-  if (!game) return res.sendStatus(404);
-  game = game!;
+        if (tags) {
+            try {
+                params.tags = <string[]>JSON.parse(tags);
+                params.tags.forEach((s, i) => {
+                    if (+s === NaN) throw 'tag #' + i + ' was not a number -> ' + s
+                });
+            } catch (e) {
+                this.setStatus(400)
+                return { error: 'tags must be an array of numbers' };
+            }
+        }
+        params.author = author;
+        params.hasDownload = hasDownload;
+        params.createdFrom = createdFrom?.toString();
+        params.createdTo = createdTo?.toString();
+        params.clearedByUserId = clearedByUserId;
+        params.reviewedByUserId = reviewedByUserId;
 
-  if (game.removed) return res.sendStatus(204);
+        params.ratingFrom = ratingFrom;
+        params.ratingTo = ratingTo;
+        params.difficultyFrom = difficultyFrom;
+        params.difficultyTo = difficultyTo;
+        params.ownerUserId = ownerUserId;
 
-  let gamePatch: Game = {
-    id: +req.params.id,
-    removed: true
-  };
-  const success = await datastore.updateGame(gamePatch,req.user.isAdmin);
-  if (!success) return res.sendStatus(404);
+        const rows = await datastore.getGames(params);
+        if (!params.page) {
+            const total = await datastore.countGames(params);
+            this.setHeader('total-count', total);
+        }
 
-  datastore.addReport({
-    type:"game_remove",
-    targetId:""+game.id,
-    report:"Game removed"
-  },req.user.sub);
+        return rows;
+    }
 
-  res.sendStatus(204);
-}));
+    /**
+     * Get Game
+     * @summary Get Game
+     */
+    @SuccessResponse(200, "Found Game Details")
+    @Response<APIError>(400, "Unparsable ID")
+    @Response(404, "Not Found")
+    @Get("{id}")
+    public async getGame(@Path() id: string): Promise<Game> {
+        // TODO: this could be simplified by making id optional, and where it isn't provided, assume "random"
+        let game;
+        if (id === 'random') {
+            game = await datastore.getRandomGame();
+        } else if (!isNaN(+id)) {
+            const game_id = parseInt(id, 10);
+            game = await datastore.getGame(game_id);
+        } else {
+            this.setStatus(400);
+            return { error: 'id must be a number' };
+        }
 
-/**
- * @swagger
- * 
- * /games/{id}/reviews:
- *   get:
- *     summary: Get Reviews for Game
- *     description: Get Reviews for Game
- *     tags: 
- *       - Games
- *       - Reviews
- *     produces:
- *       - application/json
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: integer
- *           minimum: 1
- *         required: true
- *         description: The exact id of the game to return
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           minimum: 0
- *         description: The page of results to return (default 0)
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 50
- *         description: The number of results per page (default 50, maximum 50)
- *     responses:
- *       200:
- *         description: List of reviews for the game (or empty array if none)
- *       400:
- *         description: Invalid game id
- *       404:
- *         description: Game not found
- */
-app.route('/:id/reviews').get(handle(async (req,res,next) => {
-  if (isNaN(+req.params.id)) {
-    res.status(400).send({error:'id must be a number'});
-    return;
-  }
-  
-  var gameId = parseInt(req.params.id,10);
+        if (!game) {
+            this.setStatus(404);
+            return;
+        }
 
-  const game = await datastore.gameExists(gameId);
-  if (!game) return res.sendStatus(404);
+        //get owner review
+        if (game.ownerId) {
+            const ownerReviews = await datastore.getReviews({
+                game_id: game.id,
+                user_id: +game.ownerId,
+                includeOwnerReview: true,
+                removed: false,
+            })
+            if (ownerReviews.length == 1) {
+                game.ownerBio = ownerReviews[0];
+            }
+        }
 
-  var id = parseInt(req.params.id, 10);
-  var page = +req.query.page || 0;
-  var limit = +req.query.limit || 50;
+        return game;
 
-  var byUserId = (+req.query.byUserId) || undefined;
-  const rows = await datastore.getReviews({
-    game_id:id,
-    user_id:byUserId,
-    includeOwnerReview:(req.query.includeOwnerReview==='true'),
-    textReviewsFirst:(req.query.textReviewsFirst==='true'),
-    page:page,limit:limit,
-    removed:false
-  });
-  res.send(rows);
-}));
+    }
 
-/**
- * @swagger
- * 
- * /games/{id}/reviews:
- *   put:
- *     summary: Add Review for Game (User/Admin Only)
- *     description: Add Review for Game (User/Admin Only)
- *     tags: 
- *       - Games
- *       - Reviews
- *     produces:
- *       - application/json
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: integer
- *           minimum: 1
- *         required: true
- *         description: The id of the game to review
- * 
- *     requestBody:
- *       description: Optional description in *Markdown*
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               rating: 
- *                 type: number
- *               difficulty: 
- *                 type: number
- *               comment: 
- *                 type: string
- *               removed: 
- *                 type: boolean
- * 
- *     responses:
- *       200:
- *         description: The review that was just added
- *       400:
- *         description: Invalid game id
- *       401:
- *         description: Unauthorized (must log in to add reviews)
- *       404:
- *         description: Game not found
- */
-app.route('/:id/reviews').put(userCheck(), handle(async (req,res,next) => {
-  if (isNaN(+req.params.id)) return res.status(400).send({error:'id must be a number'});
-  
-  var gameId = parseInt(req.params.id,10);
+    /**
+     * Remove Game. This is idempotent - repeated deletions of the same game have no effect.
+     * @summary Remove Game (Admin Only)
+     */
+    @Security("bearerAuth", ["admin"])
+    @SuccessResponse(204, "Game Details")
+    @Response<APIError>(403, "Insufficient Privileges")
+    @Response(404, "Not Found")
+    @Delete("{id}")
+    public async deleteGame(@Header("Authorization") authorization: string, @Path() id: number): Promise<Game | void> {
+        // NOTE: auth guard should make the error condition unreachable
+        const user = extractBearerJWT(authorization);
 
-  const game = await datastore.gameExists(gameId);
-  if (!game) return res.sendStatus(404);
+        let game = await datastore.getGame(id);
 
-  if (req.body.rating) {
-    req.body.rating = Math.min(Math.max(req.body.rating, 0), 100);
-  }
-  if (req.body.difficulty) {
-    req.body.difficulty = Math.min(Math.max(req.body.difficulty, 0), 100);
-  }
+        if (!game) return this.setStatus(404);
+        game = game!;
 
-  const newReview = await datastore.addReview(req.body,gameId,req.user.sub);
-  res.send(newReview);
-}));
+        if (game.removed) return this.setStatus(204);
 
-/**
- * @swagger
- * 
- * /games/{id}/screenshots:
- *   get:
- *     summary: Get Screenshots for Game
- *     description: Get Screenshots for Game
- *     tags: 
- *       - Games
- *       - Screenshots
- *     produces:
- *       - application/json
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: integer
- *           minimum: 1
- *         required: true
- *         description: The exact id of the game to return
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           minimum: 0
- *         description: The page of results to return (default 0)
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 50
- *         description: The number of results per page (default 50)
- *     responses:
- *       200:
- *         description: List of screenshots for the game (or empty array if none)
- *       400:
- *         description: Invalid game id
- *       404:
- *         description: Game not found
- */
-app.route('/:id/screenshots').get(handle(async (req,res,next) => {
-  if (isNaN(+req.params.id)) {
-    res.status(400).send({error:'id must be a number'});
-    return;
-  }
-  
-  var gameId = parseInt(req.params.id,10);
+        let gamePatch: Game = {
+            id: +id,
+            removed: true
+        };
+        const success = await datastore.updateGame(gamePatch, user.isAdmin);
+        if (!success) return this.setStatus(404);
 
-  const game = await datastore.gameExists(gameId);
-  if (!game) return res.sendStatus(404);
-  
-  var isAdmin = req.user && req.user.isAdmin;
-  var page = +req.query.page || 0;
-  var limit = +req.query.limit || 50;
+        datastore.addReport({
+            type: "game_remove",
+            targetId: "" + game.id,
+            report: "Game removed"
+        }, user.sub);
 
-  let approved = undefined;
-  if (req.query.approved) approved = req.query.approved==="1";
-  if (!isAdmin) approved = true; //only return approved screenshots
+        return this.setStatus(204);
+    }
 
-  let parms: GetScreenshotParms = {gameId,page,limit,approved};
-  if (!isAdmin) parms.removed = false;
-  const rows = await datastore.getScreenshots(parms);
-  res.send(rows);
-}));
-
-/**
- * @swagger
- * 
- * /games/{id}/screenshots:
- *   post:
- *     summary: Add Screenshot for Game (User/Admin Only)
- *     description: Add Screenshot for Game (User/Admin Only)
- *     tags: 
- *       - Games
- *       - Screenshots
- *     produces:
- *       - application/json
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: integer
- *           minimum: 1
- *         required: true
- *         description: The id of the game to add a screenshot to
- * 
- *     requestBody:
- *       description: Optional description in *Markdown*
- *       required: true
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             properties:
- *               description:
- *                 type: string
- *               screenshot: 
- *                 type: string
- *                 format: binary
- * 
- *     responses:
- *       200:
- *         description: The screenshot that was just added
- *       400:
- *         description: Invalid game id
- *       401:
- *         description: Unauthorized (must log in to add screenshots)
- *       404:
- *         description: Game not found
- */
-app.route('/:id/screenshots').post(userCheck(), upload.single('screenshot'), handle(async (req,res,next) => {
-  if (isNaN(+req.params.id)) {
-    return res.status(400).send({error:'id must be a number'});
-  }
-  const gameId = parseInt(req.params.id,10);
-  
-  const permissions = await datastore.getPermissions(req.user.sub);
-  const autoApprove = hasPermission(permissions,Permission.AUTO_APPROVE_SCREENSHOT);
-  const canScreenshot = hasPermission(permissions,Permission.CAN_SCREENSHOT);
-  if (!canScreenshot) return res.status(403).send({error:'screenshot capability revoked'});
-
-  const game = await datastore.gameExists(gameId);
-  if (!game) return res.sendStatus(404);
-  const ss: Screenshot = {
-    gameId: +req.params.id,
-    description: req.body.description||''
-  };
-  
-  const ssres = await datastore.addScreenshot(ss,req.user.sub,autoApprove);
-
-  //TODO: stream images straight into s3 via multer-s3 storage?
-  var metaData = {
-      'Content-Type': 'image/png',
-      'X-Amz-Meta-Testing': 1234,
-      'gameId': ssres.gameId,
-      'id': ssres.id
-  }
-  // Using fPutObject API upload your file to the bucket europetrip.
-  minioClient.fPutObject(config.s3_bucket, `${ssres.id}.png`, req.file.path, metaData, function(err, etag) {
-    if (err) return console.log(err)
-  });
-
-  if (autoApprove) {
-    datastore.addReport({
-      type:"screenshot",
-      targetId:""+ssres.id,
-      report:"Screenshot added, automatically approved"
-    },req.user.sub);
-  } else {
-    datastore.addReport({
-      type:"screenshot",
-      targetId:""+ssres.id,
-      report:"Screenshot added, awaiting approval"
-    },req.user.sub);
-  }
-
-  res.send(ssres);
-}));
-
-/**
- * @swagger
- * 
- * /games/{id}/tags:
- *   get:
- *     summary: Get Tags Associated to Game
- *     description: Get Tags Associated to Game
- *     tags: 
- *       - Games
- *     produces:
- *       - application/json
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: integer
- *           minimum: 1
- *         required: true
- *         description: The id of the game to get tags for
- *     responses:
- *       200:
- *         description: List of tags for the game (or empty array if none)
- *       400:
- *         description: Invalid game id
- *       404:
- *         description: Game not found
- */
-app.route('/:id/tags').get(handle(async (req,res,next) => {
-  if (isNaN(+req.params.id)) {
-    return res.status(400).send({error:'invalid game id'});
-  }
-
-  var gameId = parseInt(req.params.id,10);
-  
-  var userId = +req.query.uid || undefined;
-
-  const game = await datastore.gameExists(gameId);
-  if (!game) return res.sendStatus(404);
-
-  const tags = await datastore.getTagsForGame(gameId,userId);
-  res.send(tags);
-}));
+    /**
+     * Get Reviews for Game
+     * @summary Get Reviews for Game
+     */
+    @SuccessResponse(200, "List of Reviews for the game")
+    @Response<APIError>(400, "Invalid Game ID")
+    @Response<APIError>(404, "Game Not Found")
+    @Tags("Reviews")
+    @Get("{id}/reviews")
+    public async getGameReviews(@Path() id: number, @Query() byUserId?: number, @Query() includeOwnerReview?: boolean, @Query() textReviewsFirst?: boolean, @Query() page?: number = 0, @Query() limit?: number = 50): Promise<Review[]> {
+        if (isNaN(+id)) {
+            this.setStatus(400);
+            return { error: 'id must be a number' };
+        }
 
 
-/**
- * @swagger
- * 
- * /games/{id}/tags:
- *   post:
- *     summary: Set Tags Associated to Game
- *     description: Clears and sets an array of tag IDs for a game on a user-by-user basis.
- *     tags: 
- *       - Games
- *     produces:
- *       - application/json
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: integer
- *           minimum: 1
- *         required: true
- *         description: The id of the game to add tags to
- *     responses:
- *       200:
- *         description: Full list of tags for the game (or empty array if none)
- *       400:
- *         description: Invalid game id
- *       401:
- *         description: Unauthorized (must log in to add tags)
- *       404:
- *         description: Game not found
- */
-app.route('/:id/tags').post(userCheck(),handle(async (req,res,next) => {
-  if (isNaN(+req.params.id)) {
-    return res.status(400).send({error:'invalid game id'});
-  }
+        const game = await datastore.gameExists(id);
+        if (!game) {
+            this.setStatus(404);
+            return { error: "no game with this id currently exists" }
+        }
 
-  var gameId = parseInt(req.params.id,10);
+        const rows = await datastore.getReviews({
+            game_id: id,
+            user_id: byUserId,
+            includeOwnerReview: includeOwnerReview,
+            textReviewsFirst: textReviewsFirst,
+            page: page, limit: limit,
+            removed: false // TODO: admins should be able to query these
+        });
 
-  const game = await datastore.gameExists(gameId);
-  if (!game) return res.sendStatus(404);
+        return rows;
 
-  if (!(req.body instanceof Array)) 
-    return res.status(400).send({error:'invalid body: expected array of tag ids'});
+    }
 
-  if (req.body.length > 0) {
-    const tagsok = await datastore.tagsExist(req.body)
-    if (!tagsok)
-      return res.status(400).send({error:'invalid body: all tag ids must exist'});
-  }
-  
-  await datastore.setTags(gameId,req.user.sub,req.body)
-  
-  const tags = await datastore.getTagsForGame(gameId);
-  res.send(tags);
-}));
+    /**
+     * Add Review for Game (User/Admin Only)
+     * @summary Add Review for Game (User/Admin Only)
+     */
+    @Tags("Reviews")
+    @Security("bearerAuth", ["user"])
+    @SuccessResponse(200, "Review with additional populated fields")
+    @Response<APIError>(400, "Invalid Game ID")
+    @Response<APIError>(401, "Unauthorized")
+    @Response<APIError>(404, "Game Not Found")
+    @Put("{id}/reviews")
+    public async putGameReview(@Header("Authorization") authorization: string, @Path() id: number, @Body() requestBody: Review): Promise<Review> {
+        // NOTE: auth guard should make the error condition unreachable
+        const user = extractBearerJWT(authorization);
 
-/**
- * @swagger
- * 
- * /games/{id}:
- *   patch:
- *     summary: Update Game (Admin Only)
- *     description: Update Game (Admin Only)
- *     tags: 
- *       - Games
- *     produces:
- *       - application/json
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: integer
- *           minimum: 1
- *         required: true
- *         description: The id of the game to edit
- * 
- *     requestBody:
- *       description: Optional description in *Markdown*
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               name: 
- *                 type: string
- *               url: 
- *                 type: string
- *               urlSpdrn: 
- *                 type: string
- *               author: 
- *                 type: string
- *               collab: 
- *                 type: boolean
- *               dateCreated: 
- *                 type: string
- *               ownerId: 
- *                 type: integer
- *             example:
- *               name: Crimson Needle 3
- *               url: http://fangam.es/crimsonneedle3
- *               author: Kalemandu, Plasmanapkin, Zero-G
- *               collab: true
- *               dateCreated: 2019-06-07
- *               ownerId: 1
- * 
- *     responses:
- *       200:
- *         description: The Game object, after update
- *       400:
- *         description: Invalid game id
- *       403:
- *         description: Insufficient privileges (requires an admin account)
- */
-app.route('/:id').patch(adminCheck(), handle(async (req,res,next) => {
-  if (isNaN(+req.params.id)) {
-    return res.status(400).send({error:'invalid game id'});
-  }
-  var gid = parseInt(req.params.id, 10);
+        if (isNaN(+id)) {
+            this.setStatus(400);
+            return { error: 'id must be a number' };
+        }
 
-  let game = req.body as Game;
-  game.id = gid; 
+        const game = await datastore.gameExists(id);
+        if (!game) {
+            this.setStatus(404);
+            return { error: "no game with this id currently exists" }
+        }
 
-  const gameFound = await datastore.updateGame(game,req.user.isAdmin);
-  if (!gameFound) return res.sendStatus(404);
+        if (requestBody.rating) {
+            requestBody.rating = Math.min(Math.max(requestBody.rating, 0), 100);
+        }
+        if (requestBody.difficulty) {
+            requestBody.difficulty = Math.min(Math.max(requestBody.difficulty, 0), 100);
+        }
 
-  const newGame = await datastore.getGame(gid);
-  if (newGame == null) return res.sendStatus(404);
+        const newReview = await datastore.addReview(requestBody, id, user.sub);
+        return newReview;
+    }
 
-  datastore.addReport({
-    type:"game_update",
-    targetId:""+game.id,
-    report:"Game updated"
-  },req.user.sub);
+    /**
+     * Get Screenshots for Game
+     * @summary Get Screenshots for Game
+     */
+    @Tags("Screenshots")
+    @SuccessResponse(200, "List of screenshots for the game")
+    @Response<APIError>(400, "Invalid Game ID")
+    @Response<APIError>(404, "Game Not Found")
+    @Get("{id}/screenshots")
+    public async getGameScreenshot(@Header("Authorization") authorization?: string, @Path() id: number, @Query() approved?: boolean, @Query() page?: number = 0, @Query() limit?: number = 50): Promise<Screenshot[]> {
+        const isAdmin = false;
+        if (authorization) {
+            try {
+                const user = extractBearerJWT(authorization);
+                isAdmin = user && user.isAdmin;
+            } catch (_) {
+                console.warn("user provided authorization, but it was invalid")
+            }
+        }
 
-  res.send(newGame);
-}));
+        if (isNaN(+id)) {
+            this.setStatus(400);
+            return { error: 'id must be a number' };
+        }
+
+        const game = await datastore.gameExists(id);
+        if (!game) { this.setStatus(404); return { error: "no game with this id currently exists" } }
+
+        if (!isAdmin) approved = true; //only return approved screenshots
+
+        let parms: GetScreenshotParms = { id, page, limit, approved };
+        if (!isAdmin) parms.removed = false;
+        const rows = await datastore.getScreenshots(parms);
+
+        return rows;
+    }
+
+    /**
+     * Add Screenshot for Game (User/Admin Only)
+     * @summary Add Screenshot for Game (User/Admin Only)
+     */
+    @Security("bearerAuth", ["user"])
+    @Tags("Screenshots")
+    @SuccessResponse(200, "Populated Screenshot Details")
+    @Response<APIError>(400, "Invalid Game ID")
+    @Response<APIError>(401, "Unauthorized")
+    @Response<APIError>(404, "Game Not Found")
+    @Post("{id}/screenshots")
+    public async postGameScreenshot(@Header("Authorization") authorization: string, @Path() id: number, @FormField() description?: string = "", @UploadedFile() screenshot: Express.Multer.File): Promise<Screenshot> {
+        // NOTE: auth guard should make the error condition unreachable
+        const user = extractBearerJWT(authorization);
+
+        if (isNaN(+id)) {
+            this.setStatus(400);
+            return { error: 'id must be a number' };
+        }
+        const permissions = await datastore.getPermissions(user.sub);
+        const autoApprove = hasPermission(permissions, Permission.AUTO_APPROVE_SCREENSHOT);
+        const canScreenshot = hasPermission(permissions, Permission.CAN_SCREENSHOT);
+        if (!canScreenshot) {
+            this.setStatus(403);
+            return { error: 'screenshot capability revoked' };
+        }
+
+        const game = await datastore.gameExists(id);
+        if (!game) { this.setStatus(404); return { error: "no game with this id currently exists" } }
+        const ss: Screenshot = {
+            gameId: +id,
+            description: description
+        };
+
+        const ssres = await datastore.addScreenshot(ss, user.sub, autoApprove);
+
+        //TODO: stream images straight into s3 via multer-s3 storage?
+        var metaData = {
+            'Content-Type': 'image/png',
+            'X-Amz-Meta-Testing': 1234,
+            'gameId': ssres.gameId,
+            'id': ssres.id
+        }
+        // Using fPutObject API upload your file to the bucket europetrip.
+        minioClient.fPutObject(config.s3_bucket, `${ssres.id}.png`, screenshot.path, metaData, function(err, etag) {
+            // TODO: don't return raw S3 errors to the user!!!
+            if (err) return console.log(err)
+        });
+
+        if (autoApprove) {
+            datastore.addReport({
+                type: "screenshot",
+                targetId: "" + ssres.id,
+                report: "Screenshot added, automatically approved"
+            }, user.sub);
+        } else {
+            datastore.addReport({
+                type: "screenshot",
+                targetId: "" + ssres.id,
+                report: "Screenshot added, awaiting approval"
+            }, user.sub);
+        }
+
+        return ssres;
+    }
+
+    /**
+     * Get Tags Associated to Game
+     * @summary Get Tags Associated to Game
+     */
+    @Get("{id}/tags")
+    @SuccessResponse(200, "List of tags for the game")
+    @Response<APIError>(400, "Invalid Game ID")
+    @Response<APIError>(404, "Game Not Found")
+    // TODO: add a game tag type
+    public async getGameTags(@Path() id: number, @Query() userId?: number): Promise<any | any[]> {
+        if (isNaN(+id)) {
+            this.setStatus(400);
+            return { error: 'id must be a number' };
+        }
+
+        const game = await datastore.gameExists(id);
+        if (!game) { this.setStatus(404); return { error: "no game with this id currently exists" } }
+
+        const tags = await datastore.getTagsForGame(id, userId);
+        return tags
+    }
+
+    /**
+     * Clears and sets an array of tag IDs for a game on a user-by-user basis.
+     * @summary Set Tags Associated to Game
+     */
+    @Security("bearerAuth", ["user"])
+    @SuccessResponse(200, "Full list of tags for the game")
+    @Response<APIError>(400, "Invalid Game ID")
+    @Response<APIError>(401, "Unauthorized")
+    @Response<APIError>(404, "Game Not Found")
+    @Post("{id}/tags")
+    public async postGameSetTags(@Header("Authorization") authorization: string, @Path() id: number, @Body() requestBody: any[]): Promise<any | any[]> {
+        // NOTE: auth guard should make the error condition unreachable
+        const user = extractBearerJWT(authorization);
+
+        if (isNaN(+id)) {
+            this.setStatus(400);
+            return { error: 'id must be a number' };
+        }
+
+
+        const game = await datastore.gameExists(id);
+        if (!game) { this.setStatus(404); return { error: "no game with this id currently exists" } }
+
+        if (!(requestBody instanceof Array)) {
+            this.setStatus(400); return { error: 'invalid body: expected array of tag ids' };
+        }
+
+        if (requestBody.length > 0) {
+            const tagsok = await datastore.tagsExist(requestBody)
+            if (!tagsok)
+                this.setStatus(400);
+            return { error: 'invalid body: all tag ids must exist' };
+        }
+
+        await datastore.setTags(id, user.sub, requestBody)
+
+        const tags = await datastore.getTagsForGame(id);
+        return tags;
+    }
+
+    /**
+     * Update Game (Admin Only)
+     * @summary Update Game (Admin Only)
+     */
+    @Security("bearerAuth", ["admin"])
+    @SuccessResponse(200, "Game with populated details")
+    @Response<APIError>(400, "Invalid Game ID")
+    @Response<APIError>(403, "Insufficient Privileges")
+    @Patch("{id}")
+    public async patchGame(@Header("Authorization") authorization: string, @Path() id: number, @Body() game: Game): Promise<Game> {
+        // NOTE: auth guard should make the error condition unreachable
+        const user = extractBearerJWT(authorization);
+
+        if (isNaN(+id)) {
+            this.setStatus(400);
+            return { error: 'id must be a number' };
+        }
+
+        game.id = id;
+
+        const gameFound = await datastore.updateGame(game, user.isAdmin);
+        if (!gameFound) { this.setStatus(404); return { error: "no game with this id currently exists" } }
+
+        const newGame = await datastore.getGame(id);
+        if (newGame == null) { this.setStatus(404); return { error: "no game with this id currently exists" } }
+
+        datastore.addReport({
+            type: "game_update",
+            targetId: "" + game.id,
+            report: "Game updated"
+        }, user.sub);
+
+        return newGame
+    }
+}
