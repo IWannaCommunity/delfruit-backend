@@ -8,11 +8,11 @@ COPY package*.json ./
 
 USER node
 
+COPY --chown=node:node . .
+
 RUN npm install
 
 CMD ["npm", "run", "tsoa", "spec-and-routes"]
-
-COPY --chown=node:node . .
 
 EXPOSE 4201
 
