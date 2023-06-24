@@ -132,6 +132,18 @@ async function main(): Promise<number> {
 
     app.use(urlencoded({ extended: true, }));
     RegisterRoutes(app);
+	
+	// Legacy Routes
+	app.use('/api/games', game_router);
+    app.use('/api/users', user_router);
+    app.use('/api/reviews', review_router);
+    app.use('/api/lists', list_router);
+    app.use('/api/ping', ping_router);
+    app.use('/api/message', message_router);
+    app.use('/api/screenshots', screenshot_router);
+    app.use('/api/news', news_router);
+    app.use('/api/reports', report_router);
+    app.use('/api/tags', tag_router);
 
     console.log('Initializing object storage...');
 
