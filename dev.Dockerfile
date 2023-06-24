@@ -8,11 +8,15 @@ WORKDIR /home/node/app
 
 COPY package*.json ./
 
-USER node
+COPY --chown=node:node package.json .
 
 RUN npm install
 
+CMD ["npm", "run", "tsoa", "spec-and-routes"]
+
 COPY --chown=node:node . .
+
+USER node
 
 RUN cp ./src/config/config.dev.json ./src/config/config.json
 
