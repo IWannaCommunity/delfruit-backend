@@ -6,13 +6,15 @@ WORKDIR /home/node/app
 
 COPY package*.json ./
 
-USER node
-
-COPY --chown=node:node . .
+COPY --chown=node:node package.json .
 
 RUN npm install
 
 CMD ["npm", "run", "tsoa", "spec-and-routes"]
+
+COPY --chown=node:node . .
+
+USER node
 
 EXPOSE 4201
 
