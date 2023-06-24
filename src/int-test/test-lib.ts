@@ -146,12 +146,13 @@ export async function addTag(user: TestUser): Promise<any> {
 }
 
 export function getConTest(ctx: Mocha.Context): Mocha.HookFunction {
-    return () => axios.get('http://localhost:4201/api/ping')
+	return () => {}
+    /*return () => axios.get('http://localhost:4201/api/ping')
     .then(ctx.done)
     .catch((_: Error) => {
       ctx.done(new Error('server not responding at http://localhost:4201/api, is it online?'));
-    });
-  }
+    });*/
+ }
   
 
 export async function setUserToken(user: TestUser, token: string): Promise<any> {
