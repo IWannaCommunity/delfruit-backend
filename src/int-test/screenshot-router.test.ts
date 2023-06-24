@@ -16,7 +16,7 @@ describe('screenshot endpoint', function () {
       const game = await createGame();
       const ss = await addScreenshot(user,game);
 
-      const rsp = await axios.get(`http://localhost:4201/api/screenshots`);
+      const rsp = await axios.get(`http://localhost:4201/screenshots`);
       expect(rsp).to.have.property('status').and.equal(200);
       expect(rsp).to.have.property('data');
       //todo: check if array contains the new screenshot
@@ -27,7 +27,7 @@ describe('screenshot endpoint', function () {
       const game = await createGame();
       const ss = await addScreenshot(user,game);
       
-      const rsp = await axios.get(`http://localhost:4201/api/screenshots/${ss.id}`);
+      const rsp = await axios.get(`http://localhost:4201/screenshots/${ss.id}`);
       expect(rsp).to.have.property('status').and.equal(200);
       expect(rsp).to.have.property('data');
       //todo: check if object equals created screenshot
@@ -38,7 +38,7 @@ describe('screenshot endpoint', function () {
       const game = await createGame();
       const ss = await addScreenshot(admin,game);
 
-      const rsp = await axios.delete(`http://localhost:4201/api/screenshots/${ss.id}`,
+      const rsp = await axios.delete(`http://localhost:4201/screenshots/${ss.id}`,
         {headers: {'Authorization': "Bearer " + admin.token}});
       expect(rsp).to.have.property('status').and.equal(204);
     });
@@ -51,7 +51,7 @@ describe('screenshot endpoint', function () {
       //create and approve 10 screenshots
       for (let i = 0; i < 10; i++) {
         const ss = await addScreenshot(user,game);
-        await axios.patch(`http://localhost:4201/api/screenshots/${ss.id}`,{approved: true},
+        await axios.patch(`http://localhost:4201/screenshots/${ss.id}`,{approved: true},
           {headers: {'Authorization': "Bearer " + admin.token}});
 
           if (i === 8) { //one before end
@@ -70,7 +70,7 @@ describe('screenshot endpoint', function () {
       const ss = await addScreenshot(admin,game);
 
       try {
-        await axios.delete(`http://localhost:4201/api/screenshots/${ss.id}`,
+        await axios.delete(`http://localhost:4201/screenshots/${ss.id}`,
           {headers: {'Authorization': "Bearer " + admin.token}});
       } catch (err) {
         expect(err).to.have.property('response');
@@ -89,7 +89,7 @@ describe('screenshot endpoint', function () {
       data.append('screenshot', fs.createReadStream(__dirname+'/HYPE.png'));
   
       try {
-        await axios.post(`http://localhost:4201/api/games/${game.id}/screenshots`,
+        await axios.post(`http://localhost:4201/games/${game.id}/screenshots`,
           data,
           {headers: data.getHeaders()});
       } catch (err) {
@@ -106,7 +106,7 @@ describe('screenshot endpoint', function () {
       const ss = await addScreenshot(user,game);
       expect(ss).to.have.property('approved').and.equal(null);
       
-      let rsp = await axios.patch(`http://localhost:4201/api/screenshots/${ss.id}`,{
+      let rsp = await axios.patch(`http://localhost:4201/screenshots/${ss.id}`,{
         approved: true
       },
         {headers: {'Authorization': "Bearer " + user.token}});
@@ -114,7 +114,7 @@ describe('screenshot endpoint', function () {
       expect(rsp).to.have.property('data');
       expect(rsp.data).to.have.property('approved').and.equal(true);
       
-      rsp = await axios.get(`http://localhost:4201/api/screenshots/${ss.id}`);
+      rsp = await axios.get(`http://localhost:4201/screenshots/${ss.id}`);
       expect(rsp).to.have.property('status').and.equal(200);
       expect(rsp).to.have.property('data');
       expect(rsp.data).to.have.property('approved').and.equal(true);
@@ -126,7 +126,7 @@ describe('screenshot endpoint', function () {
       const ss = await addScreenshot(user,game);
       expect(ss).to.have.property('approved').and.equal(null);
       
-      let rsp = await axios.patch(`http://localhost:4201/api/screenshots/${ss.id}`,{
+      let rsp = await axios.patch(`http://localhost:4201/screenshots/${ss.id}`,{
         approved: false
       },
         {headers: {'Authorization': "Bearer " + user.token}});
@@ -143,18 +143,18 @@ describe('screenshot endpoint', function () {
       expect(ss).to.have.property('approved').and.equal(null);
 
       try {
-        await axios.get(`http://localhost:4201/api/screenshots/${ss.id}`);
+        await axios.get(`http://localhost:4201/screenshots/${ss.id}`);
       } catch (err) {
         expect(err).to.have.property('response');
         expect(err.response).to.have.property('status').and.equal(404);
         return;
       }
       
-      let rsp = await axios.patch(`http://localhost:4201/api/screenshots/${ss.id}`,{
+      let rsp = await axios.patch(`http://localhost:4201/screenshots/${ss.id}`,{
         approved: true
       },{headers: {'Authorization': "Bearer " + admin.token}});
       
-      rsp = await axios.get(`http://localhost:4201/api/screenshots/${ss.id}`);
+      rsp = await axios.get(`http://localhost:4201/screenshots/${ss.id}`);
       expect(rsp).to.have.property('status').and.equal(200);
       expect(rsp).to.have.property('data');
       expect(rsp.data).to.have.property('approved').and.equal(true);
@@ -167,7 +167,7 @@ describe('screenshot endpoint', function () {
       expect(ss).to.have.property('approved').and.equal(null);
 
       try {
-        await axios.patch(`http://localhost:4201/api/screenshots/${ss.id}`,{
+        await axios.patch(`http://localhost:4201/screenshots/${ss.id}`,{
           approved: true
         });
       } catch (err) {
@@ -185,7 +185,7 @@ describe('screenshot endpoint', function () {
       expect(ss).to.have.property('approved').and.equal(null);
 
       try {
-        await axios.patch(`http://localhost:4201/api/screenshots/${ss.id}`,{
+        await axios.patch(`http://localhost:4201/screenshots/${ss.id}`,{
           approved: true
         },
         {headers: {'Authorization': "Bearer " + user.token}});

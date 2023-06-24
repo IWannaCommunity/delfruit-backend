@@ -19,7 +19,7 @@ describe('user endpoint', function () {
   
     it('returns a 401 if the token is invalid', async () => {
       try {
-        await axios.get('http://localhost:4201/api/users',
+        await axios.get('http://localhost:4201/users',
           {headers: {'Authorization': "Bearer xyz"}});
       } catch (err) {
         expect(err).to.have.property('response');
@@ -30,7 +30,7 @@ describe('user endpoint', function () {
     it('allows a user to be registered', async () => {
       const usernameA = genUsername();
 
-      const rsp = await axios.post('http://localhost:4201/api/users',
+      const rsp = await axios.post('http://localhost:4201/users',
         {username:usernameA,password:"test-pw",email:"test@example.com"});
         expect(rsp).to.have.property('status').and.equal(200);
         expect(rsp).to.have.property('data');
@@ -48,7 +48,7 @@ describe('user endpoint', function () {
       bodyFormData.append('email', 'test@example.com');
 
       try {
-        const rsp = await axios.post('http://localhost:4201/api/users',
+        const rsp = await axios.post('http://localhost:4201/users',
           bodyFormData);
         fail("registration should not have been successful");
       } catch (err) {
@@ -63,7 +63,7 @@ describe('user endpoint', function () {
 
       //second, should fail
       try {
-        await axios.post('http://localhost:4201/api/users',
+        await axios.post('http://localhost:4201/users',
           {username:user.username,password:"test-pw",email:"test@example.com"});
         fail("second registration should not have been successful");
       } catch (err) {
@@ -73,7 +73,7 @@ describe('user endpoint', function () {
     });
 
     it('returns user information', async () => {
-      const rsp = await axios.get('http://localhost:4201/api/users/1');
+      const rsp = await axios.get('http://localhost:4201/users/1');
       expect(rsp).to.have.property('status').and.equal(200);
       expect(rsp).to.have.property('data');
       expect(rsp.data).to.have.property('id').and.equal(1);
@@ -84,7 +84,7 @@ describe('user endpoint', function () {
       const u = await createUser(false);
 
       //update
-      const patch = await axios.patch(`http://localhost:4201/api/users/${u.id}`,
+      const patch = await axios.patch(`http://localhost:4201/users/${u.id}`,
           {email:"new@example.com"},
           {headers: {'Authorization': "Bearer " + u.token}});
       expect(patch).to.have.property('status').and.equal(200);
@@ -93,7 +93,7 @@ describe('user endpoint', function () {
       expect(patch.data).to.have.property('id').and.equal(u.id);
 
       //verify
-      const user = await axios.get(`http://localhost:4201/api/users/${u.id}`,
+      const user = await axios.get(`http://localhost:4201/users/${u.id}`,
           {headers: {'Authorization': "Bearer " + u.token}});
       expect(user).to.have.property('status').and.equal(200);
       expect(user).to.have.property('data');
@@ -106,7 +106,7 @@ describe('user endpoint', function () {
       const Bob = await createUser(false);
 
       try {
-        await axios.patch(`http://localhost:4201/api/users/${Alice.id}`,
+        await axios.patch(`http://localhost:4201/users/${Alice.id}`,
           {email:"new@example.com"},
           {headers: {'Authorization': "Bearer " + Bob.token}});
         fail("modify should not have been successful");
@@ -120,7 +120,7 @@ describe('user endpoint', function () {
       const user = await createUser(false);
 
       try {
-        await axios.patch(`http://localhost:4201/api/users/${user.id}`,
+        await axios.patch(`http://localhost:4201/users/${user.id}`,
             {email:"new@example.com"});
         fail("modify should not have been successful");
       } catch (err) {
@@ -133,13 +133,13 @@ describe('user endpoint', function () {
       const user = await createUser(false);
 
       //update
-      const patch = await axios.patch(`http://localhost:4201/api/users/${user.id}`,
+      const patch = await axios.patch(`http://localhost:4201/users/${user.id}`,
           {password:"new-pw", currentPassword:"test-pw"},
           {headers: {'Authorization': "Bearer " + user.token}});
       expect(patch).to.have.property('status').and.equal(200);
 
       //verify login
-      const login = await axios.post('http://localhost:4201/api/auth/login',
+      const login = await axios.post('http://localhost:4201/auth/login',
           {username:user.username,password:"new-pw"});
       expect(login).to.have.property('status').and.equal(200);
     });
@@ -149,7 +149,7 @@ describe('user endpoint', function () {
 
       //update
       try {
-        const patch = await axios.patch(`http://localhost:4201/api/users/${user.id}`,
+        const patch = await axios.patch(`http://localhost:4201/users/${user.id}`,
           {password:"new-pw", currentPassword:"not-correct-password"},
           {headers: {'Authorization': "Bearer " + user.token}});
           fail("modify should not have been successful");
@@ -164,7 +164,7 @@ describe('user endpoint', function () {
 
       //update
       try {
-        const patch = await axios.patch(`http://localhost:4201/api/users/${user.id}`,
+        const patch = await axios.patch(`http://localhost:4201/users/${user.id}`,
           {password:"new-pw"},
           {headers: {'Authorization': "Bearer " + user.token}});
           fail("modify should not have been successful");
@@ -177,7 +177,7 @@ describe('user endpoint', function () {
     it('gets lists for a user', async () => {
       const user = await createUser(false);
       
-      const rsp = await axios.get(`http://localhost:4201/api/users/${user.id}/lists`,
+      const rsp = await axios.get(`http://localhost:4201/users/${user.id}/lists`,
         {headers: {'Authorization': "Bearer " + user.token}});
       expect(rsp).to.have.property('status').and.equal(200);
       expect(rsp).to.have.property('data');
@@ -188,7 +188,7 @@ describe('user endpoint', function () {
       const user = await createUser(false);
       const targetUser = await createUser(false);
       
-      const rsp = await axios.put(`http://localhost:4201/api/users/${user.id}/follows/${targetUser.id}`,{},
+      const rsp = await axios.put(`http://localhost:4201/users/${user.id}/follows/${targetUser.id}`,{},
         {headers: {'Authorization': "Bearer " + user.token}});
       expect(rsp).to.have.property('status').and.equal(204);
     });
@@ -197,11 +197,11 @@ describe('user endpoint', function () {
       const user = await createUser(false);
       const targetUser = await createUser(false);
       
-      let rsp = await axios.put(`http://localhost:4201/api/users/${user.id}/follows/${targetUser.id}`,{},
+      let rsp = await axios.put(`http://localhost:4201/users/${user.id}/follows/${targetUser.id}`,{},
         {headers: {'Authorization': "Bearer " + user.token}});
       expect(rsp).to.have.property('status').and.equal(204);
       
-      rsp = await axios.delete(`http://localhost:4201/api/users/${user.id}/follows/${targetUser.id}`,
+      rsp = await axios.delete(`http://localhost:4201/users/${user.id}/follows/${targetUser.id}`,
         {headers: {'Authorization': "Bearer " + user.token}});
       expect(rsp).to.have.property('status').and.equal(204);
     });
@@ -210,7 +210,7 @@ describe('user endpoint', function () {
       const hacker = await createUser(false);
       const victim = await createUser(false);
       
-      let rsp = await axios.get(`http://localhost:4201/api/users/${victim.id}`,
+      let rsp = await axios.get(`http://localhost:4201/users/${victim.id}`,
         {headers: {'Authorization': "Bearer " + hacker.token}});
       expect(rsp).to.have.property('status').and.equal(200);
       expect(rsp).to.have.property('data');
@@ -225,7 +225,7 @@ describe('user endpoint', function () {
     it('does not expose sensitive user data to anons', async () => {
       const victim = await createUser(false);
       
-      let rsp = await axios.get(`http://localhost:4201/api/users/${victim.id}`);
+      let rsp = await axios.get(`http://localhost:4201/users/${victim.id}`);
       expect(rsp).to.have.property('status').and.equal(200);
       expect(rsp).to.have.property('data');
 
@@ -239,7 +239,7 @@ describe('user endpoint', function () {
     it('does not expose sensitive user data on the user list to anons', async () => {
       await createUser(false);
       
-      let rsp = await axios.get(`http://localhost:4201/api/users`);
+      let rsp = await axios.get(`http://localhost:4201/users`);
       expect(rsp).to.have.property('status').and.equal(200);
       expect(rsp).to.have.property('data').and.be.an('array');
       expect(rsp.data.length).to.be.greaterThan(0);
@@ -254,7 +254,7 @@ describe('user endpoint', function () {
     it('allows retrieval of available badge list', async () => {
       const user = await createUser(false);
       
-      let rsp = await axios.get(`http://localhost:4201/api/users/${user.id}/badges`,
+      let rsp = await axios.get(`http://localhost:4201/users/${user.id}/badges`,
         {headers: {'Authorization': "Bearer " + user.token}});
         expect(rsp).to.have.property('status').and.equal(200);
         expect(rsp).to.have.property('data').and.be.an('array');
@@ -264,7 +264,7 @@ describe('user endpoint', function () {
     it('allows searching for user by name', async () => {
       const user = await createUser(false);
       
-      let rsp = await axios.get(`http://localhost:4201/api/users`,
+      let rsp = await axios.get(`http://localhost:4201/users`,
         {headers: {'Authorization': "Bearer " + user.token},
           params:{name:user.username.substring(3,10)}});
         expect(rsp).to.have.property('status').and.equal(200);
@@ -275,7 +275,7 @@ describe('user endpoint', function () {
     it("includes permissions for self", async () => {
       const user = await createUser(true);
       
-      let rsp = await axios.get(`http://localhost:4201/api/users/${user.id}`,
+      let rsp = await axios.get(`http://localhost:4201/users/${user.id}`,
         {headers: {'Authorization': "Bearer " + user.token}});
         expect(rsp).to.have.property('status').and.equal(200);
         expect(rsp).to.have.property('data').and.be.an('object');
@@ -286,7 +286,7 @@ describe('user endpoint', function () {
       const user = await createUser(true);
       const target_user = await createUser(false);
       
-      let rsp = await axios.get(`http://localhost:4201/api/users/${target_user.id}`,
+      let rsp = await axios.get(`http://localhost:4201/users/${target_user.id}`,
         {headers: {'Authorization': "Bearer " + user.token}});
         expect(rsp).to.have.property('status').and.equal(200);
         expect(rsp).to.have.property('data').and.be.an('object');
@@ -297,7 +297,7 @@ describe('user endpoint', function () {
       const user = await createUser(false);
       const target_user = await createUser(false);
       
-      let rsp = await axios.get(`http://localhost:4201/api/users/${target_user.id}`,
+      let rsp = await axios.get(`http://localhost:4201/users/${target_user.id}`,
         {headers: {'Authorization': "Bearer " + user.token}});
         expect(rsp).to.have.property('status').and.equal(200);
         expect(rsp).to.have.property('data').and.be.an('object');
@@ -308,12 +308,12 @@ describe('user endpoint', function () {
       const user = await createUser(true);
       const target_user = await createUser(false);
       const perm = "CAN_REPORT";
-      let revokeRsp = await axios.patch(`http://localhost:4201/api/users/${target_user.id}/permissions/${perm}`,
+      let revokeRsp = await axios.patch(`http://localhost:4201/users/${target_user.id}/permissions/${perm}`,
         {revoked_until:moment().add(1,'days')},
         {headers: {'Authorization': "Bearer " + user.token}});
       expect(revokeRsp).to.have.property('status').and.equal(200);
       
-      let rsp = await axios.get(`http://localhost:4201/api/users/${target_user.id}`,
+      let rsp = await axios.get(`http://localhost:4201/users/${target_user.id}`,
         {headers: {'Authorization': "Bearer " + user.token}});
       expect(rsp).to.have.property('status').and.equal(200);
       expect(rsp).to.have.property('data').and.be.an('object');

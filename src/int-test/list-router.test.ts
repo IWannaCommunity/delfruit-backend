@@ -10,7 +10,7 @@ describe('list endpoint', function () {
 
   it('allows users to create a list', async () => {
     const user = await createUser(false);
-    const rsp = await axios.post('http://localhost:4201/api/lists',
+    const rsp = await axios.post('http://localhost:4201/lists',
       {
         name:"new list",
         description:"very new list"
@@ -38,7 +38,7 @@ describe('list endpoint', function () {
 
   it('requires you to be logged in', async () => {
     try {
-      await axios.post('http://localhost:4201/api/lists',
+      await axios.post('http://localhost:4201/lists',
         {
           name:"new list"
         });

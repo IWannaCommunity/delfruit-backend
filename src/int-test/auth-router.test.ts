@@ -13,14 +13,14 @@ describe('auth endpoint', function () {
   
     it('allows the user to log in', async () => {
       //register
-      const reg = await axios.post('http://localhost:4201/api/users',
+      const reg = await axios.post('http://localhost:4201/users',
           {username:usernameA,password:"test-pw",email:"test@example.com"});
       expect(reg).to.have.property('status').and.equal(200);
       expect(reg).to.have.property('data');
       expect(reg.data).to.have.property('token').and.be.a('string');
   
       //login
-      const login = await axios.post('http://localhost:4201/api/auth/login',
+      const login = await axios.post('http://localhost:4201/auth/login',
           {username:usernameA,password:"test-pw"});
       expect(login).to.have.property('status').and.equal(200);
       expect(login).to.have.property('data');
@@ -32,7 +32,7 @@ describe('auth endpoint', function () {
   
       //login
       try {
-        await axios.post('http://localhost:4201/api/auth/login',
+        await axios.post('http://localhost:4201/auth/login',
             {username:user.username,password:"this is the wrong password"});
       } catch (err) {
         expect(err).to.have.property('response');
@@ -45,7 +45,7 @@ describe('auth endpoint', function () {
       const user = await createUser(false);
   
       //login
-      const result = await axios.post('http://localhost:4201/api/auth/refresh',
+      const result = await axios.post('http://localhost:4201/auth/refresh',
       {},
       {headers: {'Authorization': "Bearer " + user.token}});
       expect(result).to.have.property('status').and.equal(200);
@@ -59,7 +59,7 @@ describe('auth endpoint', function () {
       const user = await createUser(false);
   
       //login
-      const login = await axios.post('http://localhost:4201/api/auth/login',
+      const login = await axios.post('http://localhost:4201/auth/login',
           {username:user.username,password:user.password});
       expect(login).to.have.property('status').and.equal(200);
       expect(login).to.have.property('data');
@@ -76,7 +76,7 @@ describe('auth endpoint', function () {
       //wait a second so the new timeout is later
       await new Promise(res => setTimeout(res, 1100));
 
-      const rsp = await axios.get('http://localhost:4201/api/users',
+      const rsp = await axios.get('http://localhost:4201/users',
         {headers: {'Authorization': "Bearer " + user.token}});
       expect(rsp).to.have.property('status').and.equal(200);
       expect(rsp.headers).to.have.property('token').and.be.a('string');
@@ -89,7 +89,7 @@ describe('auth endpoint', function () {
       const user = await createUser(false);
   
       //login
-      const login = await axios.post('http://localhost:4201/api/auth/request-reset',
+      const login = await axios.post('http://localhost:4201/auth/request-reset',
           {username:user.username, email: user.email});
       expect(login).to.have.property('status').and.equal(204);
     });
@@ -97,7 +97,7 @@ describe('auth endpoint', function () {
     it("doesn't allow password reset request without email", async () => {
       const user = await createUser(false);
       try {
-        await axios.post('http://localhost:4201/api/auth/request-reset',
+        await axios.post('http://localhost:4201/auth/request-reset',
             {username:user.username});
       } catch (err) {
         expect(err).to.have.property('response');
@@ -109,7 +109,7 @@ describe('auth endpoint', function () {
 
     it("doesn't allow password reset for blank requests", async () => {
       try {
-        await axios.post('http://localhost:4201/api/auth/reset',{});
+        await axios.post('http://localhost:4201/auth/reset',{});
       } catch (err) {
         expect(err).to.have.property('response');
         expect(err.response).to.have.property('status').and.equal(401);
@@ -123,7 +123,7 @@ describe('auth endpoint', function () {
 
       await setUserToken(user,"test-token");
 
-      const req = await axios.post('http://localhost:4201/api/auth/reset',{
+      const req = await axios.post('http://localhost:4201/auth/reset',{
         username:user.username,
         token:"test-token",
         password:"new-password"

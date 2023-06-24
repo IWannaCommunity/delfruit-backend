@@ -12,7 +12,7 @@ var expect = chai.expect;
 async function createNews(): Promise<News> {
   const admin = await createUser(true);
     
-  const rsp = await axios.post('http://localhost:4201/api/news', {
+  const rsp = await axios.post('http://localhost:4201/news', {
       title:"news title",
       short:"check me out",
       news:"long news article"
@@ -29,7 +29,7 @@ describe('news endpoint', function () {
   it('allows admins to add news', async() => {
     const admin = await createUser(true);
     
-    const rsp = await axios.post('http://localhost:4201/api/news', {
+    const rsp = await axios.post('http://localhost:4201/news', {
         title:"news title",
         short:"check me out",
         news:"long news article"
@@ -51,12 +51,12 @@ describe('news endpoint', function () {
     const news = await createNews();
     const admin = await createUser(true);
     
-    const rsp = await axios.delete(`http://localhost:4201/api/news/${news.id}`,
+    const rsp = await axios.delete(`http://localhost:4201/news/${news.id}`,
     {headers: {'Authorization': "Bearer " + admin.token}});
     expect(rsp).to.have.property('status').and.equal(204);
 
     try {
-      await axios.get(`http://localhost:4201/api/news/${news.id}`);
+      await axios.get(`http://localhost:4201/news/${news.id}`);
     } catch (err) {
       expect(err).to.have.property('response');
       expect(err.response).to.have.property('status').and.equal(404);
@@ -67,7 +67,7 @@ describe('news endpoint', function () {
 
   it('prevents anons from adding news', async() => {
     try {
-      await axios.post('http://localhost:4201/api/news', {
+      await axios.post('http://localhost:4201/news', {
           title:"news title",
           short:"check me out",
           news:"long news article"
@@ -83,7 +83,7 @@ describe('news endpoint', function () {
   it('prevents users from adding news', async() => {
     const user = await createUser(false);
     try {
-      await axios.post('http://localhost:4201/api/news', {
+      await axios.post('http://localhost:4201/news', {
           title:"news title",
           short:"check me out",
           news:"long news article"
@@ -100,7 +100,7 @@ describe('news endpoint', function () {
   it('returns a list of news for anons', async() => {
     await createNews();
     
-    const rsp = await axios.get('http://localhost:4201/api/news');
+    const rsp = await axios.get('http://localhost:4201/news');
     expect(rsp).to.have.property('status').and.equal(200);
     expect(rsp).to.have.property('data').and.be.an('array');
   });
@@ -108,7 +108,7 @@ describe('news endpoint', function () {
   it('returns an article by id for anons', async() => {
     const article = await createNews();
     
-    const rsp = await axios.get(`http://localhost:4201/api/news/${article.id}`);
+    const rsp = await axios.get(`http://localhost:4201/news/${article.id}`);
     expect(rsp).to.have.property('status').and.equal(200);
     expect(rsp).to.have.property('data')
     expect(rsp.data).to.have.property('id').and.equal(article.id);
@@ -117,7 +117,7 @@ describe('news endpoint', function () {
   it('returns the single, latest article', async() => {
     await createNews();
     
-    const rsp = await axios.get('http://localhost:4201/api/news',{
+    const rsp = await axios.get('http://localhost:4201/news',{
       params: {limit: 1, orderCol: 'date_created', orderDir: 'DESC'}
     });
     expect(rsp).to.have.property('status').and.equal(200);

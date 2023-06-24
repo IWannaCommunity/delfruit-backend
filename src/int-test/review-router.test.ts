@@ -15,7 +15,7 @@ describe('review endpoint', function () {
       const game = await createGame();
       const ss = await addScreenshot(user,game);
 
-      const rsp = await axios.get(`http://localhost:4201/api/screenshots`);
+      const rsp = await axios.get(`http://localhost:4201/screenshots`);
       expect(rsp).to.have.property('status').and.equal(200);
       expect(rsp).to.have.property('data');*/
     });
@@ -25,7 +25,7 @@ describe('review endpoint', function () {
       const game = await createGame();
       const rv = await addReview(user,game);
       
-      const rsp = await axios.get(`http://localhost:4201/api/reviews/${rv.id}`);
+      const rsp = await axios.get(`http://localhost:4201/reviews/${rv.id}`);
       expect(rsp).to.have.property('status').and.equal(200);
       expect(rsp).to.have.property('data');
       //todo: verify data
@@ -36,7 +36,7 @@ describe('review endpoint', function () {
       const game = await createGame();
       const rv = await addReview(admin,game);
 
-      const rsp = await axios.patch(`http://localhost:4201/api/reviews/${rv.id}`,
+      const rsp = await axios.patch(`http://localhost:4201/reviews/${rv.id}`,
         {
           removed: true
         },
@@ -49,12 +49,12 @@ describe('review endpoint', function () {
       const game = await createGame();
       const rv = await addReview(admin,game);
 
-      let rsp = await axios.patch(`http://localhost:4201/api/reviews/${rv.id}`,
+      let rsp = await axios.patch(`http://localhost:4201/reviews/${rv.id}`,
         { removed: true },
         {headers: {'Authorization': "Bearer " + admin.token}});
       expect(rsp).to.have.property('status').and.equal(204);
 
-      rsp = await axios.patch(`http://localhost:4201/api/reviews/${rv.id}`,
+      rsp = await axios.patch(`http://localhost:4201/reviews/${rv.id}`,
         { removed: false },
         {headers: {'Authorization': "Bearer " + admin.token}});
       expect(rsp).to.have.property('status').and.equal(204);
@@ -65,7 +65,7 @@ describe('review endpoint', function () {
       const game = await createGame();
       const rv = await addReview(user,game);
 
-      const rsp = await axios.patch(`http://localhost:4201/api/reviews/${rv.id}`,
+      const rsp = await axios.patch(`http://localhost:4201/reviews/${rv.id}`,
         { removed: true },
         {headers: {'Authorization': "Bearer " + user.token}});
       expect(rsp).to.have.property('status').and.equal(204);
@@ -77,13 +77,13 @@ describe('review endpoint', function () {
       const game = await createGame();
       const rv = await addReview(admin,game);
 
-      const rsp = await axios.patch(`http://localhost:4201/api/reviews/${rv.id}`,
+      const rsp = await axios.patch(`http://localhost:4201/reviews/${rv.id}`,
         { removed: true },
         {headers: {'Authorization': "Bearer " + admin.token}});
       expect(rsp).to.have.property('status').and.equal(204);
 
       try {
-        await axios.delete(`http://localhost:4201/api/reviews/${rv.id}`,
+        await axios.delete(`http://localhost:4201/reviews/${rv.id}`,
           {headers: {'Authorization': "Bearer " + user.token}});
       } catch (err) {
         expect(err).to.have.property('response');
@@ -100,7 +100,7 @@ describe('review endpoint', function () {
       const rv = await addReview(user,game);
       
       try {
-        await axios.patch(`http://localhost:4201/api/reviews/${rv.id}`,
+        await axios.patch(`http://localhost:4201/reviews/${rv.id}`,
           { removed: true },
           {headers: {'Authorization': "Bearer " + otherUser.token}});
       } catch (err) {
@@ -118,7 +118,7 @@ describe('review endpoint', function () {
       const rv = await addReview(reviewer,game);
       
       const rsp = await axios.put(
-        `http://localhost:4201/api/reviews/${rv.id}/likes/${liker.id}`,{},
+        `http://localhost:4201/reviews/${rv.id}/likes/${liker.id}`,{},
         {headers: {'Authorization': "Bearer " + liker.token}});
       expect(rsp).to.have.property('status').and.equal(204);
     });
@@ -130,12 +130,12 @@ describe('review endpoint', function () {
       const rv = await addReview(reviewer,game);
 
       let rsp = await axios.put(
-        `http://localhost:4201/api/reviews/${rv.id}/likes/${liker.id}`,{},
+        `http://localhost:4201/reviews/${rv.id}/likes/${liker.id}`,{},
         {headers: {'Authorization': "Bearer " + liker.token}});
       expect(rsp).to.have.property('status').and.equal(204);
 
       rsp = await axios.delete(
-        `http://localhost:4201/api/reviews/${rv.id}/likes/${liker.id}`,
+        `http://localhost:4201/reviews/${rv.id}/likes/${liker.id}`,
         {headers: {'Authorization': "Bearer " + liker.token}});
       expect(rsp).to.have.property('status').and.equal(204);
     });
@@ -147,12 +147,12 @@ describe('review endpoint', function () {
       const rv = await addReview(reviewer,game);
 
       let rsp = await axios.put(
-        `http://localhost:4201/api/reviews/${rv.id}/likes/${liker.id}`,{},
+        `http://localhost:4201/reviews/${rv.id}/likes/${liker.id}`,{},
         {headers: {'Authorization': "Bearer " + liker.token}});
       expect(rsp).to.have.property('status').and.equal(204);
 
       rsp = await axios.put(
-        `http://localhost:4201/api/reviews/${rv.id}/likes/${liker.id}`,{},
+        `http://localhost:4201/reviews/${rv.id}/likes/${liker.id}`,{},
         {headers: {'Authorization': "Bearer " + liker.token}});
       expect(rsp).to.have.property('status').and.equal(204);
     });
@@ -164,7 +164,7 @@ describe('review endpoint', function () {
       const rv = await addReview(user,game);
       const rv2 = await addReview(user,game2);
       
-      const rsp = await axios.get(`http://localhost:4201/api/reviews`);
+      const rsp = await axios.get(`http://localhost:4201/reviews`);
       expect(rsp).to.have.property('status').and.equal(200);
       expect(rsp).to.have.property('data');
       expect(rsp.data).to.be.an.instanceof(Array);

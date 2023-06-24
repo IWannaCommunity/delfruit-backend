@@ -8,7 +8,7 @@ describe('ping endpoint', function () {
   before(getConTest(this.ctx));
 
   it('responds with pong', async () => {
-    const rsp = await axios.get('http://localhost:4201/api/ping');
+    const rsp = await axios.get('http://localhost:4201/ping');
     expect(rsp).to.have.property('data').and.equal('pong');
   });
 });

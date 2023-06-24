@@ -22,7 +22,7 @@ describe('tag endpoint', function () {
   
     it('prevents anons from creating tags', async () => {
       try {
-        await axios.post('http://localhost:4201/api/tags',
+        await axios.post('http://localhost:4201/tags',
         {name:randomName()});
       } catch (err) {
         expect(err).to.have.property('response');
@@ -37,7 +37,7 @@ describe('tag endpoint', function () {
 
       const nm = randomName();
 
-      const rsp = await axios.post('http://localhost:4201/api/tags',
+      const rsp = await axios.post('http://localhost:4201/tags',
         {name:nm},
         {headers: {'Authorization': "Bearer " + user.token}});
 
@@ -52,12 +52,12 @@ describe('tag endpoint', function () {
 
       const nm = randomName();
 
-      const rsp = await axios.post('http://localhost:4201/api/tags',
+      const rsp = await axios.post('http://localhost:4201/tags',
         {name:nm},
         {headers: {'Authorization': "Bearer " + user.token}});
         expect(rsp).to.have.property('status').and.equal(200);
 
-      const rsp2 = await axios.get(`http://localhost:4201/api/tags?q=${nm.substr(1,15)}`);
+      const rsp2 = await axios.get(`http://localhost:4201/tags?q=${nm.substr(1,15)}`);
       expect(rsp2).to.have.property('status').and.equal(200);
       expect(rsp2).to.have.property('data');
       expect(rsp2.data[0]).to.have.property('name');

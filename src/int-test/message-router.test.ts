@@ -12,7 +12,7 @@ describe('message endpoint', function () {
       const recipient = await createUser(false);
 
       //send
-      const rsp = await axios.post('http://localhost:4201/api/message',
+      const rsp = await axios.post('http://localhost:4201/message',
           {
             userToId:recipient.id,
             subject:"neat message",
@@ -27,7 +27,7 @@ describe('message endpoint', function () {
       const recipient = await createUser(false);
 
       //send
-      const rsp = await axios.post('http://localhost:4201/api/message',
+      const rsp = await axios.post('http://localhost:4201/message',
           {
             userToId:recipient.id,
             subject:"neat message",
@@ -37,7 +37,7 @@ describe('message endpoint', function () {
       expect(rsp).to.have.property('status').and.equal(204);
 
       //check receipt
-      const rcpt = await axios.get('http://localhost:4201/api/message/inbox',
+      const rcpt = await axios.get('http://localhost:4201/message/inbox',
           {headers: {'Authorization': "Bearer " + recipient.token}});
       expect(rcpt).to.have.property('status').and.equal(200);
       expect(rcpt).to.have.property('data');
@@ -50,7 +50,7 @@ describe('message endpoint', function () {
       const recipient = await createUser(false);
 
       //send
-      const msg = await axios.post('http://localhost:4201/api/message',
+      const msg = await axios.post('http://localhost:4201/message',
           {
             userToId:recipient.id,
             subject:"neat message",
@@ -60,14 +60,14 @@ describe('message endpoint', function () {
       expect(msg).to.have.property('status').and.equal(204);
 
       //check receipt
-      const rcpt = await axios.get('http://localhost:4201/api/message/inbox',
+      const rcpt = await axios.get('http://localhost:4201/message/inbox',
           {headers: {'Authorization': "Bearer " + recipient.token}});
       expect(rcpt).to.have.property('status').and.equal(200);
       expect(rcpt).to.have.property('data');
       expect(rcpt.data[0]).to.have.property('id').and.be.a('number');
 
       //reply
-      const rply = await axios.post('http://localhost:4201/api/message',
+      const rply = await axios.post('http://localhost:4201/message',
       {
         userToId:sender.id,
         subject:"my reply",
@@ -78,7 +78,7 @@ describe('message endpoint', function () {
       expect(rply).to.have.property('status').and.equal(204);
 
       //check receipt
-      const rcpt2 = await axios.get('http://localhost:4201/api/message/inbox',
+      const rcpt2 = await axios.get('http://localhost:4201/message/inbox',
           {headers: {'Authorization': "Bearer " + sender.token}});
       expect(rcpt2).to.have.property('status').and.equal(200);
       expect(rcpt2).to.have.property('data');

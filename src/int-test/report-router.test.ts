@@ -18,7 +18,7 @@ async function createReport(parameters?: any): Promise<Report> {
     };
   }
   
-  const rsp = await axios.post('http://localhost:4201/api/reports', parameters,
+  const rsp = await axios.post('http://localhost:4201/reports', parameters,
     {headers: {'Authorization': "Bearer " + user.token}});
   expect(rsp).to.have.property('status').and.equal(200);
   expect(rsp).to.have.property('data');
@@ -31,7 +31,7 @@ describe('report endpoint', function () {
   it('allows anyone to add reports', async() => {
     const user = await createUser(false);
     
-    const rsp = await axios.post('http://localhost:4201/api/reports', {
+    const rsp = await axios.post('http://localhost:4201/reports', {
       report:"game sux",
       type:"game",
       targetId:1
@@ -49,7 +49,7 @@ describe('report endpoint', function () {
 
   it('prevents anons from viewing reports', async() => {
     try {
-      await axios.get('http://localhost:4201/api/reports');
+      await axios.get('http://localhost:4201/reports');
     } catch (err) {
       expect(err).to.have.property('response');
       expect(err.response).to.have.property('status').and.equal(401);
@@ -61,7 +61,7 @@ describe('report endpoint', function () {
   it('prevents users from viewing reports', async() => {
     const user = await createUser(false);
     try {
-      await axios.get('http://localhost:4201/api/reports',
+      await axios.get('http://localhost:4201/reports',
         {headers: {'Authorization': "Bearer " + user.token}});
     } catch (err) {
       expect(err).to.have.property('response');
@@ -75,7 +75,7 @@ describe('report endpoint', function () {
     const admin = await createUser(true);
     await createReport();
     
-    const rsp = await axios.get('http://localhost:4201/api/reports',
+    const rsp = await axios.get('http://localhost:4201/reports',
     {headers: {'Authorization': "Bearer " + admin.token}});
     expect(rsp).to.have.property('status').and.equal(200);
     expect(rsp).to.have.property('data').and.be.an('array');
@@ -89,7 +89,7 @@ describe('report endpoint', function () {
       targetId:admin.id
     });
     
-    let rsp = await axios.get('http://localhost:4201/api/reports', {
+    let rsp = await axios.get('http://localhost:4201/reports', {
       params: {type: 'user', id: report.id},
       headers: {'Authorization': "Bearer " + admin.token}
     });
@@ -97,7 +97,7 @@ describe('report endpoint', function () {
     expect(rsp).to.have.property('data').and.be.an('array');
     const matchedReports = rsp.data as Report[];
     
-    rsp = await axios.get('http://localhost:4201/api/reports', {
+    rsp = await axios.get('http://localhost:4201/reports', {
       params: {type: 'game', id: report.id},
       headers: {'Authorization': "Bearer " + admin.token}
     });
@@ -113,7 +113,7 @@ describe('report endpoint', function () {
     const admin = await createUser(true);
     const report = await createReport();
     
-    const rsp = await axios.get(`http://localhost:4201/api/reports/${report.id}`,
+    const rsp = await axios.get(`http://localhost:4201/reports/${report.id}`,
     {headers: {'Authorization': "Bearer " + admin.token}});
     expect(rsp).to.have.property('status').and.equal(200);
     expect(rsp).to.have.property('data')
@@ -124,7 +124,7 @@ describe('report endpoint', function () {
     const admin = await createUser(true);
     const report = await createReport();
     
-    const rsp = await axios.patch(`http://localhost:4201/api/reports/${report.id}`,
+    const rsp = await axios.patch(`http://localhost:4201/reports/${report.id}`,
       {answeredById: admin.id},
       {headers: {'Authorization': "Bearer " + admin.token}});
     expect(rsp).to.have.property('status').and.equal(200);
@@ -138,7 +138,7 @@ describe('report endpoint', function () {
     const report = await createReport();
     
     try {
-      await axios.patch(`http://localhost:4201/api/reports/${report.id}`,
+      await axios.patch(`http://localhost:4201/reports/${report.id}`,
         {answeredById: user.id},
         {headers: {'Authorization': "Bearer " + user.token}});
     } catch (err) {
