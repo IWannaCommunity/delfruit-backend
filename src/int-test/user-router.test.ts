@@ -32,7 +32,7 @@ describe('user endpoint', function () {
 
       const rsp = await axios.post('http://localhost:4201/users',
         {username:usernameA,password:"test-pw",email:"test@example.com"});
-        expect(rsp).to.have.property('status').and.equal(200);
+        expect(rsp).to.have.property('status').and.equal(201);
         expect(rsp).to.have.property('data');
         expect(rsp.data).to.have.property('id').and.be.a('number');
         expect(rsp.data).to.have.property('email').and.equal('test@example.com');
