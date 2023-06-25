@@ -7,377 +7,272 @@ import { userCheck } from './lib/auth-check';
 import { recaptchaVerify } from './auth-router';
 import { Permission } from './model/Permission';
 import moment from 'moment';
+import { Body, Controller, Delete, Get, Header, Patch, Path, Post, Put, Query, Response, Route, Security, SuccessResponse, Tags } from 'tsoa';
+import Config from './model/config';
+let config: Config = require('./config/config.json');
 const auth = new AuthModule();
 const app = express.Router();
 export default app;
 
-/**
- * @swagger
- * 
- * /users:
- *   post:
- *     summary: Register new user
- *     description: Registers a new user
- *     tags: 
- *       - Users
- *     requestBody:
- *       description: The user to create
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               username: 
- *                 type: string
- *               password: 
- *                 type: string
- *               email: 
- *                 type: string
- *     responses:
- *       200:
- *         description: The newly created user, with a token to use for authentication
- *       400:
- *         description: Malformed request, or user already exists
- */
-app.route('/').post(handle(async (req,res,next) => {
-  if (!req.is('application/json')) return res.status(400).send('Invalid request: expected a JSON body of the format {"username":"example","password":"example","email":"example@example.com"}');
-  if (!req.body.username) return res.status(400).send("invalid request: missing 'username' in request body");
-  if (!req.body.password) return res.status(400).send("invalid request: missing 'password' in request body");
+interface UserRegistration {
+    username: string,
+    password: string,
+    email: string,
+}
 
-  const rcptoken = req.body.rcptoken;
-  const verified = await recaptchaVerify('resetPW',rcptoken,req.ip);
-  if (!verified) {
-    console.log('recaptcha verify failed!')
-    return res.sendStatus(403);
-  }
+interface EditUserPermissionsParam {
+    revokedUntil: Date
+}
 
-  const phash = await auth.hashPassword(req.body.password);
-  const user = await datastore.addUser(req.body.username,phash,req.body.email)
-  if (!user) return res.status(400).send({error:"User Exists",code:1});
+interface APIError {
+    error: string,
+}
 
-  datastore.addReport({
-    type:"user_register",
-    targetId:""+user.id,
-    report:"User Registered"
-  },user.id);
-
-  user.token = auth.getToken(user.name,user.id,user.isAdmin);
-  res.send(user);
-}));
-
-/**
- * @swagger
- * 
- * /users:
- *   get:
- *     summary: User List
- *     description: User List
- *     tags: 
- *       - Users
- *     produces:
- *       - application/json
- *     parameters:
- *       - in: query
- *         name: name
- *         schema:
- *           type: string
- *         description: Fragment of user name to search for
- *       - in: query
- *         name: following
- *         schema:
- *           type: boolean
- *         description: If true, and user is logged in, limits results to 
- *           users followed by the current user
- *       - in: query
- *         name: banned
- *         schema:
- *           type: boolean
- *         description: (Admin only) If specified, limits results to users who are 
- *           banned/unbanned (true/false)
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           minimum: 0
- *         description: The page of results to return (default 0)
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 50
- *         description: The number of results per page (default 50, maximum 50)
- *     responses:
- *       200:
- *         description: returns a list of games matching filters
- */
-app.route('/').get(handle(async (req,res,next) => {
-  var page = +req.query.page || 0;
-  var limit = +req.query.limit || 50;
-  const params: GetUsersParms = {page,limit};
-  if (!req.user || !req.user.isAdmin) params.banned = false;
-  else params.banned = req.query.banned;
-  if (req.query.following && req.user && req.user.sub) params.followerUserId = req.user.sub;
-  if (req.query.name) params.name = req.query.name;
-  //TODO: order by
-  const users = await datastore.getUsers(params);
-
-  if (!req.user || !req.user.isAdmin) {
-    users.forEach(u => {
-      delete u.email;
-      delete u.canReport;
-      delete u.canSubmit;
-      delete u.canReview;
-      delete u.canScreenshot;
-      delete u.banned;
-    });
-  }
-  return res.send(users);
-}));
-
-app.route('/:uid/lists').get(handle(async (req,res,next) => {
-  var userId = parseInt(req.params.uid, 10);
-  
-  var page = +req.query.page || 0;
-  var limit = +req.query.limit || 50;
-
-  const lists = await datastore.getLists({userId,page,limit});
-  res.send(lists);
-}));
-
-app.route('/:id/reviews').get(handle(async (req,res,next) => {
-  var id = parseInt(req.params.id, 10);
-  var page = +req.query.page || 0;
-  var limit = +req.query.limit || 50;
-  const rows = await datastore.getReviews({user_id:id,removed:false,page:page,limit:limit});
-  res.send(rows);
-}));
-
-app.route('/:id/badges').get(handle(async (req,res,next) => {
-  var id = parseInt(req.params.id, 10);
-  const rows = await datastore.getBadges({user_id:id});
-  res.send(rows);
-}));
-
-app.route('/:id/permissions/:pid').patch(handle(async (req,res,next)=>{
-  var uid = parseInt(req.params.id,10);
-  var pid = req.params.pid;
-
-  //only admins can change permissions
-  const isAdmin = req.user && req.user.isAdmin;
-  if (!isAdmin) {
-    return res.status(403).send({error:'access forbidden to this user'});
-  }
-
-  const perm = pid as Permission;
-  if (perm == null) {
-    return res.status(400).send({error:`invalid permission: ${pid}`});
-  }
-
-  let revokedUntil = req.body.revoked_until || null;
-  if (revokedUntil != null) {
-    revokedUntil = moment(revokedUntil).format("YYYY-MM-DD HH:mm:ss");
-  }
-
-  await datastore.updatePermission(uid,pid as Permission,revokedUntil);
-  const ret = await datastore.getPermissions(uid);
-  res.send(ret);
-}));
-
-app.route('/:id').get(handle(async (req,res,next) => {
-  var id = parseInt(req.params.id, 10);
-  const params = {id,page:0,limit:1} as GetUsersParms;
-  if (!req.user || !req.user.isAdmin) params.banned = false;
-
-  const users = await datastore.getUsers(params);
-  if (users == null || users.length == 0) res.sendStatus(404);
-  const user = users[0];
-  if (user && (!req.user || req.user.sub != id)) {
-    delete user.email;
-    delete user.banned;
-  }
-  
-  const canSeePerms = !!(req.user && (req.user.sub == id || req.user.isAdmin))
-  if (canSeePerms) {
-    user.permissions = await datastore.getPermissions(id);
-  }
-  res.send(user);
-}));
-
-/**
- * @swagger
- * 
- * /users/{id}:
- *   patch:
- *     summary: Modify User (User/Admin only)
- *     description: Updates a user. If a password is provided, 
- *       then the old password must also be provided to prevent impersonation 
- *       with a stolen token.
- *     tags: 
- *       - Users
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: integer
- *           minimum: 1
- *         required: true
- *         description: The user to modify
- *     responses:
- *       200:
- *         description: The updated user
- *       400:
- *         description: Invalid user id
- *       401:
- *         description: Unauthenticated (attempted to modify password without old password)
- *       403:
- *         description: Unauthorized attempt to modify another user
- *       404:
- *         description: User not found
- */
-app.route('/:id').patch(userCheck(), handle(async (req,res,next) => {
-  if (isNaN(+req.params.id)) 
-    return res.status(400).send({error:'id must be a number'});
-  var uid = parseInt(req.params.id, 10);
-  
-  const isAdmin = false;
-  //if not admin (and if not, uid is not uid in token)
-  if (!isAdmin && req.user.sub != uid) {
-    return res.status(403).send({error:'unauthorized access to this user'});
-  }
-
-  let user = req.body;
-  user.id = uid;
-
-  if (req.body.password) {
-    //verify password and abort if incorrect
-    const targetUser = await datastore.getUserForLogin({id:uid});
-    const pwVerified = await auth.verifyPassword(targetUser.phash2,req.body.currentPassword);
-    if (!pwVerified) {
-      return res.sendStatus(401);
+import * as jwt from "jsonwebtoken";
+import { Review } from './model/Review';
+import { Badge } from './model/Badge';
+function extractBearerJWT(header_token: string): string | object {
+    if (!header_token.includes("Bearer ")) {
+        throw new Error("missing prefix")
     }
-    const newPassHash = await auth.hashPassword(req.body.password);
-    user.phash2 = newPassHash;
-  }
+    const unverified_token = header_token.split(" ")[1];
 
-  if (!req.user.isAdmin) {
-    delete user.banned;
-    delete user.unsuccessfulLogins;
-    delete user.lastIp;
-    delete user.dateLastLogin;
-  }
+    try {
+        return jwt.verify(unverified_token, config.app_jwt_secret);
+    } catch (e) {
+        throw new Error(`invalid token: ${e}`)
+    }
+}
 
-  const success = await datastore.updateUser(user);
-  if (!success) {
-    return res.sendStatus(404);
-  }
+@Tags("Users")
+@Route("users")
+export class UserController extends Controller {
+    /**
+     * Register New User
+     * @summary Register New User
+     */
+    @SuccessResponse(201, "Created User, with token for auth.")
+    @Response<APIError>(400, "Bad Username")
+    @Post()
+    public async postUser(@Body() requestBody: UserRegistration): Promise<any> {
+        const phash = await auth.hashPassword(requestBody.password);
+        const user = await datastore.addUser(requestBody.username, phash, requestBody.email)
+        if (!user) {
+            this.setStatus(400);
+            return { error: "User Exists" };
+        }
+        datastore.addReport({
+            type: "user_register",
+            targetId: "" + user.id,
+            report: "User Registered"
+        }, user.id);
 
-  const newUser = await datastore.getUser(uid);
-  if (newUser == null) return res.sendStatus(404);
-  else res.send(newUser);
-}));
+        user.token = auth.getToken(user.name, user.id, user.isAdmin);
 
-/**
- * @swagger
- * 
- * /users/{id}/follows/{userId}:
- *   put:
- *     summary: Follow User (User/Admin only)
- *     description: Adds a user to your following list. Is idempotent - following the same user again does nothing
- *     tags: 
- *       - Users
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: integer
- *           minimum: 1
- *         required: true
- *         description: The user whose following list is being modified
- *       - in: path
- *         name: userId
- *         schema:
- *           type: integer
- *           minimum: 1
- *         description: The user to follow
- *     responses:
- *       204:
- *         description: Follower added
- *       400:
- *         description: Invalid user id (either one)
- *       401:
- *         description: Unauthenticated (must log in to follow a user)
- *       403:
- *         description: Unauthorized attempt to modify another user's follow list
- *       404:
- *         description: User not found
- */
-app.route('/:followerId/follows/:id').put(userCheck(), handle(async (req,res,next) => {
-  if (isNaN(+req.params.id)) 
-    return res.status(400).send({error:'id must be a number'});
-  const uid = req.params.id;
-  if (isNaN(+req.params.followerId)) 
-    return res.status(400).send({error:'followerId must be a number'});
-  const followerId = req.params.followerId;
-  
-  if (req.user.sub != followerId) return res.sendStatus(403);
+        return user;
+    }
 
-  const targetUser = await datastore.getUser(+uid);
-  if (!targetUser) return res.sendStatus(404);
+    /**
+     * User List
+     * @summary User List
+     */
+    @SuccessResponse(200, "List of users matching filters")
+    @Get()
+    public async getUsers(@Header("Authorization") authorization?: string, @Query() name?: string, @Query() following?: boolean, @Query() banned?: boolean, @Query() page?: number = 0, @Query() limit?: number = 50): Promise<any[]> {
+        const params: GetUsersParms = { page, limit };
+        let user = null;
+        try {
+            user = extractBearerJWT(authorization);
+        } catch (_) {
+            console.warn("user provided authorization, but it was invalid")
+        }
 
-  await datastore.addFollowToUser(+uid,req.user.sub);
-  return res.sendStatus(204);
-}));
+        if (!user || !user.isAdmin) params.banned = false;
+        else params.banned = banned;
+        if (following && user && user.sub) params.followerUserId = user.sub;
+        if (name) params.name = name;
+        //TODO: order by
+        const users = await datastore.getUsers(params);
 
-/**
- * @swagger
- * 
- * /users/{id}/follows/{userId}:
- *   delete:
- *     summary: Unfollow User (User/Admin only)
- *     description: Removes a user from your following list. Is idempotent - unfollowing the same user again does nothing
- *     tags: 
- *       - Users
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: integer
- *           minimum: 1
- *         required: true
- *         description: The user whose following list is being modified
- *       - in: path
- *         name: userId
- *         schema:
- *           type: integer
- *           minimum: 1
- *         description: The user to unfollow
- *     responses:
- *       204:
- *         description: Follower removed
- *       400:
- *         description: Invalid user id (either one)
- *       401:
- *         description: Unauthenticated (must log in to unfollow a user)
- *       403:
- *         description: Unauthorized attempt to modify another user's unfollow list
- *       404:
- *         description: User not found
- */
-app.route('/:followerId/follows/:id').delete(userCheck(), handle(async (req,res,next) => {
-  if (isNaN(+req.params.id)) 
-    return res.status(400).send({error:'id must be a number'});
-  const uid = req.params.id;
-  if (isNaN(+req.params.followerId)) 
-    return res.status(400).send({error:'followerId must be a number'});
-  const followerId = req.params.followerId;
-  
-  if (req.user.sub != followerId) return res.sendStatus(403);
+        if (!user || !user.isAdmin) {
+            users.forEach(u => {
+                delete u.email;
+                delete u.canReport;
+                delete u.canSubmit;
+                delete u.canReview;
+                delete u.canScreenshot;
+                delete u.banned;
+            });
+        }
+        return users;
+    }
 
-  const targetUser = await datastore.getUser(+uid);
-  if (!targetUser) return res.sendStatus(404);
+    @SuccessResponse(200, "User's Lists")
+    @Get("{uid}/lists")
+    public async getUsersLists(@Path() uid: number, @Query() page?: number = 0, @Query() limit?: number = 50): Promise<any[]> {
+        const lists = await datastore.getLists({ uid, page, limit });
+        return lists;
+    }
 
-  await datastore.removeFollowFromUser(+uid,req.user.sub);
-  return res.sendStatus(204);
-}));
+    @SuccessResponse(200, "User's Reviews")
+    @Get("{id}/reviews")
+    public async getUsersReviews(@Path() id: number, @Query() page?: number = 0, @Query() limit?: number = 50): Promise<Review[]> {
+        const rows = await datastore.getReviews({ user_id: id, removed: false, page: page, limit: limit });
+        return rows;
+    }
+
+    @SuccessResponse(200, "User's Badges")
+    @Get("{id}/badges")
+    public async getUsersBadges(@Path() id: number): Promise<Badge[]> {
+        const rows = await datastore.getBadges({ user_id: id });
+        return rows;
+    }
+
+    @Security("bearerAuth", ["admin"])
+    @SuccessResponse(200, "User's Permissions")
+    @Response<APIError>(401, "Unauthorized")
+    @Patch("{uid}/permissions/{pid}")
+    public async patchUsersPermissions(@Path() uid: number, @Path() pid: Permission, @Body() requestBody?: EditUserPermissionsParam): Promise<Permission[]> {
+        let revokedUntilStr = null;
+        if (requestBody != null) {
+            revokedUntilStr = moment(requestBody.revokedUntil).format("YYYY-MM-DD HH:mm:ss");
+        }
+
+        await datastore.updatePermission(uid, pid as Permission, revokedUntilStr);
+        const ret = await datastore.getPermissions(uid);
+        return ret;
+    }
+
+    @SuccessResponse(200, "User")
+    @Response<void>(404, "Not Found")
+    @Get("{id}")
+    public async getUser(@Header("Authorization") authorization?: string, @Path() id: number): Promise<any> {
+        let authuser = null;
+        try {
+            authuser = extractBearerJWT(authorization);
+        } catch (_) {
+            console.warn("user provided authorization, but it was invalid");
+        }
+        const params = { id, page: 0, limit: 1 } as GetUsersParms;
+        if (!authuser || !authuser.isAdmin) params.banned = false;
+
+        const users = await datastore.getUsers(params);
+        if (users == null || users.length == 0) return this.setStatus(404);
+        const user = users[0];
+        if (user && (!authuser || authuser.sub != id)) {
+            delete user.email;
+            delete user.banned;
+        }
+
+        const canSeePerms = !!(authuser && (authuser.sub == id || authuser.isAdmin))
+        if (canSeePerms) {
+            user.permissions = await datastore.getPermissions(id);
+        }
+        return user;
+    }
+
+    /**
+     * Updates a user. If a password is provided, then the old password must also be provided.
+     * @summary Modify User (User/Admin Only)
+     */
+    @Security("bearerAuth", ["user"])
+    @SuccessResponse(200, "Updated User")
+    @Response<APIError>(401, "Incorrect Old Password")
+    @Response<APIError>(403, "Unauthorized attempt to modify another user")
+    @Response<void>(404, "Not Found")
+    @Patch("{id}")
+    public async patchUser(@Header("Authorization") authorization: string, @Path() id: number, @Body() requestBody: any): Promise<any> {
+        // NOTE: auth guard should make the error condition unreachable
+        const authuser = extractBearerJWT(authorization);
+
+
+        const isAdmin = false;
+        //if not admin (and if not, uid is not uid in token)
+        if (!isAdmin && authuser.sub != id) {
+            this.setStatus(403);
+            return { error: 'unauthorized access to this user' };
+        }
+
+        let user = requestBody;
+        user.id = id;
+
+        if (requestBody.password) {
+            //verify password and abort if incorrect
+            const targetUser = await datastore.getUserForLogin({ id: id });
+            const pwVerified = await auth.verifyPassword(targetUser.phash2, requestBody.currentPassword);
+            if (!pwVerified) {
+                this.setStatus(401);
+                return { error: "password was missing or doesn't match" }
+            }
+            const newPassHash = await auth.hashPassword(requestBody.password);
+            user.phash2 = newPassHash;
+        }
+
+        if (!authuser.isAdmin) {
+            delete user.banned;
+            delete user.unsuccessfulLogins;
+            delete user.lastIp;
+            delete user.dateLastLogin;
+        }
+
+        const success = await datastore.updateUser(user);
+        if (!success) {
+            return this.setStatus(404);
+        }
+
+        const newUser = await datastore.getUser(id);
+        if (newUser == null) return this.setStatus(404);
+        else return newUser;
+    }
+
+    /**
+     * Adds a user to your following list. Idempotent.
+     * @summary Follow User (User/Admin Only)
+     */
+    @Security("bearerAuth", ["user"])
+    @SuccessResponse(204, "Follower Added")
+    @Response<APIError>(401, "Not Logged In")
+    @Response<APIError>(403, "Bad Ownership")
+    @Response<APIError>(404, "Not Found")
+    @Put("{id}/follows/{followerId}")
+    public async putUserFollow(@Header("Authorization") authorization: string, @Path() id: number, @Path() followerId: number): Promise<void> {
+        // NOTE: auth guard should make the error condition unreachable
+        const user = extractBearerJWT(authorization);
+
+        if (user.sub != id) {
+            this.setStatus(403);
+            return { error: "cannot modify another user's follower list" }
+        }
+        const targetUser = await datastore.getUser(+followerId);
+        if (!targetUser) return this.setStatus(404);
+
+        await datastore.addFollowToUser(+followerId, user.sub);
+        return this.setStatus(204);
+    }
+
+    /**
+     * Removes a user from your following list. Idempotent.
+     * @summary Unfollow User (User/Admin Only)
+    */
+    @Security("bearerAuth", ["user"])
+    @SuccessResponse(204, "Follower Removed")
+    @Response<APIError>(401, "Not Logged In")
+    @Response<APIError>(403, "Bad Onwership")
+    @Response<APIError>(400, "Not Found")
+    @Delete("{id}/follows/{followerId}")
+    public async deleteUserFollow(@Header("Authorization") authorization: string, @Path() id: number, @Path() followerId: number): Promise<void> {
+        // NOTE: auth guard should make the error condition unreachable
+        const user = extractBearerJWT(authorization);
+
+        if (user.sub != id) {
+            this.setStatus(403);
+            return { error: "cannot modify another user's follower list" }
+        }
+
+        const targetUser = await datastore.getUser(+followerId);
+        if (!targetUser) return this.setStatus(404);
+
+        await datastore.removeFollowFromUser(+followerId, user.sub);
+        return this.setStatus(204);
+    }
+}
