@@ -11,6 +11,8 @@ import { Body, Controller, Get, Header, Path, Post, Route, Security, SuccessResp
 const app = express.Router();
 export default app;
 
+import * as jwt from "jsonwebtoken";
+let config: Config = require('./config/config.json');
 function extractBearerJWT(header_token: string): string | object {
     if (!header_token.includes("Bearer ")) {
         throw new Error("missing prefix")
