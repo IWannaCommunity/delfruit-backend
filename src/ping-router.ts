@@ -1,21 +1,28 @@
 import express from 'express';
 import handle from './lib/express-async-catch';
+import { Controller, Get, Response, Route, SuccessResponse, Tags } from 'tsoa';
 
 const app = express.Router();
 export default app;
 
-app.route('/').get(handle(async (req,res,next) => {
-  res.send('pong')
-}));
+@Route("Ping")
+export class PingController extends Controller {
+    @SuccessResponse(200, "Pong")
+    @Get()
+    public async getPing(): Promise<string> {
+        return "pong";
+    }
 
-app.route('/error').get(handle(async (req,res,next) => {
-  return await new Promise((res,rej) => {
-    rej('oops');
-  });
-}));
-app.route('/error2').get(handle(async (req,res,next) => {
-  return await new Promise((res,rej) => {
-    throw 'oops'
-  });
-}));
-  
+    @Response(400, "Oops!")
+    @Get("error")
+    public async getError(): Promise<string> {
+        return "oops";
+    }
+
+    @Response(400, "Oops!")
+    @Get("error2")
+    public async getError2(): Promise<never> {
+        throw "oops";
+    }
+
+}
