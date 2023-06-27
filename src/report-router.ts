@@ -3,7 +3,7 @@ import datastore from './datastore';
 import { Report } from './model/Report';
 import handle from './lib/express-async-catch';
 import { adminCheck, userCheck } from './lib/auth-check';
-import { Body, Controller, Get, Header, Patch, Path, Post, Query, Response, Route, Security, SuccessResponse, Tags } from 'tsoa';
+import { Body, Controller, Get, Header, Patch, Path, Post, Queries, Query, Response, Route, Security, SuccessResponse, Tags } from 'tsoa';
 import { GetReportParams } from './model/GetReportParams';
 
 const app = express.Router();
@@ -40,7 +40,7 @@ export class ReportController extends Controller {
     @Security("bearerAuth", ["admin"])
     @SuccessResponse(200, "List of Reports within matching filters.")
     @Get()
-    public async getReports(@Query() requestQuery: GetReportParams): Promise<Report[]> {
+    public async getReports(@Queries() requestQuery: GetReportParams): Promise<Report[]> {
         const n = await datastore.getReports({
             type: requestQuery.type,
             answered: requestQuery.answered,
