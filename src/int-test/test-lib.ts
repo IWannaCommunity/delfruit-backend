@@ -36,7 +36,7 @@ export async function createUser(isAdmin: boolean): Promise<TestUser> {
     const usernameA = genUsername();
 
     //register
-    const reg = await axios.post('http://localhost:4201/api/users',
+    const reg = await axios.post('http://localhost:4201/users',
         { username: usernameA, password: "test-pw", email: "test@example.com" });
     expect(reg).to.have.property('status').and.equal(200);
     expect(reg).to.have.property('data');
@@ -67,7 +67,7 @@ export async function createUser(isAdmin: boolean): Promise<TestUser> {
     }
 
     //login
-    const login = await axios.post('http://localhost:4201/api/auth/login',
+    const login = await axios.post('http://localhost:4201/auth/login',
         { username: usernameA, password: "test-pw" });
     expect(login).to.have.property('status').and.equal(200);
     expect(login).to.have.property('data');
@@ -87,7 +87,7 @@ export async function createGame(parameters?: any): Promise<any> {
     const name = gamenamegen.choose() + Math.random().toString(36).substring(2, 6);
 
     //create game
-    const rsp = await axios.post('http://localhost:4201/api/games',
+    const rsp = await axios.post('http://localhost:4201/games',
         {
             name: "i wanna be the " + name,
             author: user.username,
@@ -110,9 +110,9 @@ export async function addScreenshot(user: TestUser, game: any): Promise<any> {
     const hd = data.getHeaders();
     hd['Authorization'] = "Bearer " + user.token;
 
-    const upd = await axios.post(`http://localhost:4201/api/games/${game.id}/screenshots`,
-      data,
-      {headers: hd});
+    const upd = await axios.post(`http://localhost:4201/games/${game.id}/screenshots`,
+        data,
+        { headers: hd });
     expect(upd).to.have.property('status').and.equal(200);
     expect(upd).to.have.property('data');
     expect(upd.data).to.have.property('id').and.be.a('number');
@@ -121,13 +121,13 @@ export async function addScreenshot(user: TestUser, game: any): Promise<any> {
 
 export async function addReview(user: TestUser, game: any): Promise<any> {
     //review game
-    const upd = await axios.put(`http://localhost:4201/api/games/${game.id}/reviews`,
-      {
-        rating: 69,
-        difficulty: 50,
-        comment: 'good game very good'
-      },
-      {headers: {'Authorization': "Bearer " + user.token}});
+    const upd = await axios.put(`http://localhost:4201/games/${game.id}/reviews`,
+        {
+            rating: 69,
+            difficulty: 50,
+            comment: 'good game very good'
+        },
+        { headers: { 'Authorization': "Bearer " + user.token } });
     expect(upd).to.have.property('status').and.equal(200);
     expect(upd).to.have.property('data');
     expect(upd.data).to.have.property('id').and.be.a('number');
@@ -138,9 +138,9 @@ export async function addReview(user: TestUser, game: any): Promise<any> {
 export async function addTag(user: TestUser): Promise<any> {
     const nm = taggen.choose();
 
-    const tres = await axios.post('http://localhost:4201/api/tags',
-      {name:nm},
-      {headers: {'Authorization': "Bearer " + user.token}});
+    const tres = await axios.post('http://localhost:4201/tags',
+        { name: nm },
+        { headers: { 'Authorization': "Bearer " + user.token } });
     expect(tres).to.have.property('status').and.equal(200);
 
     return tres.data;
