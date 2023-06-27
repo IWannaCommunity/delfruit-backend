@@ -3,239 +3,110 @@ import datastore from './datastore';
 import { Report } from './model/Report';
 import handle from './lib/express-async-catch';
 import { adminCheck, userCheck } from './lib/auth-check';
+import { Body, Controller, Get, Header, Patch, Path, Post, Query, Response, Route, Security, SuccessResponse, Tags } from 'tsoa';
+import { GetReportParams } from './model/GetReportParams';
 
 const app = express.Router();
 export default app;
 
-/**
- * @swagger
- * 
- * /reports:
- *   get:
- *     summary: Report List (Admin Only)
- *     description: Report List (Admin Only)
- *     tags: 
- *       - Reports
- *     produces:
- *       - application/json
- *     parameters:
- *       - in: query
- *         name: id
- *         schema:
- *           type: string
- *         description: The id of the report to return (just use /reports/{id} you meme)
- *       - in: query
- *         name: type
- *         schema:
- *           type: string
- *         description: The type of reports to return
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           minimum: 0
- *         description: The page of results to return (default 0)
- *       - in: query
- *         name: answered
- *         schema:
- *           type: integer
- *         description: If specified, whether to filter to answered (1) or unasnwered (0) reports
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 50
- *         description: The number of results per page (default 50, maximum 50)
- *     responses:
- *       200:
- *         description: returns a list of games matching filters
- *       401:
- *         description: unauthenticated (must log in to view reports)
- *       403:
- *         description: insufficient permissions (must be admin to view reports)
- */
-app.route('/').get(adminCheck(), handle(async (req,res,next) => {  
-  let answered = req.query.answered;
-  if (answered !== undefined) {
-    if (answered == "0") answered = false;
-    else answered = true;
-  }
-  const n = await datastore.getReports({
-    type: req.query.type,
-    answered: answered,
-    id: req.params.id?+req.params.id:undefined,
-    page: +req.query.page || 0,
-    limit: +req.query.limit || 50
-  });
+interface APIError {
+    error: string,
+}
 
-  return res.send(n);
-}));
+import Config from './model/config';
+let config: Config = require('./config/config.json');
 
-/**
- * @swagger
- * 
- * /reports/{id}:
- *   get:
- *     summary: Get Report (Admin Only)
- *     description: Get Report (Admin Only)
- *     tags: 
- *       - Reports
- *     produces:
- *       - application/json
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: integer
- *         description: The id of the report to return
- *     responses:
- *       200:
- *         description: return the matching report
- *       400:
- *         description: invalid report id
- *       401:
- *         description: unauthenticated (must log in to view reports)
- *       403:
- *         description: insufficient permissions (must be admin to view reports)
- *       404:
- *         description: report not found
- */
-app.route('/:id').get(adminCheck(), handle(async (req,res,next) => {
-  if (isNaN(+req.params.id)) return res.status(400).send({error:'id must be a number'});
+import * as jwt from "jsonwebtoken";
+function extractBearerJWT(header_token: string): string | object {
+    if (!header_token.includes("Bearer ")) {
+        throw new Error("missing prefix")
+    }
+    const unverified_token = header_token.split(" ")[1];
 
-  const report = await datastore.getReport(+req.params.id);
-  if (!report) return res.sendStatus(404);
-  return res.send(report);
-}));
+    try {
+        return jwt.verify(unverified_token, config.app_jwt_secret);
+    } catch (e) {
+        throw new Error(`invalid token: ${e}`)
+    }
+}
 
-/**
- * @swagger
- * 
- * /reports/{id}:
- *   patch:
- *     summary: Update Report (Admin Only)
- *     description: Allows admins to update the report, marking it as resolved.
- *     tags: 
- *       - Reports
- *     produces:
- *       - application/json
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: integer
- *         description: The id of the report to return
- * 
- *     requestBody:
- *       description: The fields on the report to update
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               id: 
- *                 type: integer
- *               answeredById: 
- *                 type: integer
- *               dateAnswered: 
- *                 type: string
- * 
- *     responses:
- *       200:
- *         description: return the updated report
- *       400:
- *         description: invalid report id
- *       401:
- *         description: unauthenticated (must log in to view reports)
- *       403:
- *         description: insufficient permissions (must be admin to view reports)
- *       404:
- *         description: report not found
- */
-app.route('/:id').patch(adminCheck(), handle(async (req,res,next) => {
-  if (isNaN(+req.params.id)) return res.status(400).send({error:'id must be a number'});
+@Tags("Reports")
+@Route("reports")
+export class ReportController extends Controller {
+    /**
+     * Report List (Admin Only)
+     * @summary Repost List (Admin Only)
+    */
+    @Security("bearerAuth", ["admin"])
+    @SuccessResponse(200, "List of Reports within matching filters.")
+    @Get()
+    public async getReports(@Query() requestQuery: GetReportParams): Promise<Report[]> {
+        const n = await datastore.getReports({
+            type: requestQuery.type,
+            answered: requestQuery.answered,
+            id: requestQuery.id ? +requestQuery.id : undefined,
+            page: +requestQuery.page || 0,
+            limit: +requestQuery.limit || 50
+        });
 
-  const rid = +req.params.id;
+        return n;
+    }
 
-  const ogReport = await datastore.getReport(rid);
-  if (!ogReport) return res.sendStatus(404);
+    /**
+     * Get Report (Admin Only)
+     * @summary Get Report (Admin Only)
+    */
+    @Security("bearerAuth", ["admin"])
+    @SuccessResponse(200, "Get Report")
+    @Response<void>(404, "Not Found")
+    @Get("{id}")
+    public async getReport(@Path() id: number): Promise<Report> {
+        const report = await datastore.getReport(+id);
+        if (!report) return this.setStatus(404);
+        return report;
+    }
 
-  const report = {
-    id: rid,
-    answeredById: req.body.answeredById, 
-    dateAnswered: req.body.dateAnswered
-  } as Report;
+    /**
+     * Allows admins to update the report, such as marking it as resolved.
+     * @summary Update Report (Admin Only)
+    */
+    @Security("bearerAuth", ["admin"])
+    @SuccessResponse(200, "Updated Report")
+    @Response<void>(404, "Not Found")
+    @Patch("{id}")
+    public async patchReport(@Path() id: number, @Body() requestBody: Report): Promise<Report> {
+        const ogReport = await datastore.getReport(id);
+        if (!ogReport) return this.setStatus(404);
 
-  const success = await datastore.updateReport(report);
-  if (success) return res.send(await datastore.getReport(rid));
-  else throw 'failed to update report';
-}));
+        const report = {
+            id: +id,
+            answeredById: requestBody.answeredById,
+            dateAnswered: requestBody.dateAnswered
+        } as Report;
 
-/**
- * @swagger
- * 
- * /reports:
- *   post:
- *     summary: Submit Report (User/Admin Only)
- *     description: Allows a user to submit a report.
- *     tags: 
- *       - Reports
- *     produces:
- *       - application/json
- * 
- *     requestBody:
- *       description: The fields on the report to update
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               type: 
- *                 type: string
- *                 enum:
- *                   - screenshot_add
- *                   - screenshot_approve
- *                   - review_remove
- *                   - screenshot_deny
- *                   - review
- *                   - game
- *                   - game_add
- *                   - game_remove
- *                   - screenshot_remove
- *                   - user_register
- *                   - user
- *                   - user_password_change
- *                   - game_update_url
- *                   - review_restore
- *                   - screenshot
- *                   - game_update_owner
- *                   - game_update_creator
- *                 description: The report type
- *               targetId: 
- *                 type: integer
- *                 description: The id of the thing being reported. If an attempt to 
- *                   retrieve the entity fails, will return a 400.
- *               report: 
- *                 type: string
- *                 description: the contents of the report
- * 
- *     responses:
- *       200:
- *         description: return the updated report
- *       400:
- *         description: invalid type for role
- *       401:
- *         description: unauthenticated (must log in to submit a report)
- */
-app.route('/').post(userCheck(), handle(async (req,res,next) => {
-  const uid = req.user.sub;
+        const success = await datastore.updateReport(report);
+        if (success) return await datastore.getReport(id);
+        else throw 'failed to update report'; // QUEST: can throwing return a parsable error?
+    }
 
-  const report = req.body as Report;
-  delete report.answeredById;
-  delete report.dateAnswered;
-  
-  return res.send(await datastore.addReport(report,uid));
-}));
+    /**
+     * Allows a user to submit a report.
+     * @summary Submit Report (User/Admin Only)
+    */
+    @Security("bearerAuth", ["user"])
+    @SuccessResponse(201, "Report Submitted")
+    @Response<void>(400, "Invalid Type")
+    @Post()
+    public async postReport(@Header("Authorization") authorization: string, @Body() requestBody: Report): Promise<Report> {
+        // NOTE: auth guard should make the error condition unreachable
+        const user = extractBearerJWT(authorization);
+
+        const uid = user.sub;
+
+        const report = requestBody;
+        delete report.answeredById;
+        delete report.dateAnswered;
+
+        return await datastore.addReport(report, uid);
+    }
+}
