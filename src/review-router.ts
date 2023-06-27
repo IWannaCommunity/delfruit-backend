@@ -114,7 +114,7 @@ export class ReviewController extends Controller {
      * @summary Unlike Review (User/Admin Only)
      */
     @Security("bearerAuth", ["user"])
-    @SuccessResponse(204, "Like Accepted")
+    @SuccessResponse(204, "Unlike Accepted")
     @Response<void>(403, "Bad Ownership")
     @Response<void>(404, "Not Found")
     @Delete("{id}/likes/{userId}")
@@ -130,12 +130,13 @@ export class ReviewController extends Controller {
         await datastore.removeLikeFromReview(+id, userId);
         return this.setStatus(204);
     }
+
     /**
      * Returns whether a user likes a specific review. (User/Admin Only)
      * @summary Like Check for User (User/Admin Only)
      */
     @Security("bearerAuth", ["user"])
-    @SuccessResponse(204, "Like Accepted")
+    @SuccessResponse(200, "Predicate")
     @Response<void>(403, "Bad Ownership")
     @Response<void>(404, "Not Found")
     @Get("{id}/likes/{userId}")
