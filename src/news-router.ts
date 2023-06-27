@@ -9,6 +9,7 @@ const app = express.Router();
 export default app;
 
 import * as jwt from "jsonwebtoken";
+import Config from './model/config';
 let config: Config = require('./config/config.json');
 function extractBearerJWT(header_token: string): string | object {
     if (!header_token.includes("Bearer ")) {
