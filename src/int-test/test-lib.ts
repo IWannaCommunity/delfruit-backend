@@ -5,6 +5,7 @@ import FormData from 'form-data';
 import fs from 'fs';
 import { Permission } from '../model/Permission';
 import Config from '../model/config';
+import retry from 'retry';
 let config: Config = require('../config/config.json');
 var Moniker = require('moniker');
 
@@ -146,14 +147,21 @@ export async function addTag(user: TestUser): Promise<any> {
 }
 
 export function getConTest(ctx: Mocha.Context): Mocha.HookFunction {
-	return () => {}
-    /*return () => axios.get('http://localhost:4201/api/ping')
-    .then(ctx.done)
-    .catch((_: Error) => {
-      ctx.done(new Error('server not responding at http://localhost:4201/api, is it online?'));
-    });*/
- }
-  
+    return () => {
+        const ops = retry.operation({ retries: 99, factor: 1, minTimeout: 1, maxTimeout: 10, randomize: false });
+        ops.attempt(async (curAttempt) => {
+            if (curAttempt >= 100) {
+                console.error("exceeded max attempts on ping, possibly failing")
+            }
+            try {
+                await axios.get('http://localhost:4201/ping');
+            } catch (e) {
+                if (ops.retry(e)) { return; }
+            }
+        });
+    }
+}
+
 
 export async function setUserToken(user: TestUser, token: string): Promise<any> {
     const database = new Database({
