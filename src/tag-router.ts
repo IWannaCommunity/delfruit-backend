@@ -3,7 +3,7 @@ import datastore from './datastore';
 
 import handle from './lib/express-async-catch';
 import { userCheck } from './lib/auth-check';
-import { Body, Controller, Get, Post, Query, Route, Security, SuccessResponse, Tags } from 'tsoa';
+import { Body, Controller, Get, Post, Queries, Query, Route, Security, SuccessResponse, Tags } from 'tsoa';
 import { getTagsParms } from './model/getTagsParms';
 
 const app = express.Router();
@@ -22,7 +22,7 @@ export class TagController extends Controller {
 
     @SuccessResponse(200, "List of Tags")
     @Get()
-    public async getTags(@Query() requestQuery: getTagsParms): Promise<any[]> {
+    public async getTags(@Queries() requestQuery: getTagsParms): Promise<any[]> {
         const tagId = +requestQuery.tagId || undefined
         const userId = +requestQuery.userId || undefined
         const q = requestQuery.q || undefined
