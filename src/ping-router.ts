@@ -5,7 +5,7 @@ import { Controller, Get, Response, Route, SuccessResponse, Tags } from 'tsoa';
 const app = express.Router();
 export default app;
 
-@Route("Ping")
+@Route("ping")
 export class PingController extends Controller {
     @SuccessResponse(200, "Pong")
     @Get()
