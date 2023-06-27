@@ -21,7 +21,7 @@ export class PingController extends Controller {
 
     @Response(400, "Oops!")
     @Get("error2")
-    public async getError2(): Promise<never> {
+    public async getError2(): Promise<string> {
         throw "oops";
     }
 
