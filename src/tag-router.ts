@@ -3,21 +3,32 @@ import datastore from './datastore';
 
 import handle from './lib/express-async-catch';
 import { userCheck } from './lib/auth-check';
+import { Body, Controller, Get, Post, Query, Route, Security, SuccessResponse, Tags } from 'tsoa';
+import { getTagsParms } from './model/getTagsParms';
 
 const app = express.Router();
 export default app;
 
-app.route('/').post(userCheck(), handle(async (req,res,next) => {
-  const tag = await datastore.createTag(req.body.name);
-  res.send(tag);
-}));
+@Tags("Tags")
+@Route("tags")
+export class TagController extends Controller {
+    @Security("bearerAuth", ["user"])
+    @SuccessResponse(200, "Created Tag")
+    @Post()
+    public async postTag(@Body() requestBody: any): Promise<any> {
+        const tag = await datastore.createTag(requestBody.name);
+        return tag;
+    }
 
-app.route('/').get(handle(async (req,res,next) => {
-  const tagId = +req.query.tag_id||undefined
-  const userId = +req.query.user_id||undefined
-  const q = req.query.q||undefined
-  const name = req.query.name||undefined
+    @SuccessResponse(200, "List of Tags")
+    @Get()
+    public async getTags(@Query() requestQuery: getTagsParms): Promise<any[]> {
+        const tagId = +requestQuery.tagId || undefined
+        const userId = +requestQuery.userId || undefined
+        const q = requestQuery.q || undefined
+        const name = requestQuery.name || undefined
 
-  const rows = await datastore.getTags(tagId,q,name);
-  res.send(rows);
-}));
+        const rows = await datastore.getTags(tagId, q, name);
+        return rows;
+    }
+}
