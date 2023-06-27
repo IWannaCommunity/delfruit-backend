@@ -5,135 +5,136 @@ import { Screenshot } from "./model/Screenshot";
 import handle from './lib/express-async-catch';
 import { adminCheck } from './lib/auth-check';
 import { Permission } from './model/Permission';
+import { Body, Controller, Delete, Get, Header, Patch, Path, Query, Response, Route, Security, SuccessResponse, Tags } from 'tsoa';
 
 const app = express.Router();
 export default app;
 
-/**
- * @swagger
- * 
- * /screenshots:
- *   get:
- *     summary: Get Screenshots
- *     description: Get Screenshots
- *     tags: 
- *       - Screenshots
- *     produces:
- *       - application/json
- *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           minimum: 0
- *         description: The page of results to return (default 0)
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 50
- *         description: The number of results per page (default 50)
- *     responses:
- *       200:
- *         description: List of matching screenshots (or an empty array if no match)
- */
-app.route('/').get(handle(async (req,res,next) => {  
-  var isAdmin = req.user && req.user.isAdmin;
-  var page = +req.query.page || 0;
-  var limit = +req.query.limit || 50;
+import Config from './model/config';
+let config: Config = require('./config/config.json');
 
-  let parms: GetScreenshotParms = {page,limit,removed:req.query.removed}; 
-  if (!isAdmin) parms.removed = false; //TODO: allow toggle
-  const rows = await datastore.getScreenshots(parms);
-  res.send(rows);
-}));
+import * as jwt from "jsonwebtoken";
+function extractBearerJWT(header_token: string): string | object {
+    if (!header_token.includes("Bearer ")) {
+        throw new Error("missing prefix")
+    }
+    const unverified_token = header_token.split(" ")[1];
 
-/**
- * @swagger
- * 
- * /screenshots/{id}:
- *   get:
- *     summary: Get Screenshot
- *     description: Get Screenshot
- *     tags: 
- *       - Screenshots
- *     produces:
- *       - application/json
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: integer
- *           minimum: 1
- *         required: true
- *         description: The id of the screenshot to return
- *     responses:
- *       200:
- *         description: Object describing the screenshot
- *       400:
- *         description: Invalid screenshot id
- *       404:
- *         description: Screenshot not found
- */
-app.route('/:id').get(handle(async (req,res,next) => {
-  if (isNaN(+req.params.id)) {
-    return res.status(400).send({error:'id must be a number'});
-  }
-  var id = parseInt(req.params.id, 10);
-  
-  var isAdmin = req.user && req.user.isAdmin;
+    try {
+        return jwt.verify(unverified_token, config.app_jwt_secret);
+    } catch (e) {
+        throw new Error(`invalid token: ${e}`)
+    }
+}
 
-  const screenshot = await datastore.getScreenshot(id);
-  if (!screenshot || (!isAdmin && screenshot.removed)) {
-    return res.sendStatus(404);
-  }
-  res.send(screenshot);
-}));
+interface APIError {
+    error: string,
+}
 
-app.route('/:id').delete(adminCheck(), handle(async (req,res,next) => {
-  if (isNaN(+req.params.id)) return res.status(400).send({error:'id must be a number'});
-  var id = parseInt(req.params.id, 10);
-  let screenshot = await datastore.getScreenshot(id);
+@Tags("Screenshots")
+@Route("screenshots")
+export class ScreenshotController extends Controller {
+    /**
+     * Get List of Screenshots
+     * @summary Get List of Screenshots
+     */
+    @SuccessResponse(200, "List of matching Screenshots")
+    @Get()
+    public async getScreenshots(@Header("Authorization") authorization?: string, @Query() requestQuery: GetScreenshotParms): Promise<Screenshot[]> {
+        let isAdmin = false;
+        try {
+            const user = extractBearerJWT(authorization);
+            isAdmin = user.isAdmin;
+        } catch (_) {
+            console.warn("user provided authorization, but it was invalid")
+        }
 
-  if (!screenshot) return res.sendStatus(404);
-  screenshot = screenshot!;
+        requestQuery.page = +requestQuery.page || 0;
+        requestQuery.limit = +requestQuery.limit || 50;
 
-  if (screenshot.removed) return res.send({message:'Screenshot is already deleted'});
+        if (!isAdmin) requestQuery.removed = false; // TODO: allow toggle
+        const rows = await datastore.getScreenshots(requestQuery);
 
-  let ssPatch: any = {
-    id: req.params.id,
-    removed: true
-  };
-  await datastore.updateScreenshot(ssPatch,req.user.isAdmin);
-  
-  datastore.addReport({
-    type:"screenshot_remove",
-    targetId:""+ssPatch.id,
-    report:"Screenshot Removed"
-  },req.user.sub);
+        return rows;
+    }
 
-  res.sendStatus(204);
-}));
+    /**
+     * Get Screenshot
+     * @summary Get Screenshot
+     */
+    @SuccessResponse(200, "Screenshot Details")
+    @Response<void>(404, "Not Found")
+    @Get("{id}")
+    public async getScreenshot(@Header("Authorization") authorization?: string, @Path() id: number): Promise<Screenshot> {
+        let isAdmin = false;
+        try {
+            const user = extractBearerJWT(authorization);
+            isAdmin = user.isAdmin;
+        } catch (_) {
+            console.warn("user provided authorization, but it was invalid")
+        }
 
-app.route('/:id').patch(adminCheck(), handle(async (req,res,next) => {
+        const screenshot = await datastore.getScreenshot(id);
+        if (!screenshot || (!isAdmin && screenshot.removed)) {
+            return this.setStatus(404);
+        }
+        return screenshot;
+    }
 
-  var gid = parseInt(req.params.id, 10);
+    @Security("bearerAuth", ["admin"])
+    @SuccessResponse(204, "Successfully Deleted")
+    @Response<APIError>(200, "Already Deleted")
+    @Response<void>(404, "Not Found")
+    @Delete("{id}")
+    public async deleteScreenshot(@Header("authorization") authorization: string, @Path() id: number): Promise<void> {
+        // NOTE: auth guard should make the error condition unreachable
+        const user = extractBearerJWT(authorization);
 
-  let game = req.body as Screenshot;
-  game.id = gid;
-  
-  const gameFound = await datastore.updateScreenshot(game,req.user.isAdmin);
-  if (!gameFound) return res.sendStatus(404);
+        let screenshot = await datastore.getScreenshot(id);
 
-  const newGame = await datastore.getScreenshot(gid);
-  if (newGame == null) res.sendStatus(404);
-  
-  const userScreenshots = await datastore.getScreenshots({addedById: newGame!.addedById!, approved: true,page:0,limit:10});
-  if (userScreenshots.length >= 10) {
-    console.log('grant permission')
-    await datastore.grantPermission(newGame!.addedById!,Permission.AUTO_APPROVE_SCREENSHOT);
-  }
+        if (!screenshot) return this.setStatus(404);
+        screenshot = screenshot!;
 
-  res.send(newGame);
-}));
+        if (screenshot.removed) return { error: 'Screenshot is already deleted' };
+
+        let ssPatch: any = {
+            id: +id,
+            removed: true
+        };
+        await datastore.updateScreenshot(ssPatch, user.isAdmin);
+
+        datastore.addReport({
+            type: "screenshot_remove",
+            targetId: "" + ssPatch.id,
+            report: "Screenshot Removed"
+        }, user.sub);
+
+        this.setStatus(204);
+    }
+
+    @Security("bearerAuth", ["admin"])
+    @SuccessResponse(200, "Successfully Updated")
+    @Response<void>(404, "Not Found")
+    @Patch("{id}")
+    public async patchScreenshot(@Header("Authorization") authorization: string, @Path() id: number, @Body() requestBody: Screenshot): Promise<Screenshot> {
+        // NOTE: auth guard should make the error condition unreachable
+        const user = extractBearerJWT(authorization);
+
+        let game = requestBody;
+        game.id = id;
+
+        const gameFound = await datastore.updateScreenshot(game, user.isAdmin);
+        if (!gameFound) return this.setStatus(404);
+
+        const newGame = await datastore.getScreenshot(id);
+        if (newGame == null) return this.setStatus(404);
+
+        const userScreenshots = await datastore.getScreenshots({ addedById: newGame!.addedById!, approved: true, page: 0, limit: 10 });
+        if (userScreenshots.length >= 10) {
+            console.log('grant permission')
+            await datastore.grantPermission(newGame!.addedById!, Permission.AUTO_APPROVE_SCREENSHOT);
+        }
+
+        return newGame;
+    }
+}
