@@ -148,9 +148,9 @@ export async function addTag(user: TestUser): Promise<any> {
 
 export function getConTest(ctx: Mocha.Context): Mocha.HookFunction {
     return () => {
-        const ops = retry.operation({ retries: 99, factor: 1, minTimeout: 1, maxTimeout: 10, randomize: false });
+        const ops = retry.operation({ retries: 999, factor: 1, minTimeout: 1, maxTimeout: 10, randomize: false });
         ops.attempt(async (curAttempt) => {
-            if (curAttempt >= 100) {
+            if (curAttempt >= 1000) {
                 console.error("exceeded max attempts on ping, possibly failing")
             }
             try {
