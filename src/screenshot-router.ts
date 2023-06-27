@@ -5,7 +5,7 @@ import { Screenshot } from "./model/Screenshot";
 import handle from './lib/express-async-catch';
 import { adminCheck } from './lib/auth-check';
 import { Permission } from './model/Permission';
-import { Body, Controller, Delete, Get, Header, Patch, Path, Query, Response, Route, Security, SuccessResponse, Tags } from 'tsoa';
+import { Body, Controller, Delete, Get, Header, Patch, Path, Queries, Query, Response, Route, Security, SuccessResponse, Tags } from 'tsoa';
 
 const app = express.Router();
 export default app;
@@ -40,7 +40,7 @@ export class ScreenshotController extends Controller {
      */
     @SuccessResponse(200, "List of matching Screenshots")
     @Get()
-    public async getScreenshots(@Header("Authorization") authorization?: string, @Query() requestQuery: GetScreenshotParms): Promise<Screenshot[]> {
+    public async getScreenshots(@Header("Authorization") authorization?: string, @Queries() requestQuery: GetScreenshotParms): Promise<Screenshot[]> {
         let isAdmin = false;
         try {
             const user = extractBearerJWT(authorization);
