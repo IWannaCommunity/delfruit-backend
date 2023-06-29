@@ -8,7 +8,7 @@ executors:
   docker:
     working_directory: /tmp/workspace
     docker:
-      - image: docker:latest
+      - image: docker:20.10.1
 
 jobs:
     integration-tests:
