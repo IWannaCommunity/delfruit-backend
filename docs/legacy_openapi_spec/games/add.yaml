@@ -1,0 +1,45 @@
+/games/{id}:
+  post:
+    summary: Add Game (Admin Only)
+    description: Add Game (Admin Only)
+    tags:
+      - Games
+    produces:
+      - application/json
+    parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+          minimum: 1
+        required: true
+        description: The exact id of the game to return
+
+    requestBody:
+      description: Optional description in Markdown
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+              url:
+                type: string
+              urlSpdrn:
+                type: string
+              author:
+                type: string
+              collab:
+                type: boolean
+              dateCreated:
+                type: string
+              ownerId:
+                type: integer
+
+    responses:
+      200:
+        description: The Game object, after creation
+      403:
+        description: Insufficient privileges (requires an admin account)

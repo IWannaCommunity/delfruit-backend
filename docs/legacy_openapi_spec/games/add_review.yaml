@@ -1,0 +1,44 @@
+/games/{id}/reviews:
+  put:
+    summary: Add Review for Game (User/Admin Only)
+    description: Add Review for Game (User/Admin Only)
+    tags:
+      - Games
+      - Reviews
+    produces:
+      - application/json
+    parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+          minimum: 1
+        required: true
+        description: The id of the game to review
+
+    requestBody:
+      description: Optional description in Markdown
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              rating:
+                type: number
+              difficulty:
+                type: number
+              comment:
+                type: string
+              removed:
+                type: boolean
+
+    responses:
+      200:
+        description: The review that was just added
+      400:
+        description: Invalid game id
+      401:
+        description: Unauthorized (must log in to add reviews)
+      404:
+        description: Game not found

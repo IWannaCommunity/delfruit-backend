@@ -1,0 +1,31 @@
+
+
+  
+  /users/{id}:
+    patch:
+      summary: Modify User (User/Admin only)
+      description: Updates a user. If a password is provided, 
+        then the old password must also be provided to prevent impersonation 
+        with a stolen token.
+      tags: 
+        - Users
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+            minimum: 1
+          required: true
+          description: The user to modify
+      responses:
+        200:
+          description: The updated user
+        400:
+          description: Invalid user id
+        401:
+          description: Unauthenticated (attempted to modify password without old password)
+        403:
+          description: Unauthorized attempt to modify another user
+        404:
+          description: User not found
+ 

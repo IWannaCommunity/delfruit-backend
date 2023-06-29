@@ -1,0 +1,95 @@
+/games:
+  get:
+    summary: Game List
+    description: Game List
+    tags:
+      - Games
+    produces:
+      - application/json
+    parameters:
+      - in: query
+        name: id
+        schema:
+          type: integer
+        description: The exact id of the game to return
+      - in: query
+        name: removed
+        schema:
+          type: boolean
+        description: (admin only) Whether to return removed games. Forced to false (non-removed only) for users
+      - in: query
+        name: name
+        schema:
+          type: string
+        description: Game name (allows partial match)
+      - in: query
+        name: tags
+        schema:
+          type: string
+        description: Comma-separated list of tags to filter by
+      - in: query
+        name: author
+        schema:
+          type: string
+        description: Author name (allows partial search)
+      - in: query
+        name: hasDownload
+        schema:
+          type: boolean
+        description: Whether or not the game has a download associated
+      - in: query
+        name: createdFrom
+        schema:
+          type: date
+        description: The earliest creation date to filter games by
+      - in: query
+        name: createdTo
+        schema:
+          type: date
+        description: The latest creation date to filter games by
+      - in: query
+        name: clearedByUserId
+        schema:
+          type: integer
+        description: The user id of a user who has indicated they have cleared the game
+      - in: query
+        name: reviewedByUserId
+        schema:
+          type: integer
+        description: The user id of a user who has reviewed the game
+      - in: query
+        name: ratingFrom
+        schema:
+          type: integer
+        description: A minimum rating
+      - in: query
+        name: ratedTo
+        schema:
+          type: integer
+        description: A maximum rating
+      - in: query
+        name: difficultyFrom
+        schema:
+          type: integer
+        description: A minimum difficulty
+      - in: query
+        name: difficultyTo
+        schema:
+          type: integer
+        description: A maximum difficulty
+      - in: query
+        name: page
+        schema:
+          type: integer
+          minimum: 0
+        description: The page of results to return (default 0)
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 50
+        description: The number of results per page (default 50, maximum 50)
+    responses:
+      200:
+        description: returns a list of games matching filters

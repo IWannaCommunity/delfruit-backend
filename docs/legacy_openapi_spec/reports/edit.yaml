@@ -1,0 +1,45 @@
+
+
+  
+  /reports/{id}:
+    patch:
+      summary: Update Report (Admin Only)
+      description: Allows admins to update the report, marking it as resolved.
+      tags: 
+        - Reports
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          description: The id of the report to return
+  
+      requestBody:
+        description: The fields on the report to update
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id: 
+                  type: integer
+                answeredById: 
+                  type: integer
+                dateAnswered: 
+                  type: string
+  
+      responses:
+        200:
+          description: return the updated report
+        400:
+          description: invalid report id
+        401:
+          description: unauthenticated (must log in to view reports)
+        403:
+          description: insufficient permissions (must be admin to view reports)
+        404:
+          description: report not found
+

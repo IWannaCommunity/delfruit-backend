@@ -1,0 +1,47 @@
+
+
+  
+  /reviews/{id}:
+    patch:
+      summary: Update Review (User Only)
+      description: Update Review (User Only)
+      tags: 
+        - Reviews
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+            minimum: 1
+          required: true
+          description: The id of the review to update
+  
+      requestBody:
+        description: Optional description in Markdown
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rating: 
+                  type: number
+                difficulty: 
+                  type: number
+                comment: 
+                  type: string
+                removed: 
+                  type: boolean
+  
+      responses:
+        204:
+          description: The review was updated
+        400:
+          description: Invalid review id
+        401:
+          description: Unauthorized (must log in to edit reviews)
+        403:
+          description: Insufficient privileges (must be an admin or the reviewer)
+ 

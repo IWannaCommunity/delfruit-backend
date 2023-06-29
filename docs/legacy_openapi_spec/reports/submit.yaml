@@ -1,0 +1,57 @@
+
+
+  
+  /reports:
+    post:
+      summary: Submit Report (User/Admin Only)
+      description: Allows a user to submit a report.
+      tags: 
+        - Reports
+      produces:
+        - application/json
+  
+      requestBody:
+        description: The fields on the report to update
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type: 
+                  type: string
+                  enum:
+                    - screenshot_add
+                    - screenshot_approve
+                    - review_remove
+                    - screenshot_deny
+                    - review
+                    - game
+                    - game_add
+                    - game_remove
+                    - screenshot_remove
+                    - user_register
+                    - user
+                    - user_password_change
+                    - game_update_url
+                    - review_restore
+                    - screenshot
+                    - game_update_owner
+                    - game_update_creator
+                  description: The report type
+                targetId: 
+                  type: integer
+                  description: The id of the thing being reported. If an attempt to 
+                    retrieve the entity fails, will return a 400.
+                report: 
+                  type: string
+                  description: the contents of the report
+  
+      responses:
+        200:
+          description: return the updated report
+        400:
+          description: invalid type for role
+        401:
+          description: unauthenticated (must log in to submit a report)
+ 

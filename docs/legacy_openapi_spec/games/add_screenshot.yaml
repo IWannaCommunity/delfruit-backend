@@ -1,0 +1,41 @@
+/games/{id}/screenshots:
+  post:
+    summary: Add Screenshot for Game (User/Admin Only)
+    description: Add Screenshot for Game (User/Admin Only)
+    tags:
+      - Games
+      - Screenshots
+    produces:
+      - application/json
+    parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+          minimum: 1
+        required: true
+        description: The id of the game to add a screenshot to
+
+    requestBody:
+      description: Optional description in Markdown
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            properties:
+              description:
+                type: string
+              screenshot:
+                type: string
+                format: binary
+
+    responses:
+      200:
+        description: The screenshot that was just added
+      400:
+        description: Invalid game id
+      401:
+        description: Unauthorized (must log in to add screenshots)
+      404:
+        description: Game not found

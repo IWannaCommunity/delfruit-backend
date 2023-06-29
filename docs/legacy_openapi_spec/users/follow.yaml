@@ -1,0 +1,35 @@
+
+
+  
+  /users/{id}/follows/{userId}:
+    put:
+      summary: Follow User (User/Admin only)
+      description: Adds a user to your following list. Is idempotent - following the same user again does nothing
+      tags: 
+        - Users
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+            minimum: 1
+          required: true
+          description: The user whose following list is being modified
+        - in: path
+          name: userId
+          schema:
+            type: integer
+            minimum: 1
+          description: The user to follow
+      responses:
+        204:
+          description: Follower added
+        400:
+          description: Invalid user id (either one)
+        401:
+          description: Unauthenticated (must log in to follow a user)
+        403:
+          description: Unauthorized attempt to modify another user's follow list
+        404:
+          description: User not found
+ 

@@ -1,0 +1,23 @@
+/games/{id}/tags:
+  get:
+    summary: Get Tags Associated to Game
+    description: Get Tags Associated to Game
+    tags:
+      - Games
+    produces:
+      - application/json
+    parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+          minimum: 1
+        required: true
+        description: The id of the game to get tags for
+    responses:
+      200:
+        description: List of tags for the game (or empty array if none)
+      400:
+        description: Invalid game id
+      404:
+        description: Game not found

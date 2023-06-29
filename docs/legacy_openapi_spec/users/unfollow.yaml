@@ -1,0 +1,35 @@
+
+
+  
+  /users/{id}/follows/{userId}:
+    delete:
+      summary: Unfollow User (User/Admin only)
+      description: Removes a user from your following list. Is idempotent - unfollowing the same user again does nothing
+      tags: 
+        - Users
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+            minimum: 1
+          required: true
+          description: The user whose following list is being modified
+        - in: path
+          name: userId
+          schema:
+            type: integer
+            minimum: 1
+          description: The user to unfollow
+      responses:
+        204:
+          description: Follower removed
+        400:
+          description: Invalid user id (either one)
+        401:
+          description: Unauthenticated (must log in to unfollow a user)
+        403:
+          description: Unauthorized attempt to modify another user's unfollow list
+        404:
+          description: User not found
+ 

@@ -1,0 +1,27 @@
+
+
+  
+  /reviews/{id}:
+    get:
+      summary: Get Review
+      description: Get Review
+      tags: 
+        - Reviews
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+            minimum: 1
+          required: true
+          description: The exact id of the review to return
+      responses:
+        200:
+          description: Object describing the review
+        400:
+          description: Invalid review id
+        404:
+          description: Review not found
+ 

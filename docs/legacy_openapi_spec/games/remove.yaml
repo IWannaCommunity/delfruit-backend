@@ -1,0 +1,27 @@
+/games/{id}:
+  delete:
+    summary: Remove Game (Admin only)
+    description: Remove Game. This is idempotent - repeated deletions of the
+      same game have no effect.
+    tags:
+      - Games
+    produces:
+      - application/json
+    parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+          minimum: 1
+        required: true
+        description: The exact id of the game to return
+          (or the literal 'random' for a random game)
+    responses:
+      204:
+        description: Object describing the game
+      400:
+        description: Invalid game id
+      403:
+        description: Insufficient privileges (requires an admin account)
+      404:
+        description: Game not found

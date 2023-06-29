@@ -1,0 +1,25 @@
+/games/{id}/tags:
+  post:
+    summary: Set Tags Associated to Game
+    description: Clears and sets an array of tag IDs for a game on a user-by-user basis.
+    tags:
+      - Games
+    produces:
+      - application/json
+    parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+          minimum: 1
+        required: true
+        description: The id of the game to add tags to
+    responses:
+      200:
+        description: Full list of tags for the game (or empty array if none)
+      400:
+        description: Invalid game id
+      401:
+        description: Unauthorized (must log in to add tags)
+      404:
+        description: Game not found

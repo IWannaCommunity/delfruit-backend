@@ -1,0 +1,22 @@
+/games/{id}:
+  get:
+    summary: Get Game
+    description: Get Game
+    tags:
+      - Games
+    produces:
+      - application/json
+    parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+          minimum: 1
+        required: true
+        description: The exact id of the game to return
+          (or the literal 'random' for a random game)
+    responses:
+      200:
+        description: Object describing the game
+      404:
+        description: Game not found

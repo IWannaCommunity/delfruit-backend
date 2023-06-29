@@ -1,0 +1,29 @@
+
+
+  
+  /users:
+    post:
+      summary: Register new user
+      description: Registers a new user
+      tags: 
+        - Users
+      requestBody:
+        description: The user to create
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username: 
+                  type: string
+                password: 
+                  type: string
+                email: 
+                  type: string
+      responses:
+        200:
+          description: The newly created user, with a token to use for authentication
+        400:
+          description: Malformed request, or user already exists
+ 

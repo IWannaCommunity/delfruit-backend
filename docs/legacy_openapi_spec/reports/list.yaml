@@ -1,0 +1,48 @@
+
+
+  
+  /reports:
+    get:
+      summary: Report List (Admin Only)
+      description: Report List (Admin Only)
+      tags: 
+        - Reports
+      produces:
+        - application/json
+      parameters:
+        - in: query
+          name: id
+          schema:
+            type: string
+          description: The id of the report to return (just use /reports/{id} you meme)
+        - in: query
+          name: type
+          schema:
+            type: string
+          description: The type of reports to return
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 0
+          description: The page of results to return (default 0)
+        - in: query
+          name: answered
+          schema:
+            type: integer
+          description: If specified, whether to filter to answered (1) or unanswered (0) reports
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+          description: The number of results per page (default 50, maximum 50)
+      responses:
+        200:
+          description: returns a list of games matching filters
+        401:
+          description: unauthenticated (must log in to view reports)
+        403:
+          description: insufficient permissions (must be admin to view reports)
+ 

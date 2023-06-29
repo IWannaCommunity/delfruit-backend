@@ -1,0 +1,27 @@
+
+
+  
+  /screenshots/{id}:
+    get:
+      summary: Get Screenshot
+      description: Get Screenshot
+      tags: 
+        - Screenshots
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+            minimum: 1
+          required: true
+          description: The id of the screenshot to return
+      responses:
+        200:
+          description: Object describing the screenshot
+        400:
+          description: Invalid screenshot id
+        404:
+          description: Screenshot not found
+ 

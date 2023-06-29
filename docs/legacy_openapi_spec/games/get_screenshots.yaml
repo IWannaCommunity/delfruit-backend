@@ -1,0 +1,37 @@
+/games/{id}/screenshots:
+  get:
+    summary: Get Screenshots for Game
+    description: Get Screenshots for Game
+    tags:
+      - Games
+      - Screenshots
+    produces:
+      - application/json
+    parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+          minimum: 1
+        required: true
+        description: The exact id of the game to return
+      - in: query
+        name: page
+        schema:
+          type: integer
+          minimum: 0
+        description: The page of results to return (default 0)
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 50
+        description: The number of results per page (default 50)
+    responses:
+      200:
+        description: List of screenshots for the game (or empty array if none)
+      400:
+        description: Invalid game id
+      404:
+        description: Game not found

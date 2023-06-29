@@ -1,0 +1,38 @@
+
+
+  
+  /reviews/{id}/likes/{userId}:
+    get:
+      summary: Returns whether user likes review (User/Admin only)
+      description: Returns whether user likes review (User/Admin only)
+      tags: 
+        - Reviews
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+            minimum: 1
+          required: true
+          description: The exact id of the review
+        - in: path
+          name: userId
+          schema:
+            type: integer
+            minimum: 1
+          required: true
+          description: The id of the user to check
+      responses:
+        200:
+          description: User's like status
+        400:
+          description: Invalid review id or user id (check the error in response)
+        401:
+          description: Unauthenticated (log in first)
+        403:
+          description: Insufficient priviliges (must be an admin, or the user indicated in the url)
+        404:
+          description: Review not found
+ 
