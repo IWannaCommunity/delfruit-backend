@@ -16,7 +16,7 @@ services:
     volumes:
       - ./src:/app/src
     healthcheck:
-        test: [ "CMD", "curl", "localhost:4201/api/ping/" ]
+        test: [ "CMD", "curl", "localhost:4201/ping/" ]
         timeout: 5s
         interval: 3s
         retries: 10
