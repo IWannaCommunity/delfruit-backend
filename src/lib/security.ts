@@ -34,7 +34,7 @@ export function expressAuthentication(req: Request, securityName: string, scopes
         );
     }
 
-    if (scopes.includes("user")) {
+    if (token.isAdmin === false) {
         if (userCheck(token) === AuthnCheck.Authorized) {
             return Promise.resolve({});
         } else {
@@ -42,7 +42,7 @@ export function expressAuthentication(req: Request, securityName: string, scopes
                 resp.status(403).contentType("application/json").send({ error: "not signed in" })
             );
         }
-    } else if (scopes.includes("admin")) {
+    } else {
         if (adminCheck(token) === AuthnCheck.Authorized) {
             return Promise.resolve({});
         } else {
