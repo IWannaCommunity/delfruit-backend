@@ -33,15 +33,15 @@ export enum AuthnCheck {
  * @param roles optional set of roles, the user must have at least one of these
  */
 export function userCheck(token: any, ...roles: string[]): AuthnCheck {
-    if (!token.user || !token.user.sub) return AuthnCheck.Unauthorized;
+    if (!token || !token.sub) return AuthnCheck.Unauthorized;
 
-    if (token.user.useExp < Math.floor(Date.now() / 1000)) {
+    if (token.useExp < Math.floor(Date.now() / 1000)) {
         //TODO: generate a new token
         //TODO: replace the user in context
     }
 
     if (roles.length > 0) {
-        const userRoles = token.user.roles as string[];
+        const userRoles = token.roles as string[];
         if (!roles.some(r => userRoles.includes(r))) return AuthnCheck.Forbidden;
     }
     return AuthnCheck.Authorized;
@@ -60,10 +60,10 @@ export function adminCheck(token: any, ...roles: string[]): AuthnCheck {
     if (token === undefined) {
         return AuthnCheck.Unauthorized;
     }
-    if (!token.user || !token.user.sub) return AuthnCheck.Unauthorized;
-    if (!token.user.isAdmin) return AuthnCheck.Forbidden;
+    if (!token || !token.sub) return AuthnCheck.Unauthorized;
+    if (!token.isAdmin) return AuthnCheck.Forbidden;
     if (roles.length > 0) {
-        const userRoles = token.user.roles as string[];
+        const userRoles = token.roles as string[];
         if (!roles.some(r => userRoles.includes(r))) return AuthnCheck.Forbidden;
     }
     return AuthnCheck.Authorized;
