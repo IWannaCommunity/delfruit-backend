@@ -381,7 +381,7 @@ export class GameController extends Controller {
             'id': ssres.id
         }
         // Using fPutObject API upload your file to the bucket europetrip.
-        minioClient.putObject(config.s3_bucket, `${ssres.id}.png`, screenshot, metaData, function(err, etag) {
+        minioClient.putObject(config.s3_bucket, `${ssres.id}.png`, screenshot.buffer, metaData, function(err, etag) {
             // TODO: don't return raw S3 errors to the user!!!
             if (err) return console.log(err)
         });
