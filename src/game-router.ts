@@ -348,6 +348,7 @@ export class GameController extends Controller {
     @Response<APIError>(404, "Game Not Found")
     @Post("{id}/screenshots")
     public async postGameScreenshot(@Header("Authorization") authorization: string, @Path() id: number, @FormField() description?: string = "", @UploadedFile() screenshot: Express.Multer.File): Promise<Screenshot> {
+        console.log(screenshot);
         // NOTE: auth guard should make the error condition unreachable
         const user = extractBearerJWT(authorization);
 
@@ -380,7 +381,7 @@ export class GameController extends Controller {
             'id': ssres.id
         }
         // Using fPutObject API upload your file to the bucket europetrip.
-        minioClient.fPutObject(config.s3_bucket, `${ssres.id}.png`, screenshot.path, metaData, function(err, etag) {
+        minioClient.putObject(config.s3_bucket, `${ssres.id}.png`, screenshot, metaData, function(err, etag) {
             // TODO: don't return raw S3 errors to the user!!!
             if (err) return console.log(err)
         });
