@@ -1,5 +1,5 @@
 
-import mysql, { Connection } from 'mysql2';
+import mysql, { ConnectionOptions } from 'mysql2';
 import Config from './model/config';
 let config: Config = require('./config/config.json');
 
@@ -11,7 +11,7 @@ export class Database {
      * @param configOverride if provided, forces a connection configuration.
      * Really only used for integration testing - always use the parameterless version in prod.
      */
-    constructor(configOverride?: mysql.Connection) {
+    constructor(configOverride?: mysql.ConnectionOptions) {
         let useConfig: mysql.Connection = { ...config.db };
         if (configOverride) {
             useConfig = configOverride;
