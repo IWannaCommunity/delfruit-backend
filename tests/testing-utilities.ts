@@ -49,7 +49,6 @@ export async function createUser(isAdmin: boolean): Promise<TestUser> {
             database: config.db.database,
             user: config.db.user,
             password: config.db.password,
-            timeout: 1000
         });
         try {
             const success = await db.execute('update User set is_admin = 1 WHERE id = ?', [reg.data.id]);
@@ -161,7 +160,6 @@ export async function setUserToken(user: TestUser, token: string): Promise<any> 
         database: config.db.database,
         user: config.db.user,
         password: config.db.password,
-        timeout: 1000
     });
     try {
         const success = await database.execute(
@@ -187,7 +185,6 @@ export async function grantPermission(user: TestUser, permission: Permission): P
         database: config.db.database,
         user: config.db.user,
         password: config.db.password,
-        timeout: 1000
     });
     try {
         await database.execute(
@@ -211,7 +208,6 @@ export async function hasPermission(user: TestUser, permission: Permission): Pro
         database: config.db.database,
         user: config.db.user,
         password: config.db.password,
-        timeout: 1000
     });
     try {
         const result = await database.execute(
