@@ -5,7 +5,7 @@ import { createUser } from "./testing-utilities";
 describe("api controller", () => {
     test("returns a 401 if the token is invalid", async () => {
         try {
-            await axios.get("http://localhost:4201/api/users", { header: { "Authorization": "Bearer xyz" } });
+            await axios.get("http://localhost:4201/api/users", { headers: { "Authorization": "Bearer xyz" } });
         } catch (e: any) {
             expect(e).toHaveProperty("response");
             expect(e.response).toHaveProperty("status");
@@ -16,7 +16,7 @@ describe("api controller", () => {
     test("returns a 403 if the user isn't an admin", async () => {
         const user = await createUser(false);
         try {
-            await axios.get("http://localhost:4201/api/users", { header: { "Authorization": "Bearer " + user.token } });
+            await axios.get("http://localhost:4201/api/users", { headers: { "Authorization": "Bearer " + user.token } });
         } catch (e: any) {
             expect(e).toHaveProperty("response");
             expect(e.response).toHaveProperty("status");
