@@ -1,10 +1,9 @@
 import axios from 'axios';
-import { Database } from '../database';
+import { Database } from '../src/database';
 import FormData from 'form-data';
 import fs from 'fs';
-import { Permission } from '../model/Permission';
-import Config from '../model/config';
-import retry from 'retry';
+import { Permission } from '../src/model/Permission';
+import Config from '../src/model/config';
 import { expect } from "@jest/globals";
 let config: Config = require('../config/config.json');
 var Moniker = require('moniker');
