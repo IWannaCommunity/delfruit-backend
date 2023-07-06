@@ -1,18 +1,15 @@
 import axios from 'axios';
-import chai from 'chai';
 import { Database } from '../database';
 import FormData from 'form-data';
 import fs from 'fs';
 import { Permission } from '../model/Permission';
 import Config from '../model/config';
 import retry from 'retry';
+import { expect } from "@jest/globals";
 let config: Config = require('../config/config.json');
 var Moniker = require('moniker');
 
-var expect = chai.expect;
-var fail = chai.assert.fail;
-
-var gamenamegen = Moniker.generator([Moniker.adjective, Moniker.noun],{glue:' '});
+var gamenamegen = Moniker.generator([Moniker.adjective, Moniker.noun], { glue: ' ' });
 var taggen = Moniker.generator([Moniker.adjective]);
 var usergen = Moniker.generator(['src/int-test/usernames']);
 
@@ -38,10 +35,13 @@ export async function createUser(isAdmin: boolean): Promise<TestUser> {
     //register
     const reg = await axios.post('http://localhost:4201/users',
         { username: usernameA, password: "test-pw", email: "test@example.com" });
-    expect(reg).to.have.property('status').and.equal(200);
-    expect(reg).to.have.property('data');
-    expect(reg.data).to.have.property('token').and.be.a('string');
-    expect(reg.data).to.have.property('id').and.be.a('number');
+    expect(reg).toHaveProperty("status")
+    expect(reg.status).toStrictEqual(200);
+    expect(reg).toHaveProperty('data');
+    expect(reg.data).toHaveProperty('token')
+    expect(reg.data.token).toEqual(expect.any(String));
+    expect(reg.data).toHaveProperty('id');
+    expect(reg.data.id).toEqual(expect.any(Number));
 
     if (isAdmin) {
         const db = new Database({
@@ -50,18 +50,18 @@ export async function createUser(isAdmin: boolean): Promise<TestUser> {
             database: config.db.database,
             user: config.db.user,
             password: config.db.password,
-            timeout:1000
-          });
+            timeout: 1000
+        });
         try {
             const success = await db.execute('update User set is_admin = 1 WHERE id = ?', [reg.data.id]);
-            expect(success.affectedRows).to.be.equal(1);
+            expect(success.affectedRows).toEqual(1);
         } catch (err) {
-            fail("failed to connect to database!\n"+err);
+            fail("failed to connect to database!\n" + err);
         } finally {
-            try { 
+            try {
                 await db.close();
             } catch (err) {
-                fail("failed to close database!\n"+err);
+                fail("failed to close database!\n" + err);
             }
         }
     }
@@ -69,16 +69,18 @@ export async function createUser(isAdmin: boolean): Promise<TestUser> {
     //login
     const login = await axios.post('http://localhost:4201/auth/login',
         { username: usernameA, password: "test-pw" });
-    expect(login).to.have.property('status').and.equal(200);
-    expect(login).to.have.property('data');
-    expect(login.data).to.have.property('token').and.be.a('string');
+    expect(login).toHaveProperty('status');
+    expect(login.status).toEqual(200);
+    expect(login).toHaveProperty('data');
+    expect(login.data).toHaveProperty('token');
+    expect(login.data.token).toEqual(expect.any(String))
 
-    return { 
-        token: login.data.token, 
-        id: login.data.id, 
-        username: usernameA, 
-        password: "test-pw", 
-        email: "test@example.com" 
+    return {
+        token: login.data.token,
+        id: login.data.id,
+        username: usernameA,
+        password: "test-pw",
+        email: "test@example.com"
     };
 }
 
@@ -94,9 +96,11 @@ export async function createGame(parameters?: any): Promise<any> {
             ...parameters
         },
         { headers: { 'Authorization': "Bearer " + user.token } });
-    expect(rsp).to.have.property('status').and.equal(200);
-    expect(rsp).to.have.property('data');
-    expect(rsp.data).to.have.property('id').and.be.a("number");
+    expect(rsp).toHaveProperty('status')
+    expect(rsp.status).toEqual(200);
+    expect(rsp).toHaveProperty('data');
+    expect(rsp.data).toHaveProperty('id')
+    expect(rsp.data.id).toEqual(expect.any(Number));
 
     return { id: rsp.data.id, name: rsp.data.name, author: rsp.data.author, user };
 }
@@ -105,7 +109,7 @@ export async function addScreenshot(user: TestUser, game: any): Promise<any> {
     let data = new FormData();
 
     data.append('description', 'super neat screenshot');
-    data.append('screenshot', fs.createReadStream(__dirname+'/HYPE.png'));
+    data.append('screenshot', fs.createReadStream(__dirname + '/HYPE.png'));
 
     const hd = data.getHeaders();
     hd['Authorization'] = "Bearer " + user.token;
@@ -113,9 +117,11 @@ export async function addScreenshot(user: TestUser, game: any): Promise<any> {
     const upd = await axios.post(`http://localhost:4201/games/${game.id}/screenshots`,
         data,
         { headers: hd });
-    expect(upd).to.have.property('status').and.equal(200);
-    expect(upd).to.have.property('data');
-    expect(upd.data).to.have.property('id').and.be.a('number');
+    expect(upd).toHaveProperty('status')
+    expect(upd.status).toEqual(200);
+    expect(upd).toHaveProperty('data');
+    expect(upd.data).toHaveProperty('id');
+    expect(upd.data.id).toEqual(expect.any(Number));
     return upd.data;
 }
 
@@ -128,10 +134,12 @@ export async function addReview(user: TestUser, game: any): Promise<any> {
             comment: 'good game very good'
         },
         { headers: { 'Authorization': "Bearer " + user.token } });
-    expect(upd).to.have.property('status').and.equal(200);
-    expect(upd).to.have.property('data');
-    expect(upd.data).to.have.property('id').and.be.a('number');
-    
+    expect(upd).toHaveProperty('status');
+    expect(upd.status).toEqual(200);
+    expect(upd).toHaveProperty('data');
+    expect(upd.data).toHaveProperty('id');
+    expect(upd.data.id).toEqual(expect.any(Number));
+
     return upd.data;
 }
 
@@ -141,27 +149,11 @@ export async function addTag(user: TestUser): Promise<any> {
     const tres = await axios.post('http://localhost:4201/tags',
         { name: nm },
         { headers: { 'Authorization': "Bearer " + user.token } });
-    expect(tres).to.have.property('status').and.equal(200);
+    expect(tres).toHaveProperty('status');
+    expect(tres).toEqual(200);
 
     return tres.data;
 }
-
-export function getConTest(ctx: Mocha.Context): Mocha.HookFunction {
-    return () => {
-        const ops = retry.operation({ retries: 999, factor: 1, minTimeout: 1, maxTimeout: 10, randomize: false });
-        ops.attempt(async (curAttempt) => {
-            if (curAttempt >= 1000) {
-                console.error("exceeded max attempts on ping, possibly failing")
-            }
-            try {
-                await axios.get('http://localhost:4201/ping');
-            } catch (e) {
-                if (ops.retry(e)) { return; }
-            }
-        });
-    }
-}
-
 
 export async function setUserToken(user: TestUser, token: string): Promise<any> {
     const database = new Database({
@@ -170,21 +162,21 @@ export async function setUserToken(user: TestUser, token: string): Promise<any> 
         database: config.db.database,
         user: config.db.user,
         password: config.db.password,
-        timeout:1000
-      });
+        timeout: 1000
+    });
     try {
         const success = await database.execute(
             `UPDATE User SET reset_token = ?, reset_token_set_time = CURRENT_TIMESTAMP
-            WHERE id = ?`,[token,user.id]);
-        expect(success.affectedRows).to.be.equal(1);
+            WHERE id = ?`, [token, user.id]);
+        expect(success.affectedRows).toEqual(1);
     } catch (err) {
-        console.log("failed to connecto to database!\n"+err);
-        fail("failed to connecto to database!\n"+err);
+        console.log("failed to connecto to database!\n" + err);
+        fail("failed to connecto to database!\n" + err);
     } finally {
-        try { 
+        try {
             await database.close();
         } catch (err) {
-            console.log("failed to close database!\n"+err);
+            console.log("failed to close database!\n" + err);
         }
     }
 }
@@ -196,19 +188,19 @@ export async function grantPermission(user: TestUser, permission: Permission): P
         database: config.db.database,
         user: config.db.user,
         password: config.db.password,
-        timeout:1000
-      });
+        timeout: 1000
+    });
     try {
         await database.execute(
-            `INSERT IGNORE INTO UserPermission (user_id,permission_id) VALUES (?,?)`,[user.id,permission]);
+            `INSERT IGNORE INTO UserPermission (user_id,permission_id) VALUES (?,?)`, [user.id, permission]);
     } catch (err) {
-        console.log("failed to connecto to database!\n"+err);
-        fail("failed to connecto to database!\n"+err);
+        console.log("failed to connecto to database!\n" + err);
+        fail("failed to connecto to database!\n" + err);
     } finally {
-        try { 
+        try {
             await database.close();
         } catch (err) {
-            console.log("failed to close database!\n"+err);
+            console.log("failed to close database!\n" + err);
         }
     }
 }
@@ -220,21 +212,21 @@ export async function hasPermission(user: TestUser, permission: Permission): Pro
         database: config.db.database,
         user: config.db.user,
         password: config.db.password,
-        timeout:1000
-      });
+        timeout: 1000
+    });
     try {
         const result = await database.execute(
-            `SELECT 1 FROM UserPermission WHERE user_id=? AND permission_id=?`,[user.id,permission]);
+            `SELECT 1 FROM UserPermission WHERE user_id=? AND permission_id=?`, [user.id, permission]);
         return result.length === 1;
     } catch (err) {
-        console.log("failed to connecto to database!\n"+err);
-        fail("failed to connecto to database!\n"+err);
+        console.log("failed to connecto to database!\n" + err);
+        fail("failed to connecto to database!\n" + err);
         return false;
     } finally {
-        try { 
+        try {
             await database.close();
         } catch (err) {
-            console.log("failed to close database!\n"+err);
+            console.log("failed to close database!\n" + err);
         }
     }
 }
