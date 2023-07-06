@@ -1,5 +1,5 @@
 
-import mysql, { ConnectionOptions } from 'mysql2';
+import mysql, { Connection, ConnectionOptions } from 'mysql2';
 import Config from './model/config';
 let config: Config = require('./config/config.json');
 
