@@ -12,7 +12,7 @@ export class Database {
      * Really only used for integration testing - always use the parameterless version in prod.
      */
     constructor(configOverride?: mysql.ConnectionOptions) {
-        let useConfig: mysql.Connection = { ...config.db };
+        let useConfig: mysql.ConnectionOptions = { ...config.db };
         if (configOverride) {
             useConfig = configOverride;
         }
