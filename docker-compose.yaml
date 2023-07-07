@@ -28,7 +28,7 @@ services:
     expose: # exposes 3306 on the internal container network for the server
       - "3306"
     ports: # allows connection from integration tests, or an external mysql client.
-      - "3306:3306"
+      - "33061:3306"
   minio:
     image: quay.io/minio/minio:RELEASE.2023-05-18T00-05-36Z
     expose:
