@@ -168,7 +168,7 @@ export async function setUserToken(user: TestUser, token: string): Promise<any> 
         expect(success.affectedRows).toEqual(1);
     } catch (err) {
         console.log("failed to connecto to database!\n" + err);
-        fail("failed to connecto to database!\n" + err);
+        throw new Error("failed to connecto to database!\n" + err);
     } finally {
         try {
             await database.close();
@@ -215,7 +215,7 @@ export async function hasPermission(user: TestUser, permission: Permission): Pro
         return result.length === 1;
     } catch (err) {
         console.log("failed to connecto to database!\n" + err);
-        fail("failed to connecto to database!\n" + err);
+        throw new Error("failed to connecto to database!\n" + err);
         return false;
     } finally {
         try {
