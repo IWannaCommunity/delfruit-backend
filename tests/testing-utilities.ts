@@ -5,7 +5,7 @@ import fs from 'fs';
 import { Permission } from '../src/model/Permission';
 import Config from '../src/model/config';
 import { expect } from "@jest/globals";
-let config: Config = require('../config/config.json');
+let config: Config = require('../src/config/config.json');
 var Moniker = require('moniker');
 
 var gamenamegen = Moniker.generator([Moniker.adjective, Moniker.noun], { glue: ' ' });
