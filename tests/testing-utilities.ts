@@ -35,7 +35,7 @@ export async function createUser(isAdmin: boolean): Promise<TestUser> {
     const reg = await axios.post('http://localhost:4201/users',
         { username: usernameA, password: "test-pw", email: "test@example.com" });
     expect(reg).toHaveProperty("status")
-    expect(reg.status).toStrictEqual(200);
+    expect(reg.status).toStrictEqual(201);
     expect(reg).toHaveProperty('data');
     expect(reg.data).toHaveProperty('token')
     expect(reg.data.token).toEqual(expect.any(String));
