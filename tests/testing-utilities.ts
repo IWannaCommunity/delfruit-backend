@@ -54,12 +54,12 @@ export async function createUser(isAdmin: boolean): Promise<TestUser> {
             const success = await db.execute('update User set is_admin = 1 WHERE id = ?', [reg.data.id]);
             expect(success.affectedRows).toEqual(1);
         } catch (err) {
-            fail("failed to connect to database!\n" + err);
+            throw new Error("failed to connect to database!\n" + err);
         } finally {
             try {
                 await db.close();
             } catch (err) {
-                fail("failed to close database!\n" + err);
+                throw new Error("failed to close database!\n" + err);
             }
         }
     }
@@ -95,7 +95,7 @@ export async function createGame(parameters?: any): Promise<any> {
         },
         { headers: { 'Authorization': "Bearer " + user.token } });
     expect(rsp).toHaveProperty('status')
-    expect(rsp.status).toEqual(200);
+    expect(rsp.status).toEqual(201);
     expect(rsp).toHaveProperty('data');
     expect(rsp.data).toHaveProperty('id')
     expect(rsp.data.id).toEqual(expect.any(Number));
@@ -191,7 +191,7 @@ export async function grantPermission(user: TestUser, permission: Permission): P
             `INSERT IGNORE INTO UserPermission (user_id,permission_id) VALUES (?,?)`, [user.id, permission]);
     } catch (err) {
         console.log("failed to connecto to database!\n" + err);
-        fail("failed to connecto to database!\n" + err);
+        throw new Error("failed to connecto to database!\n" + err);
     } finally {
         try {
             await database.close();
