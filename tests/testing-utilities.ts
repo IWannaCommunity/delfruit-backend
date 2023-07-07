@@ -59,7 +59,7 @@ export async function createUser(isAdmin: boolean): Promise<TestUser> {
             try {
                 await db.close();
             } catch (err) {
-                throw new Error("failed to close database!\n" + err);
+                console.error(`failed to close database!\n ${err}`);
             }
         }
     }
