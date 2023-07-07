@@ -46,7 +46,7 @@ export class Database {
         return new Promise((resolve, reject) => {
             this.connection.end(err => {
                 if (err) reject(err);
-                else resolve();
+                else resolve({});
             });
         });
     }
