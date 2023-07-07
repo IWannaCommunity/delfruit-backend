@@ -10,7 +10,7 @@ var Moniker = require('moniker');
 
 var gamenamegen = Moniker.generator([Moniker.adjective, Moniker.noun], { glue: ' ' });
 var taggen = Moniker.generator([Moniker.adjective]);
-var usergen = Moniker.generator(['src/int-test/usernames']);
+var usergen = Moniker.generator(['tests/usernames']);
 
 export interface TestUser {
     token: string;
