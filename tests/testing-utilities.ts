@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosError, AxiosResponse } from 'axios';
 import { Database } from '../src/database';
 import FormData from 'form-data';
 import fs from 'fs';
@@ -28,14 +28,34 @@ export function genGamename() {
     return gamenamegen.choose() + '_' + Math.random().toString(36).substring(2, 6);
 }
 
+export function assertAxiosRequest(req: AxiosResponse | any, statusCode: number): void | never {
+    expect(req).toHaveProperty("status")
+    expect(req.status).toStrictEqual(statusCode);
+}
+
+export function assertAxiosError(e: AxiosError | any, statusCode: number): void | never {
+    expect(e).toHaveProperty("response");
+    expect(e.response).toHaveProperty("status");
+    expect(e.response.status).toStrictEqual(statusCode);
+}
+
+export function assertAxiosReqDataHasPropAndEquals(req: AxiosResponse, propName: string, value: any): void | never {
+    expect(req.data).toHaveProperty(propName);
+    expect(req.data[propName]).toEqual(value);
+}
+
+export function assertAxiosReqDataHasPropAndStrictEquals(req: AxiosResponse, propName: string, value: any): void | never {
+    expect(req.data).toHaveProperty(propName);
+    expect(req.data[propName]).toStrictEqual(value);
+}
+
 export async function createUser(isAdmin: boolean): Promise<TestUser> {
     const usernameA = genUsername();
 
     //register
     const reg = await axios.post('http://localhost:4201/users',
         { username: usernameA, password: "test-pw", email: "test@example.com" });
-    expect(reg).toHaveProperty("status")
-    expect(reg.status).toStrictEqual(201);
+    assertAxiosRequest(reg, 201);
     expect(reg).toHaveProperty('data');
     expect(reg.data).toHaveProperty('token')
     expect(reg.data.token).toEqual(expect.any(String));
@@ -49,7 +69,7 @@ export async function createUser(isAdmin: boolean): Promise<TestUser> {
             database: config.db.database,
             user: config.db.user,
             password: config.db.password,
-			connectTimeout: 1000
+            connectTimeout: 1000
         });
         try {
             const success = await db.execute('update User set is_admin = 1 WHERE id = ?', [reg.data.id]);
@@ -161,7 +181,7 @@ export async function setUserToken(user: TestUser, token: string): Promise<any> 
         database: config.db.database,
         user: config.db.user,
         password: config.db.password,
-		connectTimeout: 1000
+        connectTimeout: 1000
     });
     try {
         const success = await database.execute(
@@ -187,7 +207,7 @@ export async function grantPermission(user: TestUser, permission: Permission): P
         database: config.db.database,
         user: config.db.user,
         password: config.db.password,
-		connectTimeout: 1000
+        connectTimeout: 1000
     });
     try {
         await database.execute(
@@ -211,7 +231,7 @@ export async function hasPermission(user: TestUser, permission: Permission): Pro
         database: config.db.database,
         user: config.db.user,
         password: config.db.password,
-		connectTimeout: 1000
+        connectTimeout: 1000
     });
     try {
         const result = await database.execute(
