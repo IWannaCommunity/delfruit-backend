@@ -74,6 +74,7 @@ export class GameController extends Controller {
             report: "Game added"
         }, user.sub);
 
+		this.setStatus(201);
         return game;
     }
 
