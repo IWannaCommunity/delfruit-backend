@@ -1,15 +1,13 @@
 import axios from "axios";
 import { test, describe, expect } from "@jest/globals";
-import { createUser } from "./testing-utilities";
+import { assertAxiosError, assertAxiosRequest, createUser } from "./testing-utilities";
 
 describe("api controller", () => {
     test("returns a 401 if the token is invalid", async () => {
         try {
             await axios.get("http://localhost:4201/api/users", { headers: { "Authorization": "Bearer xyz" } });
         } catch (e: any) {
-            expect(e).toHaveProperty("response");
-            expect(e.response).toHaveProperty("status");
-            expect(e.response.status).toStrictEqual(401);
+            assertAxiosError(e, 401);
         }
     });
 
@@ -18,17 +16,14 @@ describe("api controller", () => {
         try {
             await axios.get("http://localhost:4201/api/users", { headers: { "Authorization": "Bearer " + user.token } });
         } catch (e: any) {
-            expect(e).toHaveProperty("response");
-            expect(e.response).toHaveProperty("status");
-            expect(e.response.status).toStrictEqual(403);
+            assertAxiosError(e, 403);
         }
     });
 
     test("returns user list if user is an admin", async () => {
         const user = await createUser(true);
         const rsp = await axios.get("http://localhost:4201/api/users", { headers: { "Authorization": "Bearer " + user.token } });
-        expect(rsp).toHaveProperty("status")
-        expect(rsp.status).toStrictEqual(200);
+        assertAxiosRequest(rsp, 200);
         expect(rsp).toHaveProperty("data");
     });
 });
