@@ -169,7 +169,7 @@ export async function addTag(user: TestUser): Promise<any> {
         { name: nm },
         { headers: { 'Authorization': "Bearer " + user.token } });
     expect(tres).toHaveProperty('status');
-    expect(tres).toEqual(200);
+    expect(tres.status).toEqual(200);
 
     return tres.data;
 }
