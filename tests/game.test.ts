@@ -157,7 +157,8 @@ describe("game controller", () => {
 
         const res = await axios.post(`http://localhost:4201/games/${game.id}/tags`,
             [tag.id],
-            { headers: { 'Authorization': "Bearer " + user.token } });
+            { headers: { 'Authorization': "Bearer " + user.token } }
+		);
 
         assertAxiosRequest(res, 200);
         expect(res).toHaveProperty('data');
@@ -366,8 +367,8 @@ describe("game controller", () => {
     test("supports author search", async () => {
         const game = await createGame();
 
-        const list = await axios.get(`http://localhost:4201/games`, {
-            params: { author: game.author }
+        var list = await axios.get(`http://localhost:4201/games`, {
+           params: { author: game.author[0] } // QUEST: how should we be using the array here? author_raw is also always empty...
         });
 
         assertAxiosRequest(list, 200);
