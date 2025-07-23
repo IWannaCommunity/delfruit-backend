@@ -15,7 +15,7 @@ describe("game controller", () => {
 
         const rsp = await axios.post("http://localhost:4201/games", { name: "i wanna " + user.username, url: "example.com/" + user.username, author: user.username }, { headers: { "Authorization": "Bearer " + user.token } });
 
-        assertAxiosRequest(rsp, 200);
+        assertAxiosRequest(rsp, 201);
 
         expect(rsp).toHaveProperty("data");
 
@@ -55,14 +55,14 @@ describe("game controller", () => {
 
         // we need a game to delete first!
         const rsp = await axios.post("http://localhost:4201/games", { name: "i wanna be the " + name, url: "example.com/" + name, author: user.username }, { headers: { "Authorization": "Bearer " + user.token } });
-        assertAxiosRequest(rsp, 200);
+        assertAxiosRequest(rsp, 201);
 
         expect(rsp).toHaveProperty("data");
         assertAxiosReqDataHasPropAndEquals(rsp, "id", expect.any(Number));
 
         // delete game
         const del = await axios.delete(`http://localhost:4201/games/${rsp.data.id}`, { headers: { "Authorization": "Bearer " + user.token } });
-        assertAxiosRequest(rsp, 204);
+        assertAxiosRequest(del, 204);
     });
 
     test("prevents anonymous users from deleting games", async () => {
@@ -88,7 +88,7 @@ describe("game controller", () => {
             },
             { headers: { 'Authorization': "Bearer " + user.token } });
 
-        assertAxiosRequest(rsp, 200);
+        assertAxiosRequest(rsp, 201);
         expect(rsp).toHaveProperty("data");
         assertAxiosReqDataHasPropAndEquals(rsp, "id", expect.any(Number));
 
