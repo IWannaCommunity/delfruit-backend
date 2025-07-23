@@ -553,7 +553,7 @@ describe("game controller", () => {
 
         assertAxiosRequest(list, 200);
         expect(list.headers).toHaveProperty("total-count");
-        expect(list.headers["total-count"]).toEqual(1);
+        expect(list.headers["total-count"]).toEqual("1");
     });
 
     test("returns 0 for the total count of matched games in header when no match", async () => {
@@ -565,6 +565,6 @@ describe("game controller", () => {
 
         assertAxiosRequest(list, 200);
         expect(list.headers).toHaveProperty("total-count");
-        expect(list.headers["total-count"]).toEqual(0);
+        expect(list.headers["total-count"]).toEqual("0");
     });
 });
