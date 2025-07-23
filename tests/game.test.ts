@@ -557,10 +557,8 @@ describe("game controller", () => {
     });
 
     test("returns 0 for the total count of matched games in header when no match", async () => {
-        const game = await createGame();
-
-        const list = await axios.get(`http://localhost:4201/games`, {
-            params: { name: game.name } //name contains username
+		const list = await axios.get(`http://localhost:4201/games`, {
+            params: { name: "a game with this name should NEVER exist!!!!!" }
         });
 
         assertAxiosRequest(list, 200);
