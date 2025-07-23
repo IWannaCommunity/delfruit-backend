@@ -455,9 +455,11 @@ export class GameController extends Controller {
 
         if (requestBody.length > 0) {
             const tagsok = await datastore.tagsExist(requestBody)
-            if (!tagsok)
+			console.log(tagsok);
+            if (!tagsok) {
                 this.setStatus(400);
-            return { error: 'invalid body: all tag ids must exist' };
+				return { error: 'invalid body: all tag ids must exist' };
+			}
         }
 
         await datastore.setTags(id, user.sub, requestBody)
