@@ -17,11 +17,11 @@ export interface Report {
         
         |"screenshot"
         |"screenshot_remove";
-  targetId?: string;
+  targetId?: number;
   report?: string;
-  reporterId?: string;
+  reporterId?: number;
   reporterName?: string;
-  answeredById?: string;
+  answeredById?: number;
   answeredByName?: string;
   dateCreated?: string;
   dateAnswered?: string;
