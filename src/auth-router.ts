@@ -226,7 +226,7 @@ This link is valid for 2 hours since making the request.\n
     @Response<APIError>(401, "Bad Username/Token Pair")
     @Response<APIError>(422, "Unusable Token")
     @Post("reset")
-    public async postFinalizePassReset(@Body() requestBody: FinalizePassResetParams): Promise<AuthResponse> {
+    public async postFinalizePassReset(@Body() requestBody?: FinalizePassResetParams): Promise<AuthResponse> {
         const database = new Database();
         try {
             const results = await database.query(`
