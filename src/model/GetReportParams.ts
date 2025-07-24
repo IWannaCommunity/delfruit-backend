@@ -1,6 +1,6 @@
 export interface GetReportParams {
-  page: number;
-  limit: number;
+  page?: number;
+  limit?: number;
   orderCol?: string;
   orderDir?: "ASC" | "DESC";
 
