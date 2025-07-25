@@ -64,7 +64,7 @@ export async function createUser(isAdmin: boolean): Promise<TestUser> {
 
     if (isAdmin) {
         const db = new Database({
-            host: 'localhost',
+            host: config.db.host,
             port: 3306,
             database: config.db.database,
             user: config.db.user,
@@ -202,7 +202,7 @@ export async function setUserToken(user: TestUser, token: string): Promise<any> 
 
 export async function grantPermission(user: TestUser, permission: Permission): Promise<any> {
     const database = new Database({
-        host: 'localhost',
+        host: config.db.host,
         port: 3306,
         database: config.db.database,
         user: config.db.user,
@@ -226,7 +226,7 @@ export async function grantPermission(user: TestUser, permission: Permission): P
 
 export async function hasPermission(user: TestUser, permission: Permission): Promise<boolean> {
     const database = new Database({
-        host: 'localhost',
+        host: config.db.host,
         port: 3306,
         database: config.db.database,
         user: config.db.user,
