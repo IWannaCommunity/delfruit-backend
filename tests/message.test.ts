@@ -1,7 +1,6 @@
-import { expectToContainAllKeys } from "./user.test";
 import { test, describe, expect } from "@jest/globals";
 import axios from "axios";
-import { createUser } from "./testing-utilities";
+import { createUser, expectToContainAllKeys } from "./testing-utilities";
 
 describe("message endpoint", function () {
     test("allows the user to send a new message", async () => {

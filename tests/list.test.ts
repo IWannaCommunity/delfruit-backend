@@ -1,8 +1,7 @@
 import axios from "axios";
-import { expectToContainAllKeys } from "./user.test";
 import { test, describe, expect } from "@jest/globals";
 import { fail } from "assert";
-import { createUser } from "./testing-utilities";
+import { createUser, expectToContainAllKeys } from "./testing-utilities";
 
 describe("list endpoint", function () {
 	test("allows users to create a list", async () => {

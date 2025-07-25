@@ -249,3 +249,22 @@ export async function hasPermission(user: TestUser, permission: Permission): Pro
         }
     }
 }
+
+// HACK: yoooo, wouldn't it be really COOL if there was some external,
+// third party package that had this functionally. maybe we could call
+// it "jest-extended" or something, and then implement a function named
+// ".toContainAllKeys" to that effect. oh wait, someone did! too bad
+// that it doesn't actually FUCKING work. really cool, really good
+// work guys. really glad the open source community goes through
+// any attempts at trying to make things that WORK before publishing
+// them. ahahahahaha, so cool...
+export function expectToContainAllKeys(o: Object, k: string | string[]) {
+    const matcher = expect(o);
+    if (Array.isArray(k)) {
+        for (const prop of k) {
+            matcher.toHaveProperty(prop);
+        }
+    } else {
+        matcher.toHaveProperty(k);
+    }
+}

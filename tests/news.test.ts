@@ -1,11 +1,10 @@
 import axios from "axios";
 import { fail, ok } from "assert";
-import { createUser, createGame, addReview } from "./testing-utilities";
+import { createUser, expectToContainAllKeys } from "./testing-utilities";
 import FormData from "form-data";
 import fs from "fs";
 import { hashSync } from "bcrypt";
 import { News } from "../src/model/News";
-import { expectToContainAllKeys } from "./user.test";
 import { test, describe, expect } from "@jest/globals";
 
 async function createNews(): Promise<News> {

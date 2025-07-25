@@ -1,8 +1,11 @@
 import axios from "axios";
 import { fail } from "assert";
 import { test, describe, expect } from "@jest/globals";
-import { expectToContainAllKeys } from "./user.test";
-import { createUser, createGame } from "./testing-utilities";
+import {
+	createUser,
+	createGame,
+	expectToContainAllKeys,
+} from "./testing-utilities";
 import { Report } from "../src/model/Report";
 
 async function createReport(parameters?: any): Promise<Report> {

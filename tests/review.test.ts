@@ -1,10 +1,9 @@
 import axios from "axios";
-import { createUser, createGame, addScreenshot, addReview } from "./testing-utilities";
+import { createUser, createGame, addReview, expectToContainAllKeys } from "./testing-utilities";
 import { fail } from "assert";
 import FormData from "form-data";
 import fs from "fs";
 import { test, describe, expect } from "@jest/globals";
-import { expectToContainAllKeys } from "./user.test";
 
 describe("review endpoint", function () {
     test.skip("allows users to get a list of reviews", async () => {
