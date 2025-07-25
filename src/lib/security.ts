@@ -34,6 +34,13 @@ export function expressAuthentication(req: Request, securityName: string, scopes
         );
     }
 
+	// HACK: actually check scopes instead of whatever the fuck is happen below here
+	if ((scopes) && (scopes[0] === "user")) {
+		if (userCheck(token) === AuthnCheck.Authorized) {
+			return Promise.resolve({});
+		}
+	}
+	
     if (token.isAdmin === false) {
         if (userCheck(token) === AuthnCheck.Authorized) {
             return Promise.resolve({});
