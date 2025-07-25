@@ -84,7 +84,9 @@ export class UserController extends Controller {
         try {
             user = extractBearerJWT(authorization);
         } catch (_) {
-            console.warn("user provided authorization, but it was invalid")
+            console.warn("user provided authorization, but it was invalid");
+			//this.setStatus(401);
+			//return { error: "unauthenticated users cannot view the user list" };
         }
 
         if (!user || !user.isAdmin) params.banned = false;
