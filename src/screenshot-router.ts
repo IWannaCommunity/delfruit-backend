@@ -40,7 +40,7 @@ export class ScreenshotController extends Controller {
      */
     @SuccessResponse(200, "List of matching Screenshots")
     @Get()
-    public async getScreenshots(@Header("Authorization") authorization?: string, @Queries() requestQuery: GetScreenshotParms): Promise<Screenshot[]> {
+    public async getScreenshots(@Header("Authorization") authorization?: string, @Queries() requestQuery?: GetScreenshotParms): Promise<Screenshot[]> {
         let isAdmin = false;
         try {
             const user = extractBearerJWT(authorization);
@@ -49,8 +49,8 @@ export class ScreenshotController extends Controller {
             console.warn("user provided authorization, but it was invalid")
         }
 
-        requestQuery.page = +requestQuery.page || 0;
-        requestQuery.limit = +requestQuery.limit || 50;
+        requestQuery.page = (+(requestQuery.page)) ?? 0;
+        requestQuery.limit = (+(requestQuery.limit)) ?? 50;
 
         if (!isAdmin) requestQuery.removed = false; // TODO: allow toggle
         const rows = await datastore.getScreenshots(requestQuery);

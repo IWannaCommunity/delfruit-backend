@@ -3,7 +3,7 @@ import * as Minio from 'minio';
 
 
 export default interface Config {
-    db: mysql.Connection;
+    db: mysql.ConnectionOptions;
 
     app_port: number;
     app_jwt_secret: string;

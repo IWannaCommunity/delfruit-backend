@@ -871,10 +871,11 @@ ${whereList.getClause()}
             const res = await database.execute(
                 `SELECT COUNT(1) as cnt FROM Tag WHERE id in (${qs})`,
                 tagIds);
-            return res.length == 1 && res[0].cnt == tagIds.length;
+            return res.length >= 1 && res[0].cnt == tagIds.length;
         } finally {
             database.close();
         }
+		return false;
     },
 
     async createTag(name: string) {

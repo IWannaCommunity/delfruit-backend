@@ -40,7 +40,7 @@ export class ReportController extends Controller {
     @Security("bearerAuth", ["admin"])
     @SuccessResponse(200, "List of Reports within matching filters.")
     @Get()
-    public async getReports(@Queries() requestQuery: GetReportParams): Promise<Report[]> {
+    public async getReports(@Queries() requestQuery?: GetReportParams): Promise<Report[]> {
         const n = await datastore.getReports({
             type: requestQuery.type,
             answered: requestQuery.answered,
