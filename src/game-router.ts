@@ -1,30 +1,48 @@
-import express from 'express';
-import datastore from './datastore';
+import express from "express";
+import datastore from "./datastore";
 import { GetGamesParms } from "./model/GetGamesParms";
 import { GetScreenshotParms } from "./model/GetScreenshotParms";
 import { Screenshot } from "./model/Screenshot";
 import { Game } from "./model/Game";
-import whitelist from './lib/whitelist';
+import whitelist from "./lib/whitelist";
 
-import * as Minio from 'minio';
+import * as Minio from "minio";
 
-import multer from 'multer';
-import handle from './lib/express-async-catch';
-import { adminCheck, userCheck } from './lib/auth-check';
-import Config from './model/config';
-let config: Config = require('./config/config.json');
+import multer from "multer";
+import handle from "./lib/express-async-catch";
+import { adminCheck, userCheck } from "./lib/auth-check";
+import Config from "./model/config";
+let config: Config = require("./config/config.json");
 
-import { Permission, hasPermission } from './model/Permission';
-import { Body, Controller, Delete, FormField, Get, Header, Patch, Path, Post, Put, Query, Response, Route, Security, SuccessResponse, Tags, UploadedFile } from 'tsoa';
+import { Permission, hasPermission } from "./model/Permission";
+import {
+    Body,
+    Controller,
+    Delete,
+    FormField,
+    Get,
+    Header,
+    Patch,
+    Path,
+    Post,
+    Put,
+    Query,
+    Response,
+    Route,
+    Security,
+    SuccessResponse,
+    Tags,
+    UploadedFile,
+} from "tsoa";
 const upload = multer({
     storage: multer.diskStorage({
         //If no destination is given, the operating system's default directory for temporary files is used.
-        filename: function(req, file, cb) {
-            cb(null, file.fieldname + '-' + Date.now())
-        }
-    })
-})
-console.log("config:")
+        filename: function (req, file, cb) {
+            cb(null, file.fieldname + "-" + Date.now());
+        },
+    }),
+});
+console.log("config:");
 console.log(config);
 const minioClient = new Minio.Client(config.s3);
 
@@ -32,22 +50,27 @@ const app = express.Router();
 export default app;
 
 import * as jwt from "jsonwebtoken";
-import { Review } from './model/Review';
+import { Review } from "./model/Review";
 function extractBearerJWT(header_token: string): string | object {
     if (!header_token.includes("Bearer ")) {
-        throw new Error("missing prefix")
+        throw new Error("missing prefix");
     }
     const unverified_token = header_token.split(" ")[1];
 
     try {
         return jwt.verify(unverified_token, config.app_jwt_secret);
     } catch (e) {
-        throw new Error(`invalid token: ${e}`)
+        throw new Error(`invalid token: ${e}`);
     }
 }
 
+export interface Rating {
+    rating: number;
+    difficulty: number;
+}
+
 interface APIError {
-    error: string,
+    error: string;
 }
 
 @Route("games")
@@ -61,20 +84,26 @@ export class GameController extends Controller {
     @SuccessResponse(200, "Populated Game Object")
     @Response<APIError>(403, "Insufficient Privileges")
     @Post()
-    public async postGame(@Header("Authorization") authorization: string, @Body() requestBody: Pick<Game, "name" | "url" | "urlSpdrn" | "author" | "collab" | "dateCreated" | "ownerId">): Promise<Game> {
+    public async postGame(
+        @Header("Authorization") authorization: string,
+        @Body() requestBody: Pick<Game, "name" | "url" | "urlSpdrn" | "author" | "collab" | "dateCreated" | "ownerId">,
+    ): Promise<Game> {
         const user = extractBearerJWT(authorization);
 
         const uid = user.sub;
 
         const game = await datastore.addGame(requestBody, uid);
 
-        datastore.addReport({
-            type: "game_add",
-            targetId: "" + game.id,
-            report: "Game added"
-        }, user.sub);
+        datastore.addReport(
+            {
+                type: "game_add",
+                targetId: "" + game.id,
+                report: "Game added",
+            },
+            user.sub,
+        );
 
-		this.setStatus(201);
+        this.setStatus(201);
         return game;
     }
 
@@ -85,29 +114,44 @@ export class GameController extends Controller {
     @SuccessResponse(200, "List of Games matching filters")
     @Response<APIError>(400, "Invalid Parameters")
     @Get()
-    public async getGames(@Header("Authorization") authorization?: string, @Query() id?: number, @Query() removed?: boolean, @Query() name?: string, @Query() tags?: string, @Query() author?: string, @Query() ownerUserId?: number, @Query() hasDownload?: boolean, @Query() createdFrom?: Date, @Query() createdTo?: Date, @Query() clearedByUserId?: number, @Query() reviewedByUserId?: number, @Query() ratingFrom?: number, @Query() ratingTo?: number, @Query() difficultyFrom?: number, @Query() difficultyTo?: number, @Query() page?: number, @Query() limit?: number, @Query() order_col?: string, @Query() order_dir?: string): Promise<Game[]> {
+    public async getGames(
+        @Header("Authorization") authorization?: string,
+        @Query() id?: number,
+        @Query() removed?: boolean,
+        @Query() name?: string,
+        @Query() tags?: string,
+        @Query() author?: string,
+        @Query() ownerUserId?: number,
+        @Query() hasDownload?: boolean,
+        @Query() createdFrom?: Date,
+        @Query() createdTo?: Date,
+        @Query() clearedByUserId?: number,
+        @Query() reviewedByUserId?: number,
+        @Query() ratingFrom?: number,
+        @Query() ratingTo?: number,
+        @Query() difficultyFrom?: number,
+        @Query() difficultyTo?: number,
+        @Query() page?: number,
+        @Query() limit?: number,
+        @Query() order_col?: string,
+        @Query() order_dir?: string,
+    ): Promise<Game[]> {
         // TODO: do type restrictions in method definition
-        order_col = whitelist(
-            order_col,
-            ['name', 'date_created', 'rating', 'difficulty'],
-            'name');
-        order_dir = whitelist(
-            order_dir,
-            ['asc', 'desc'],
-            'asc') as 'asc' | 'desc';
+        order_col = whitelist(order_col, ["name", "date_created", "rating", "difficulty"], "name");
+        order_dir = whitelist(order_dir, ["asc", "desc"], "asc") as "asc" | "desc";
         let isAdmin = false;
         try {
             const user = extractBearerJWT(authorization);
             isAdmin = user.isAdmin;
         } catch (_) {
-            console.warn("user provided authorization, but it was invalid")
+            console.warn("user provided authorization, but it was invalid");
         }
 
         const params: GetGamesParms = {
             page: +(page || 0),
             limit: +(limit || 50),
             orderCol: order_col,
-            orderDir: order_dir
+            orderDir: order_dir,
         };
         if (!isAdmin) params.removed = false;
 
@@ -120,11 +164,11 @@ export class GameController extends Controller {
             try {
                 params.tags = <string[]>JSON.parse(tags);
                 params.tags.forEach((s, i) => {
-                    if (+s === NaN) throw 'tag #' + i + ' was not a number -> ' + s
+                    if (+s === NaN) throw "tag #" + i + " was not a number -> " + s;
                 });
             } catch (e) {
-                this.setStatus(400)
-                return { error: 'tags must be an array of numbers' };
+                this.setStatus(400);
+                return { error: "tags must be an array of numbers" };
             }
         }
         params.author = author;
@@ -143,7 +187,7 @@ export class GameController extends Controller {
         const rows = await datastore.getGames(params);
         if (!params.page) {
             const total = await datastore.countGames(params);
-            this.setHeader('total-count', total);
+            this.setHeader("total-count", total);
         }
 
         return rows;
@@ -160,14 +204,14 @@ export class GameController extends Controller {
     public async getGame(@Path() id: string): Promise<Game> {
         // TODO: this could be simplified by making id optional, and where it isn't provided, assume "random"
         let game;
-        if (id === 'random') {
+        if (id === "random") {
             game = await datastore.getRandomGame();
         } else if (!isNaN(+id)) {
             const game_id = parseInt(id, 10);
             game = await datastore.getGame(game_id);
         } else {
             this.setStatus(400);
-            return { error: 'id must be a number' };
+            return { error: "id must be a number" };
         }
 
         if (!game) {
@@ -182,14 +226,13 @@ export class GameController extends Controller {
                 user_id: +game.ownerId,
                 includeOwnerReview: true,
                 removed: false,
-            })
+            });
             if (ownerReviews.length == 1) {
                 game.ownerBio = ownerReviews[0];
             }
         }
 
         return game;
-
     }
 
     /**
@@ -214,16 +257,19 @@ export class GameController extends Controller {
 
         let gamePatch: Game = {
             id: +id,
-            removed: true
+            removed: true,
         };
         const success = await datastore.updateGame(gamePatch, user.isAdmin);
         if (!success) return this.setStatus(404);
 
-        datastore.addReport({
-            type: "game_remove",
-            targetId: "" + game.id,
-            report: "Game removed"
-        }, user.sub);
+        datastore.addReport(
+            {
+                type: "game_remove",
+                targetId: "" + game.id,
+                report: "Game removed",
+            },
+            user.sub,
+        );
 
         return this.setStatus(204);
     }
@@ -237,17 +283,23 @@ export class GameController extends Controller {
     @Response<APIError>(404, "Game Not Found")
     @Tags("Reviews")
     @Get("{id}/reviews")
-    public async getGameReviews(@Path() id: number, @Query() byUserId?: number, @Query() includeOwnerReview?: boolean, @Query() textReviewsFirst?: boolean, @Query() page?: number = 0, @Query() limit?: number = 50): Promise<Review[]> {
+    public async getGameReviews(
+        @Path() id: number,
+        @Query() byUserId?: number,
+        @Query() includeOwnerReview?: boolean,
+        @Query() textReviewsFirst?: boolean,
+        @Query() page?: number = 0,
+        @Query() limit?: number = 50,
+    ): Promise<Review[]> {
         if (isNaN(+id)) {
             this.setStatus(400);
-            return { error: 'id must be a number' };
+            return { error: "id must be a number" };
         }
-
 
         const game = await datastore.gameExists(id);
         if (!game) {
             this.setStatus(404);
-            return { error: "no game with this id currently exists" }
+            return { error: "no game with this id currently exists" };
         }
 
         const rows = await datastore.getReviews({
@@ -255,12 +307,12 @@ export class GameController extends Controller {
             user_id: byUserId,
             includeOwnerReview: includeOwnerReview,
             textReviewsFirst: textReviewsFirst,
-            page: page, limit: limit,
-            removed: false // TODO: admins should be able to query these
+            page: page,
+            limit: limit,
+            removed: false, // TODO: admins should be able to query these
         });
 
         return rows;
-
     }
 
     /**
@@ -274,19 +326,23 @@ export class GameController extends Controller {
     @Response<APIError>(401, "Unauthorized")
     @Response<APIError>(404, "Game Not Found")
     @Put("{id}/reviews")
-    public async putGameReview(@Header("Authorization") authorization: string, @Path() id: number, @Body() requestBody: Review): Promise<Review> {
+    public async putGameReview(
+        @Header("Authorization") authorization: string,
+        @Path() id: number,
+        @Body() requestBody: Review,
+    ): Promise<Review> {
         // NOTE: auth guard should make the error condition unreachable
         const user = extractBearerJWT(authorization);
 
         if (isNaN(+id)) {
             this.setStatus(400);
-            return { error: 'id must be a number' };
+            return { error: "id must be a number" };
         }
 
         const game = await datastore.gameExists(id);
         if (!game) {
             this.setStatus(404);
-            return { error: "no game with this id currently exists" }
+            return { error: "no game with this id currently exists" };
         }
 
         if (requestBody.rating) {
@@ -309,24 +365,33 @@ export class GameController extends Controller {
     @Response<APIError>(400, "Invalid Game ID")
     @Response<APIError>(404, "Game Not Found")
     @Get("{id}/screenshots")
-    public async getGameScreenshot(@Header("Authorization") authorization?: string, @Path() id: number, @Query() approved?: boolean, @Query() page?: number = 0, @Query() limit?: number = 50): Promise<Screenshot[]> {
+    public async getGameScreenshot(
+        @Header("Authorization") authorization?: string,
+        @Path() id: number,
+        @Query() approved?: boolean,
+        @Query() page?: number = 0,
+        @Query() limit?: number = 50,
+    ): Promise<Screenshot[]> {
         const isAdmin = false;
         if (authorization) {
             try {
                 const user = extractBearerJWT(authorization);
                 isAdmin = user && user.isAdmin;
             } catch (_) {
-                console.warn("user provided authorization, but it was invalid")
+                console.warn("user provided authorization, but it was invalid");
             }
         }
 
         if (isNaN(+id)) {
             this.setStatus(400);
-            return { error: 'id must be a number' };
+            return { error: "id must be a number" };
         }
 
         const game = await datastore.gameExists(id);
-        if (!game) { this.setStatus(404); return { error: "no game with this id currently exists" } }
+        if (!game) {
+            this.setStatus(404);
+            return { error: "no game with this id currently exists" };
+        }
 
         if (!isAdmin) approved = true; //only return approved screenshots
 
@@ -348,57 +413,71 @@ export class GameController extends Controller {
     @Response<APIError>(401, "Unauthorized")
     @Response<APIError>(404, "Game Not Found")
     @Post("{id}/screenshots")
-    public async postGameScreenshot(@Header("Authorization") authorization: string, @Path() id: number, @FormField() description?: string = "", @UploadedFile() screenshot: Express.Multer.File): Promise<Screenshot> {
+    public async postGameScreenshot(
+        @Header("Authorization") authorization: string,
+        @Path() id: number,
+        @FormField() description?: string = "",
+        @UploadedFile() screenshot: Express.Multer.File,
+    ): Promise<Screenshot> {
         console.log(screenshot);
         // NOTE: auth guard should make the error condition unreachable
         const user = extractBearerJWT(authorization);
 
         if (isNaN(+id)) {
             this.setStatus(400);
-            return { error: 'id must be a number' };
+            return { error: "id must be a number" };
         }
         const permissions = await datastore.getPermissions(user.sub);
         const autoApprove = hasPermission(permissions, Permission.AUTO_APPROVE_SCREENSHOT);
         const canScreenshot = hasPermission(permissions, Permission.CAN_SCREENSHOT);
         if (!canScreenshot) {
             this.setStatus(403);
-            return { error: 'screenshot capability revoked' };
+            return { error: "screenshot capability revoked" };
         }
 
         const game = await datastore.gameExists(id);
-        if (!game) { this.setStatus(404); return { error: "no game with this id currently exists" } }
+        if (!game) {
+            this.setStatus(404);
+            return { error: "no game with this id currently exists" };
+        }
         const ss: Screenshot = {
             gameId: +id,
-            description: description
+            description: description,
         };
 
         const ssres = await datastore.addScreenshot(ss, user.sub, autoApprove);
 
         //TODO: stream images straight into s3 via multer-s3 storage?
         var metaData = {
-            'Content-Type': 'image/png',
-            'X-Amz-Meta-Testing': 1234,
-            'gameId': ssres.gameId,
-            'id': ssres.id
-        }
+            "Content-Type": "image/png",
+            "X-Amz-Meta-Testing": 1234,
+            gameId: ssres.gameId,
+            id: ssres.id,
+        };
         // Using fPutObject API upload your file to the bucket europetrip.
-        minioClient.putObject(config.s3_bucket, `${ssres.id}.png`, screenshot.buffer, metaData, function(err, etag) {
+        minioClient.putObject(config.s3_bucket, `${ssres.id}.png`, screenshot.buffer, metaData, function (err, etag) {
             // TODO: don't return raw S3 errors to the user!!!
-            if (err) return console.log(err)
+            if (err) return console.log(err);
         });
 
         if (autoApprove) {
-            datastore.addReport({
-                type: "screenshot",
-                targetId: "" + ssres.id,
-                report: "Screenshot added, automatically approved"
-            }, user.sub);
+            datastore.addReport(
+                {
+                    type: "screenshot",
+                    targetId: "" + ssres.id,
+                    report: "Screenshot added, automatically approved",
+                },
+                user.sub,
+            );
         } else {
-            datastore.addReport({
-                type: "screenshot",
-                targetId: "" + ssres.id,
-                report: "Screenshot added, awaiting approval"
-            }, user.sub);
+            datastore.addReport(
+                {
+                    type: "screenshot",
+                    targetId: "" + ssres.id,
+                    report: "Screenshot added, awaiting approval",
+                },
+                user.sub,
+            );
         }
 
         return ssres;
@@ -416,14 +495,17 @@ export class GameController extends Controller {
     public async getGameTags(@Path() id: number, @Query() userId?: number): Promise<any | any[]> {
         if (isNaN(+id)) {
             this.setStatus(400);
-            return { error: 'id must be a number' };
+            return { error: "id must be a number" };
         }
 
         const game = await datastore.gameExists(id);
-        if (!game) { this.setStatus(404); return { error: "no game with this id currently exists" } }
+        if (!game) {
+            this.setStatus(404);
+            return { error: "no game with this id currently exists" };
+        }
 
         const tags = await datastore.getTagsForGame(id, userId);
-        return tags
+        return tags;
     }
 
     /**
@@ -436,33 +518,40 @@ export class GameController extends Controller {
     @Response<APIError>(401, "Unauthorized")
     @Response<APIError>(404, "Game Not Found")
     @Post("{id}/tags")
-    public async postGameSetTags(@Header("Authorization") authorization: string, @Path() id: number, @Body() requestBody: any[]): Promise<any | any[]> {
+    public async postGameSetTags(
+        @Header("Authorization") authorization: string,
+        @Path() id: number,
+        @Body() requestBody: any[],
+    ): Promise<any | any[]> {
         // NOTE: auth guard should make the error condition unreachable
         const user = extractBearerJWT(authorization);
 
         if (isNaN(+id)) {
             this.setStatus(400);
-            return { error: 'id must be a number' };
+            return { error: "id must be a number" };
         }
 
-
         const game = await datastore.gameExists(id);
-        if (!game) { this.setStatus(404); return { error: "no game with this id currently exists" } }
+        if (!game) {
+            this.setStatus(404);
+            return { error: "no game with this id currently exists" };
+        }
 
         if (!(requestBody instanceof Array)) {
-            this.setStatus(400); return { error: 'invalid body: expected array of tag ids' };
+            this.setStatus(400);
+            return { error: "invalid body: expected array of tag ids" };
         }
 
         if (requestBody.length > 0) {
-            const tagsok = await datastore.tagsExist(requestBody)
-			console.log(tagsok);
+            const tagsok = await datastore.tagsExist(requestBody);
+            console.log(tagsok);
             if (!tagsok) {
                 this.setStatus(400);
-				return { error: 'invalid body: all tag ids must exist' };
-			}
+                return { error: "invalid body: all tag ids must exist" };
+            }
         }
 
-        await datastore.setTags(id, user.sub, requestBody)
+        await datastore.setTags(id, user.sub, requestBody);
 
         const tags = await datastore.getTagsForGame(id);
         return tags;
@@ -477,29 +566,66 @@ export class GameController extends Controller {
     @Response<APIError>(400, "Invalid Game ID")
     @Response<APIError>(403, "Insufficient Privileges")
     @Patch("{id}")
-    public async patchGame(@Header("Authorization") authorization: string, @Path() id: number, @Body() game: Game): Promise<Game> {
+    public async patchGame(
+        @Header("Authorization") authorization: string,
+        @Path() id: number,
+        @Body() game: Game,
+    ): Promise<Game> {
         // NOTE: auth guard should make the error condition unreachable
         const user = extractBearerJWT(authorization);
 
         if (isNaN(+id)) {
             this.setStatus(400);
-            return { error: 'id must be a number' };
+            return { error: "id must be a number" };
         }
 
         game.id = id;
 
         const gameFound = await datastore.updateGame(game, user.isAdmin);
-        if (!gameFound) { this.setStatus(404); return { error: "no game with this id currently exists" } }
+        if (!gameFound) {
+            this.setStatus(404);
+            return { error: "no game with this id currently exists" };
+        }
 
         const newGame = await datastore.getGame(id);
-        if (newGame == null) { this.setStatus(404); return { error: "no game with this id currently exists" } }
+        if (newGame == null) {
+            this.setStatus(404);
+            return { error: "no game with this id currently exists" };
+        }
 
-        datastore.addReport({
-            type: "game_update",
-            targetId: "" + game.id,
-            report: "Game updated"
-        }, user.sub);
+        datastore.addReport(
+            {
+                type: "game_update",
+                targetId: "" + game.id,
+                report: "Game updated",
+            },
+            user.sub,
+        );
 
-        return newGame
+        return newGame;
+    }
+
+    /**
+     * Get Ratings for Game
+     * @summary Get Ratings for Game
+     */
+    @SuccessResponse(200, "Rating for Game")
+    @Response<APIError>(400, "Invalid Game ID")
+    @Response<APIError>(404, "Game Not Found")
+    @Tags("Ratings")
+    @Get("{id}/ratings")
+    public async getGameRatings(@Path() id: number): Promise<Rating> {
+        if (isNaN(+id)) {
+            this.setStatus(400);
+            return { error: "id must be a number" };
+        }
+
+        const game = await datastore.gameExists(id);
+        if (!game) {
+            this.setStatus(404);
+            return { error: "no game with this id currently exists" };
+        }
+
+        return await datastore.getRatings(id);
     }
 }
