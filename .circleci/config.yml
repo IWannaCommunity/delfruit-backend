@@ -45,7 +45,7 @@ jobs:
                     nvm use 16.20.0
                     npm i --force -d
                     sleep 30
-                    npm uninstall bcrypt && npm install bcrypt@=3.0.6 # temporary, remove this later
+                    npm uninstall bcrypt && npm install bcrypt@3.0.6 --save --save-exact # temporary, remove this later
             - run:
                 name: Run Integration Tests
                 command: |
