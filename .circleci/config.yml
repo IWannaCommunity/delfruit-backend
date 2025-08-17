@@ -43,7 +43,7 @@ jobs:
                 command: |
                     nvm alias default 16.20.0
                     nvm use 16.20.0
-                    npm i --force -d
+                    npm i --legacy-peer-deps -d
                     sleep 30
                     npm uninstall bcrypt && npm install bcrypt@3.0.6 --save --save-exact # temporary, remove this later
             - run:
