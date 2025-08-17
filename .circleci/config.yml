@@ -43,7 +43,7 @@ jobs:
                 command: |
                     nvm alias default 16.20.0
                     nvm use 16.20.0
-                    npm i -d
+                    npm i --force -d
                     sleep 30
                     npm uninstall bcrypt && npm install bcrypt@=3.0.6 # temporary, remove this later
             - run:
