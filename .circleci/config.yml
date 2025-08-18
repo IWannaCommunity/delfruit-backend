@@ -90,7 +90,8 @@ jobs:
             - run:
                 name: Upload SDK
                 command: |
-                    cp --verbose --recursive --dereference --preserve ${PWD}/build/swagger-cg-sdk/ ~/swagger-cg-sdk/
+                    git clone https://github.com/IWannaCommunity/delfruit-swagger-cg-sdk-node.git ~/swagger-cg-sdk/
+                    cp --verbose --force --recursive --dereference --preserve ${PWD}/build/swagger-cg-sdk/ ~/swagger-cg-sdk/
                     cd ~/swagger-cg-sdk/
                     sudo chmod +x ./git_push.sh
                     ./git_push.sh IWannaCommunity delfruit-swagger-cg-sdk-node "Automated changes from upstream."
