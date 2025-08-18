@@ -91,7 +91,8 @@ jobs:
                 name: Upload SDK
                 command: |
                     sudo chmod +x ${PWD}/build/swagger-cg-sdk/git_push.sh
-                    cd ${PWD}/build/swagger-cg-sdk/
+                    cp ${PWD}/build/swagger-cg-sdk/ ~/swagger-cg-sdk/
+                    cd ~/swagger-cg-sdk/
                     ./git_push.sh IWannaCommunity delfruit-swagger-cg-sdk-node "Automated changes from upstream."
     docker:
         parameters:
@@ -145,27 +146,3 @@ workflows:
         jobs:
             - publish-node-sdk:
                 name: Publish Node SDK
-            - integration-tests:
-                name: Integration Tests
-            - docker:
-                name: Build
-                with_publish: false
-                requires:
-                    - Integration Tests
-                filters:
-                    branches:
-                        ignore:
-                            - master
-                            - develop
-                            - release
-            - docker:
-                name: Build & Publish
-                with_publish: true
-                requires:
-                    - Integration Tests
-                filters:
-                    branches:
-                        only:
-                            - master
-                            - develop
-                            - release
