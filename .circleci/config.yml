@@ -57,7 +57,7 @@ jobs:
             - store_test_results:
                 path: test-results.xml
     publish-node-sdk:
-        executor: node
+        executor: docker
         steps:
             - add_ssh_keys:
                 fingerprints:
