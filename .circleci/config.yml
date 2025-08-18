@@ -56,6 +56,43 @@ jobs:
                     - ~/.npm
             - store_test_results:
                 path: test-results.xml
+    publish-node-sdk:
+        executor: node
+        steps:
+            - add_ssh_keys:
+                fingerprints:
+                    - "SHA256:6uSusj536HFBXwstxow8E4ydHkjZkuoryLtQYuj9xnk"
+            - checkout
+            - setup_remote_docker:
+                version: 17.09.0-ce
+            - restore_cache:
+                keys:
+                    - node-v1-{{ checksum "package-lock.json" }}
+            - run:
+                name: Install Packages
+                command: |
+                    source /opt/circleci/.nvm/nvm.sh
+                    nvm install 16.20.0
+                    echo 'export NVM_DIR="/opt/circleci/.nvm"' >> $BASH_ENV
+                    echo ' [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> $BASH_ENV
+                    sudo apt-get update
+                    sudo apt-get install -y ca-certificates git build-essential
+                    nvm alias default 16.20.0
+                    nvm use 16.20.0
+                    npm i --force --legacy-peer-deps -d
+                    npm uninstall bcrypt --force && npm install bcrypt@3.0.6 --force --legacy-peer-deps --save --save-exact # temporary, remove this later
+            - run:
+                name: Build OpenAPI Manifest
+                command: |
+                    npm run build-openapi-spec
+            - run:
+                name: Generate SDK from Swagger Codegen
+                command: |
+                    docker run --rm -v ${PWD}:/local swaggerapi/swagger-codegen-cli-v3:3.0.71 generate -i /local/build/swagger.json -l typescript-axios -o /local/build/swagger-cg-sdk
+            - run:
+                name: Upload SDK
+                command: |
+                    ${PWD}/build/swagger-cg-sdk/git_push.sh IWannaCommunity delfruit-swagger-cg-sdk-node "Automated changes from upstream."
     docker:
         parameters:
             with_publish:
@@ -106,6 +143,8 @@ workflows:
     version: 2
     cicd:
         jobs:
+            - publish-node-sdk:
+                name: Publish Node SDK
             - integration-tests:
                 name: Integration Tests
             - docker:
