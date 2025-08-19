@@ -1037,8 +1037,8 @@ ${whereList.getClause()}
 			else whereList.addDirect("g.url is null OR g.url != ''");
 		}
 
-		whereList.add2("g.date_created >= ?", new Date(params.createdFrom));
-		whereList.add2("g.date_created <= ?", new Date(params.createdTo));
+		whereList.add2("g.date_created >= ?", new Date(params.createdFrom ?? new Date(0)));
+		whereList.add2("g.date_created <= ?", new Date(params.createdTo ?? Date.now()));
 
 		if (params.reviewedByUserId !== undefined) {
 			whereList.add2(
