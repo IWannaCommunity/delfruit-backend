@@ -11,7 +11,7 @@ COPY --chown=node:node package.json .
 # RUN npm install
 RUN npm install --force
 
-CMD ["npm", "run", "tsoa", "spec-and-routes"]
+RUN npm run tsoa spec-and-routes
 
 COPY --chown=node:node . .
 
@@ -19,5 +19,5 @@ USER node
 
 EXPOSE 4201
 
-CMD ["npm", "run", "tsoa", "spec-and-routes"]
+
 CMD ["npm", "run", "start"]
