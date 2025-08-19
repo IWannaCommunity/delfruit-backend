@@ -19,4 +19,5 @@ USER node
 
 EXPOSE 4201
 
+CMD ["npm", "run", "tsoa", "spec-and-routes"]
 CMD ["npm", "run", "start"]
