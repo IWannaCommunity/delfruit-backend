@@ -77,7 +77,13 @@ export class CompositeController extends Controller {
 
         const [ratings, reviews, tags, screenshots] = await Promise.all([
             datastore.getRatings(game.id),
-            datastore.getReviews({ game_id: game.id, page: 0, limit: 5, textReviewsFirst: true }), // just enough to hydrate a page
+            datastore.getReviews({
+                game_id: game.id,
+                page: 0,
+                limit: 5, // just enough to hydrate a page
+                textReviewsFirst: true,
+                includeOwnerReview: true,
+            }),
             datastore.getTagsForGame(game.id, void 0),
             datastore.getScreenshots({ gameId: game.id }),
         ]);
