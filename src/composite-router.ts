@@ -23,13 +23,19 @@ interface APIError {
     error: string;
 }
 
+interface GameExtTag {
+    name: string;
+    id: number;
+    count: number;
+}
+
 interface GameExt extends Game {
     ratings: {
         rating: number;
         difficulty: number;
     };
     reviews: Review[];
-    tags: ReadonlySet<{ name: string; id: number; count: number }>;
+    tags: GameExtTag[];
     screenshots: Screenshot[];
 }
 
