@@ -29,7 +29,7 @@ interface GameExt extends Game {
         difficulty: number;
     };
     reviews: Review[];
-    tags: string[];
+    tags: ReadonlySet<{ name: string; id: number; count: number }>;
     screenshots: Screenshot[];
 }
 
@@ -84,12 +84,12 @@ export class CompositeController extends Controller {
                 textReviewsFirst: true,
                 includeOwnerReview: true,
             }),
-            datastore.getTagsForGame(game.id, void 0),
+            datastore.getTagSetsForGame(game.id),
             datastore.getScreenshots({ gameId: game.id }),
         ]);
         game.ratings = ratings;
         game.reviews = reviews;
-        game.tags = tags;
+        game.tags = tags as unknown as ReadonlySet<{ name: string; id: number; count: number }>;
         game.screenshots = screenshots;
 
         return game;
