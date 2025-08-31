@@ -119,6 +119,8 @@ export class GameController extends Controller {
         @Query() id?: number,
         @Query() removed?: boolean,
         @Query() name?: string,
+        @Query() nameStartsWith?: string,
+        @Query() nameExp?: string,
         @Query() tags?: string,
         @Query() author?: string,
         @Query() ownerUserId?: number,
@@ -159,6 +161,8 @@ export class GameController extends Controller {
         params.id = id;
         params.removed = false; // QUEST: shouldn't this just use the removed query parameter?
         params.name = name;
+		params.nameStartsWith = nameStartsWith;
+		params.nameExp = nameExp;
 
         if (tags) {
             try {
