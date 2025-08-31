@@ -10,6 +10,8 @@ export interface GetGamesParms {
   ownerUserId?: number;
 
   name?: string;
+  nameStartsWith?: string;
+  nameExp?: string;
   removed?: boolean;
 
   tags?: string[];
