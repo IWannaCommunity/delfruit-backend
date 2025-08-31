@@ -969,14 +969,28 @@ ${whereList.getClause()}
         //TODO: cleared
 
         whereList.addIn("gt.name", params.tags);
+        // DANGER: A bit worried that this might result in DoS attacks, but
+        // I'm hoping by hinting to limit execution time to around 2.5 seconds
+        // that it won't happen. If it becomes a issue I have alternatives.
         if (params.tags !== undefined) {
             whereList.addDirect(`g.id IN (
 SELECT /*+ MAX_EXECUTION_TIME(2500) */ game_id
 FROM GameTag gt
 JOIN Tag t ON t.id=gt.tag_id
-WHERE t.name REGEXP (${params.tags.map((s) => "?").join(",")})
+WHERE t.name IN (${params.tags.map((s) => "?").join(",")})
 )`);
         }
+		
+		if (params.nameStartsWith !== undefined) {
+			const letter = params.nameStartsWith.charAt(0).toUpperCase();
+			if (/^[A-Z]$/.test(letter)) {
+				whereList.add2("g.sortname LIKE ?", `${letter}%`);
+			}
+		}
+		
+		if (params.nameExp !== undefined) {
+			whereList.add2("g.name REGEXP ?", `${params.nameExp}%`);
+		}
 
         const havingList = new WhereList("HAVING");
         if (params.ratingFrom !== undefined) havingList.add2("AVG(r.rating) >= ?", params.ratingFrom);
