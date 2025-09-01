@@ -980,17 +980,17 @@ JOIN Tag t ON t.id=gt.tag_id
 WHERE t.name IN (${params.tags.map((s) => "?").join(",")})
 )`);
         }
-		
-		if (params.nameStartsWith !== undefined) {
-			const letter = params.nameStartsWith.charAt(0).toUpperCase();
-			if (/^[A-Z]$/.test(letter)) {
-				whereList.add2("g.sortname LIKE ?", `${letter}%`);
-			}
-		}
-		
-		if (params.nameExp !== undefined) {
-			whereList.add2("g.name REGEXP ?", `${params.nameExp}%`);
-		}
+
+        if (params.nameStartsWith !== undefined) {
+            const letter = params.nameStartsWith.charAt(0).toUpperCase();
+            if (/^[A-Z]$/.test(letter)) {
+                whereList.add2("g.sortname LIKE ?", `${letter}%`);
+            }
+        }
+
+        if (params.nameExp !== undefined) {
+            whereList.add2("g.name REGEXP ?", `${params.nameExp}%`);
+        }
 
         const havingList = new WhereList("HAVING");
         if (params.ratingFrom !== undefined) havingList.add2("AVG(r.rating) >= ?", params.ratingFrom);
@@ -1064,6 +1064,82 @@ LIMIT ?,?
         if (!users || users.length == 0) return null;
         const user = users[0];
         return user;
+    },
+
+    async getUserReviewCount(uid: number): Promise<number> {
+        const database = new Database();
+        const res = await database.execute(
+            `SELECT
+	count(*) AS cnt
+FROM
+	Rating AS r
+INNER JOIN Game AS g ON
+	g.id = r.game_id
+WHERE
+	r.user_id = ?
+	AND r.removed = 0
+	AND g.removed = 0`,
+            [uid],
+        );
+
+        database.close();
+
+        if (res.length >= 1) {
+            return res[0].cnt as number;
+        } else {
+            return -1;
+        }
+    },
+
+    async getUserRatingCount(uid: number): Promise<number> {
+        const database = new Database();
+        const res = await database.execute(
+            `SELECT
+		count(*) AS cnt
+	FROM
+		Rating AS r
+	LEFT OUTER JOIN Game AS g ON
+		g.id = r.game_id
+	WHERE
+		r.user_id = ?
+		AND r.comment = ''
+		AND r.removed = 0
+		AND g.removed = 0`,
+            [uid],
+        );
+
+        database.close();
+
+        if (res.length >= 1) {
+            return res[0].cnt as number;
+        } else {
+            return -1;
+        }
+    },
+
+    async getUserScreenshotCount(uid: number): Promise<number> {
+        const database = new Database();
+        const res = await database.execute(
+            `SELECT
+	count(*) AS cnt
+FROM
+	Screenshot AS s
+RIGHT OUTER JOIN Game AS g ON
+	g.id = s.game_id
+WHERE
+	s.added_by_id = ?
+	AND s.removed = 0
+	AND g.removed = 0`,
+            [uid],
+        );
+
+        database.close();
+
+        if (res.length >= 1) {
+            return res[0].cnt as number;
+        } else {
+            return -1;
+        }
     },
 
     async getUsers(params: GetUsersParms): Promise<any[]> {
