@@ -5,6 +5,8 @@ import whitelist from "./lib/whitelist";
 import { Game } from "./model/Game";
 import { Review } from "./model/Review";
 import { Screenshot } from "./model/Screenshot";
+import { AuthResponse } from "./auth-router";
+import { GetUsersParms } from "./model/GetUsersParms";
 
 function extractBearerJWT(header_token: string): string | object {
     if (!header_token.includes("Bearer ")) {
@@ -39,17 +41,23 @@ interface GameExt extends Game {
     screenshots: Screenshot[];
 }
 
-@Route("/games/composite")
+interface UserExt extends Omit<AuthResponse, "email" | "banned" | "phash2" | "isAdmin"> {
+    reviewCount: number;
+    ratingsCount: number;
+    screenshotCount: number;
+}
+
+@Route("/composite")
 @Tags("Composite", "Games")
 export class CompositeController extends Controller {
     /**
      * Get Game
      * @summary Get Game
      */
-    @SuccessResponse(200, "Found Game Details")
+    @SuccessResponse(200, "Found Extended Game Details")
     @Response<APIError>(400, "Unparsable ID")
     @Response(404, "Not Found")
-    @Get("{id}/all")
+    @Get("games/{id}/all")
     public async getGameCompositeAll(@Path() id: string): Promise<GameExt> {
         // TODO: this could be simplified by making id optional, and where it isn't provided, assume "random"
         let game: GameExt;
@@ -107,7 +115,7 @@ export class CompositeController extends Controller {
      */
     @SuccessResponse(200, "List of Games matching filters")
     @Response<APIError>(400, "Invalid Parameters")
-    @Get("rating")
+    @Get("games/rating")
     public async getGamesWithRatings(
         @Header("Authorization") authorization?: string,
         @Query() id?: number,
@@ -189,5 +197,43 @@ export class CompositeController extends Controller {
         }
 
         return rows;
+    }
+
+    /**
+     * Get User
+     * @summary Get User
+     */
+    @SuccessResponse(200, "Found Extended User Details")
+    @Response<APIError>(400, "Unparsable ID")
+    @Response(404, "Not Found")
+    @Get("users/{id}/all")
+    public async getUserCompositeAll(@Path() id: number): Promise<UserExt> {
+        const params = { id, page: 0, limit: 1 } as GetUsersParms;
+        const users: AuthResponse[] | null = await datastore.getUsers(params);
+        if (users === null || users.length === 0) {
+            this.setStatus(404);
+            return { error: "not found" } satisfies APIError;
+        }
+        const user: UserExt = (() => {
+            const user = users[0];
+            // DANGER: we really need a User model
+            delete user.banned;
+            delete user.email;
+            delete user.phash2;
+            delete user.isAdmin;
+            return user;
+        })();
+
+        const [reviewCount, ratingsCount, screenshotCount] = await Promise.all([
+            datastore.getUserReviewCount(id),
+            datastore.getUserRatingCount(id),
+            datastore.getUserScreenshotCount(id),
+        ]);
+
+        user.reviewCount = reviewCount;
+        user.ratingsCount = ratingsCount;
+        user.screenshotCount = screenshotCount;
+
+        return user;
     }
 }
