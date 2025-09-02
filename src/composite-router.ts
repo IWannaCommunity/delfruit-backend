@@ -118,6 +118,7 @@ export class CompositeController extends Controller {
     @Get("games/rating")
     public async getGamesWithRatings(
         @Header("Authorization") authorization?: string,
+        @Query() q?: string,
         @Query() id?: number,
         @Query() removed?: boolean,
         @Query() name?: string,
@@ -157,7 +158,7 @@ export class CompositeController extends Controller {
         };
         if (!isAdmin) params.removed = false;
 
-        //params.q = req.query.q; // QUEST: what the hell is Q?
+        params.q = q; // QUEST: what the hell is Q?
         params.id = id;
         params.removed = false; // QUEST: shouldn't this just use the removed query parameter?
         params.name = name;
