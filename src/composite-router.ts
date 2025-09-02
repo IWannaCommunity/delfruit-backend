@@ -48,12 +48,13 @@ interface UserExt extends Omit<AuthResponse, "email" | "banned" | "phash2" | "is
 }
 
 @Route("/composite")
-@Tags("Composite", "Games")
+@Tags("Composite")
 export class CompositeController extends Controller {
     /**
      * Get Game
      * @summary Get Game
      */
+    @Tags("Games")
     @SuccessResponse(200, "Found Extended Game Details")
     @Response<APIError>(400, "Unparsable ID")
     @Response(404, "Not Found")
@@ -113,6 +114,7 @@ export class CompositeController extends Controller {
      * Game List
      * @summary Game List
      */
+    @Tags("Games")
     @SuccessResponse(200, "List of Games matching filters")
     @Response<APIError>(400, "Invalid Parameters")
     @Get("games/rating")
@@ -204,6 +206,7 @@ export class CompositeController extends Controller {
      * Get User
      * @summary Get User
      */
+    @Tags("Users")
     @SuccessResponse(200, "Found Extended User Details")
     @Response<APIError>(400, "Unparsable ID")
     @Response(404, "Not Found")
@@ -236,5 +239,51 @@ export class CompositeController extends Controller {
         user.screenshotCount = screenshotCount;
 
         return user;
+    }
+
+    /**
+     * User List
+     * @summary User List
+     */
+    @Tags("Users")
+    @SuccessResponse(200, "List of users matching filters")
+    @Get("users")
+    public async getUsersWithReviewsCount(
+        @Header("Authorization") authorization?: string,
+        @Query() name?: string,
+        @Query() following?: boolean,
+        @Query() banned?: boolean,
+        @Query() page?: number = 0,
+        @Query() limit?: number = 50,
+    ): Promise<Array<Omit<UserExt, "ratingsCount" | "screenshotCount">>> {
+        const params: GetUsersParms = { page, limit };
+        if (name) params.name = name;
+
+        const [users, reviewCounts] = await (async () => {
+            const users: ReadonlyArray<AuthResponse> = await datastore.getUsers(params);
+            const dbQueries: Array<Promise<number>> = new Array(users.length);
+
+            let idx = 0;
+            for (const user of users) {
+                dbQueries[idx] = datastore.getUserReviewCount(user.id);
+                // DANGER: where's my user model
+                delete user.email;
+                delete user.banned;
+                delete user.phash2;
+                delete user.isAdmin;
+
+                ++idx;
+            }
+
+            const reviewCounts = (await Promise.all(dbQueries)).reverse();
+
+            return [users as unknown as Array<Omit<UserExt, "ratingsCount" | "screenshotCount">>, reviewCounts];
+        })();
+
+        for (const user of users) {
+            user.reviewCount = reviewCounts.pop();
+        }
+
+        return users;
     }
 }
