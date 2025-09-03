@@ -123,7 +123,7 @@ export class GameController extends Controller {
         @Query() name?: string,
         @Query() nameStartsWith?: string,
         @Query() nameExp?: string,
-        @Query() tags?: Array<number>,
+        @Query() tags?: string, // QUEST: find a way to stuff a array in a querystring
         @Query() author?: string,
         @Query() ownerUserId?: number,
         @Query() hasDownload?: boolean,
@@ -168,7 +168,7 @@ export class GameController extends Controller {
 
         if (tags) {
             try {
-                params.tags = tags;
+                params.tags = tags.trim().split(",");
                 params.tags.forEach((s, i) => {
                     if (Number(s) === NaN) throw "tag #" + i + " was not a number -> " + s;
                 });
