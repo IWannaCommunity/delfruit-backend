@@ -123,7 +123,7 @@ export class GameController extends Controller {
         @Query() name?: string,
         @Query() nameStartsWith?: string,
         @Query() nameExp?: string,
-        @Query() tags?: string,
+        @Query() tags?: Array<number>,
         @Query() author?: string,
         @Query() ownerUserId?: number,
         @Query() hasDownload?: boolean,
@@ -168,9 +168,9 @@ export class GameController extends Controller {
 
         if (tags) {
             try {
-                params.tags = <string[]>JSON.parse(tags);
+                params.tags = tags;
                 params.tags.forEach((s, i) => {
-                    if (+s === NaN) throw "tag #" + i + " was not a number -> " + s;
+                    if (Number(s) === NaN) throw "tag #" + i + " was not a number -> " + s;
                 });
             } catch (e) {
                 this.setStatus(400);
