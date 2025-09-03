@@ -968,7 +968,7 @@ ${whereList.getClause()}
         }
         //TODO: cleared
 
-        whereList.addIn("gt.name", params.tags);
+        //whereList.addIn("gt.name", params.tags);
         // DANGER: A bit worried that this might result in DoS attacks, but
         // I'm hoping by hinting to limit execution time to around 2.5 seconds
         // that it won't happen. If it becomes a issue I have alternatives.
@@ -977,7 +977,7 @@ ${whereList.getClause()}
 SELECT /*+ MAX_EXECUTION_TIME(2500) */ game_id
 FROM GameTag gt
 JOIN Tag t ON t.id=gt.tag_id
-WHERE t.name IN (${params.tags.map((s) => "?").join(",")})
+WHERE t.id IN (${params.tags.map((s) => `${s}`).join(",")})
 )`);
         }
 
