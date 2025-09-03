@@ -38,7 +38,7 @@ import {
 const upload = multer({
     storage: multer.diskStorage({
         //If no destination is given, the operating system's default directory for temporary files is used.
-        filename: function(req, file, cb) {
+        filename: function (req, file, cb) {
             cb(null, file.fieldname + "-" + Date.now());
         },
     }),
@@ -168,7 +168,10 @@ export class GameController extends Controller {
 
         if (tags) {
             try {
-                params.tags = tags.trim().split(",");
+                const tagNames = tags.trim().split(",");
+                params.tags = (await datastore.getTagsByName(tagNames)).flatMap((v, idx, a) => {
+                    return String(v.id);
+                });
                 params.tags.forEach((s, i) => {
                     if (Number(s) === NaN) throw "tag #" + i + " was not a number -> " + s;
                 });
@@ -461,7 +464,7 @@ export class GameController extends Controller {
             id: ssres.id,
         };
         // Using fPutObject API upload your file to the bucket europetrip.
-        minioClient.putObject(config.s3_bucket, `${ssres.id}.png`, screenshot.buffer, metaData, function(err, etag) {
+        minioClient.putObject(config.s3_bucket, `${ssres.id}.png`, screenshot.buffer, metaData, function (err, etag) {
             // TODO: don't return raw S3 errors to the user!!!
             if (err) return console.log(err);
         });
