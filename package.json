@@ -64,6 +64,7 @@
         "concurrently": "8.2.0",
         "form-data": "2.5.0",
         "jest": "27.2.5",
+        "jest-junit": "16.0.0",
         "moniker": "0.1.2",
         "nodemon": "1.19.0",
         "nyc": "14.1.1",
