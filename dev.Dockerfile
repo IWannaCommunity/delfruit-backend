@@ -25,4 +25,4 @@ ENV CI=1
 
 RUN npm run tsoa spec-and-routes
 
-CMD ["npm", "run", "start"]
+CMD ["sh", "-c", "CI=1 exec npm run start"]
