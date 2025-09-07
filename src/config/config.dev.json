@@ -4,7 +4,7 @@
     "database": "delfruit",
     "user": "root",
     "password": "my-secret-pw",
-    "port": 33061,
+    "port": 3306,
     "connectTimeout": 5000
   },
 
