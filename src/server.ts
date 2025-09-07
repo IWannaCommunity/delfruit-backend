@@ -67,7 +67,9 @@ async function main(): Promise<number> {
         (async () => {
             const cfg = { ...config.db };
             delete cfg.database; // HACK: we don't want to set this
+            console.log("Connecting to the database server.");
             const conn: Connection = mysql.createConnection(cfg);
+            console.log("Creating the database.");
             conn.execute("CREATE DATABASE IF NOT EXISTS delfruit", [], (e, res, fields) => {
                 console.log(`error: ${e}`);
                 console.log(`resultsrows: ${res}`);
@@ -75,12 +77,14 @@ async function main(): Promise<number> {
             });
         })();
 
+        console.log("Running migrations");
         const db = new Database();
         fs.readdir("./src/migrations/", (e, filenames) => {
             for (const filename of filenames) {
                 fs.readFile(`./src/migrations/${filename}`, (e, data) => {
                     (async () => {
-                        db.execute(String(data), []);
+                        const res = await db.execute(String(data), []);
+                        console.log(`migration res: ${res}`);
                     })();
                 });
             }
