@@ -27,6 +27,7 @@ import { RegisterRoutes } from "../build/routes";
 let config: Config = require("./config/config.json");
 
 import fs from "fs";
+const fsAsync = fs.promises;
 import path from "path";
 import process from "process";
 import mysql, { Connection } from "mysql2";
@@ -64,7 +65,7 @@ async function main(): Promise<number> {
     if (process.env.CI) {
         console.log("Initializing the database");
         await delay(1000 * 45); // HACK: wait for mysql to startup
-        (async () => {
+        await (async () => {
             const cfg = { ...config.db };
             delete cfg.database; // HACK: we don't want to set this
             console.log("Connecting to the database server.");
@@ -79,16 +80,23 @@ async function main(): Promise<number> {
 
         console.log("Running migrations");
         const db = new Database();
-        fs.readdir("./src/migrations/", (e, filenames) => {
+        /*fs.readdir("./src/migrations/", (e, filenames) => {
             for (const filename of filenames) {
                 fs.readFile(`./src/migrations/${filename}`, (e, data) => {
-                    (async () => {
+                    await (async () => {
                         const res = await db.execute(String(data), []);
                         console.log(`migration res: ${res}`);
                     })();
                 });
             }
-        });
+        });*/
+        const filenames = await fsAsync.readdir("./src/migrations");
+        console.log(`Migration files to be run: ${filenames}`);
+        for (const filename of filenames) {
+            const fileBlob = await fsAsync.readFile(`./src/migrations/${filename}`, {});
+            const res = await db.execute(String(fileBlob), []);
+            console.log(`migration res: ${res}`);
+        }
     }
 
     console.log("Initializing express...");
