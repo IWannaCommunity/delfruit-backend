@@ -21,6 +21,8 @@ RUN cp ./src/config/config.dev.json ./src/config/config.json
 
 EXPOSE 4201
 
+ARG CI=1
+
 RUN npm run tsoa spec-and-routes
 
 CMD ["npm", "run", "start"]

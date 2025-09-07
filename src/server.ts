@@ -28,6 +28,7 @@ let config: Config = require("./config/config.json");
 
 import fs from "fs";
 import path from "path";
+import process from "process";
 
 /** Exit codes for fatal errors. */
 enum ExitCode {
@@ -55,6 +56,22 @@ async function main(): Promise<number> {
 	console.log("Welcome to delfruit server 2.0!");
 
 	// TODO: database initialization step, currently assumed database is already initialized
+
+	// HACK: but actually do db initialization, but only if we detect we're in CI
+	if (process.env.CI) {
+		const db = new Database();
+		await db.execute("CREATE DATABASE IF NOT EXISTS delfruit", []);
+
+		fs.readdir("./src/migrations/", (e, filenames) => {
+			for (const filename of filenames) {
+				fs.readFile(`./src/migrations/${filename}`, (e, data) => {
+					(async () => {
+						db.execute(String(data), []);
+					})();
+				});
+			}
+		});
+	}
 
 	console.log("Initializing express...");
 
