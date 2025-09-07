@@ -71,7 +71,10 @@ async function main(): Promise<number> {
             console.log("Connecting to the database server.");
             const conn: Connection = mysql.createConnection(cfg);
             console.log("Creating the database.");
-            conn.execute("CREATE DATABASE IF NOT EXISTS delfruit", [], (e, res, fields) => {
+            conn.connect((e) => {
+                console.log(e);
+            });
+            conn.query("CREATE DATABASE IF NOT EXISTS delfruit", [], (e, res, fields) => {
                 console.log(`error: ${e}`);
                 console.log(`resultsrows: ${res}`);
                 console.log(`fields: ${fields}`);
