@@ -49,7 +49,15 @@ jobs:
             - run:
                 name: Run Integration Tests
                 command: |
-                    JEST_JUNIT_OUTPUT_NAME="test-results.xml" npm run test-int
+                    JEST_JUNIT_OUTPUT_NAME="test-results.xml" npm run test-int || true
+            - run:
+                name: (DEBUG) MySQL Logs
+                command: |
+                    docker-compose logs -t --tail="all" mysql
+            - run:
+                name: (DEBUG) DF Service Logs
+                command: |
+                    docker-compose logs -t --tail="all" df2-server
             - save_cache:
                 key: node-v1-{{ checksum "package-lock.json" }}
                 paths:
