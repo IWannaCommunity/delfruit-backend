@@ -5,7 +5,7 @@
     "user": "root",
     "password": "my-secret-pw",
     "port": 33061,
-    "timeout": 5000
+    "connectTimeout": 5000
   },
 
   "app_port": 4201,
