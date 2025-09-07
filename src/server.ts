@@ -29,6 +29,7 @@ let config: Config = require("./config/config.json");
 import fs from "fs";
 import path from "path";
 import process from "process";
+import mysql, { Connection } from "mysql2";
 
 /** Exit codes for fatal errors. */
 enum ExitCode {
@@ -63,9 +64,18 @@ async function main(): Promise<number> {
     if (process.env.CI) {
         console.log("Initializing the database");
         await delay(1000 * 45); // HACK: wait for mysql to startup
-        const db = new Database();
-        await db.execute("CREATE DATABASE IF NOT EXISTS delfruit", []);
+        (async () => {
+            const cfg = { ...config.db };
+            delete cfg.database; // HACK: we don't want to set this
+            const conn: Connection = mysql.createConnection(cfg);
+            conn.execute("CREATE DATABASE IF NOT EXISTS delfruit", [], (e, res, fields) => {
+                console.log(`error: ${e}`);
+                console.log(`resultsrows: ${res}`);
+                console.log(`fields: ${fields}`);
+            });
+        })();
 
+        const db = new Database();
         fs.readdir("./src/migrations/", (e, filenames) => {
             for (const filename of filenames) {
                 fs.readFile(`./src/migrations/${filename}`, (e, data) => {
