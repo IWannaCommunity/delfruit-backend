@@ -61,7 +61,8 @@ async function main(): Promise<number> {
 
     // HACK: but actually do db initialization, but only if we detect we're in CI
     if (process.env.CI) {
-        await delay(1000 * 30); // HACK: wait for mysql to startup
+        console.log("Initializing the database");
+        await delay(1000 * 45); // HACK: wait for mysql to startup
         const db = new Database();
         await db.execute("CREATE DATABASE IF NOT EXISTS delfruit", []);
 
