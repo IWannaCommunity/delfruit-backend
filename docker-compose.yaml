@@ -5,6 +5,8 @@ services:
     build:
       context: .
       dockerfile: dev.Dockerfile
+    environment:
+        CI: true
     expose:
       - "4201"
     ports:
