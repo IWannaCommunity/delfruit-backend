@@ -21,8 +21,8 @@ RUN cp ./src/config/config.dev.json ./src/config/config.json
 
 EXPOSE 4201
 
-ENV CI=1
+ENV __DF_TEST_RUN true
 
 RUN npm run tsoa spec-and-routes
 
-CMD ["sh", "-c", "CI=1 exec npm run start"]
+CMD ["npm", "run", "start"]

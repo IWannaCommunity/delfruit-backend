@@ -62,11 +62,11 @@ async function main(): Promise<number> {
     // TODO: database initialization step, currently assumed database is already initialized
 
     // HACK: but actually do db initialization, but only if we detect we're in CI
-    if (process.env.CI) {
+    if (process.env.__DF_TEST_RUN) {
         console.log("Initializing the database");
         await delay(1000 * 45); // HACK: wait for mysql to startup
         const cfg = { ...config.db };
-        cfg.database = "mysql"; // HACK: we don't want to set this
+        delete cfg.database; // HACK: we don't want to set this
         console.log("Connecting to the database server.");
         const conn: Connection = mysql.createConnection(cfg);
         console.log("Creating the database.");
@@ -83,16 +83,6 @@ async function main(): Promise<number> {
 
         console.log("Running migrations");
         const db = new Database();
-        /*fs.readdir("./src/migrations/", (e, filenames) => {
-            for (const filename of filenames) {
-                fs.readFile(`./src/migrations/${filename}`, (e, data) => {
-                    await (async () => {
-                        const res = await db.execute(String(data), []);
-                        console.log(`migration res: ${res}`);
-                    })();
-                });
-            }
-        });*/
         const filenames = await fsAsync.readdir("./src/migrations");
         console.log(`Migration files to be run: ${filenames}`);
         for (const filename of filenames) {
