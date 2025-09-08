@@ -11,6 +11,29 @@ executors:
       - image: docker:20.10.1
 
 jobs:
+  semgrep-full-scan:
+    docker:
+      - image: semgrep/semgrep
+    steps:
+      - checkout
+      - run:
+          name: "Semgrep full scan"
+          command: semgrep ci
+  semgrep-diff-scan:
+    parameters:
+      default_branch:
+        type: string
+        # Replace main with the repository default branch if different.
+        default: main
+    docker:
+      - image: semgrep/semgrep
+    steps:
+      - checkout
+      - run:
+          name: Semgrep diff scan
+          environment:
+            SEMGREP_BASELINE_REF: << parameters.default_branch >>
+          command: semgrep ci
     integration-tests:
         executor: node
         steps:
@@ -151,6 +174,20 @@ jobs:
                             
 workflows:
     version: 2
+    semgrep:
+        jobs:
+            - semgrep-full-scan:
+                filters:
+                    branches:
+                        only: main
+                context:
+                    - semgrep
+            - semgrep-diff-scan:
+                filters:
+                    branches:
+                        ignore: main
+                context:
+                    - semgrep
     cicd:
         jobs:
             - publish-node-sdk:
