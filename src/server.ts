@@ -74,11 +74,12 @@ async function main(): Promise<number> {
             console.log(`connect error: ${e}`);
         });
         await delay(1000 * 5);
-        conn.query("CREATE DATABASE IF NOT EXISTS delfruit", [], (e, res, fields) => {
+        conn.execute("CREATE DATABASE IF NOT EXISTS delfruit", [], (e, res, fields) => {
             console.log(`error: ${e}`);
             console.log(`resultsrows: ${res}`);
             console.log(`fields: ${fields}`);
         });
+        await delay(1000 * 5);
 
         console.log("Running migrations");
         const db = new Database();
