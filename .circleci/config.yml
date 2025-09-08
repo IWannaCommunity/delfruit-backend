@@ -179,13 +179,13 @@ workflows:
             - semgrep-full-scan:
                 filters:
                     branches:
-                        only: main
+                        only: master
                 context:
                     - semgrep
             - semgrep-diff-scan:
                 filters:
                     branches:
-                        ignore: main
+                        ignore: master
                 context:
                     - semgrep
     cicd:
