@@ -48,6 +48,7 @@ jobs:
                     sudo apt-get update
                     sudo apt-get install -y curl unzip ca-certificates git build-essential
                     curl -fsSL https://fnm.vercel.app/install | bash
+                    PATH="$HOME/.fnm":"$HOME/.local/share/fnm":$PATH && export PATH
                     eval "$(fnm env --use-on-cd --shell bash)"
                     cd .
             - restore_cache:
