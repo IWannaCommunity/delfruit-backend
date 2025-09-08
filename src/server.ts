@@ -65,21 +65,20 @@ async function main(): Promise<number> {
     if (process.env.CI) {
         console.log("Initializing the database");
         await delay(1000 * 45); // HACK: wait for mysql to startup
-        await (async () => {
-            const cfg = { ...config.db };
-            delete cfg.database; // HACK: we don't want to set this
-            console.log("Connecting to the database server.");
-            const conn: Connection = mysql.createConnection(cfg);
-            console.log("Creating the database.");
-            conn.connect((e) => {
-                console.log(e);
-            });
-            conn.query("CREATE DATABASE IF NOT EXISTS delfruit", [], (e, res, fields) => {
-                console.log(`error: ${e}`);
-                console.log(`resultsrows: ${res}`);
-                console.log(`fields: ${fields}`);
-            });
-        })();
+        const cfg = { ...config.db };
+        cfg.database = "mysql"; // HACK: we don't want to set this
+        console.log("Connecting to the database server.");
+        const conn: Connection = mysql.createConnection(cfg);
+        console.log("Creating the database.");
+        conn.connect((e) => {
+            console.log(`connect error: ${e}`);
+        });
+        await delay(1000 * 5);
+        conn.query("CREATE DATABASE IF NOT EXISTS delfruit", [], (e, res, fields) => {
+            console.log(`error: ${e}`);
+            console.log(`resultsrows: ${res}`);
+            console.log(`fields: ${fields}`);
+        });
 
         console.log("Running migrations");
         const db = new Database();
