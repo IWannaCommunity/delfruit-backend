@@ -31,6 +31,9 @@ const fsAsync = fs.promises;
 import path from "path";
 import process from "process";
 import mysql, { Connection } from "mysql2";
+import { slowDown } from "express-slow-down";
+import { MemcachedStore } from "rate-limit-memcached";
+import { memcached } from "./datastore";
 
 /** Exit codes for fatal errors. */
 enum ExitCode {
@@ -236,6 +239,16 @@ async function main(): Promise<number> {
                 "Lower values mean faster hash attempts for password crackers!",
         );
     }
+
+    console.log("Initializing Speed Limiting middleware");
+    const expressSpeedLimiter = slowDown({
+        windowMs: 1000 * 60 * 15,
+        delayAfter: 30,
+        delayMs: (hits) => hits * 250,
+        store: new MemcachedStore({ prefix: "exprSpdLmt-", client: memcached }),
+    });
+
+    app.use(expressSpeedLimiter);
 
     console.log("Starting app...");
 

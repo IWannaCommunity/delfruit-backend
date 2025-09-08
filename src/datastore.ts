@@ -24,7 +24,10 @@ import { Rating } from "./game-router";
 let config: Config = require("./config/config.json");
 
 var Memcached = require("memcached");
-const memcached = new Memcached(config.memcache.hosts, config.memcache.options);
+export const memcached = new Memcached(
+	config.memcache.hosts,
+	config.memcache.options,
+);
 
 for (let host of config.memcache.hosts) {
 	memcached.connect(host, function (err: Error, conn: any) {
