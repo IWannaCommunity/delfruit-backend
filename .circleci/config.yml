@@ -50,7 +50,10 @@ jobs:
                     curl -fsSL https://fnm.vercel.app/install | bash
                     PATH="$HOME/.fnm":"$HOME/.local/share/fnm":$PATH && export PATH
                     eval "$(fnm env --shell bash)"
-                    fnm install $(cat .node_version)
+            - run:
+                name: Install Node.js from fnm
+                command: |
+                    fnm install --use $(cat .node_version) && fnm use --install-if-missing $(cat .node_version) && fnm default $(cat .node_version)
             - restore_cache:
                 keys:
                     - node-v1-{{ checksum "package-lock.json" }}
@@ -98,14 +101,18 @@ jobs:
             - run:
                 name: Install Packages
                 command: |
-                    source /opt/circleci/.nvm/nvm.sh
-                    nvm install 16.20.1
-                    echo 'export NVM_DIR="/opt/circleci/.nvm"' >> $BASH_ENV
-                    echo ' [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> $BASH_ENV
                     sudo apt-get update
-                    sudo apt-get install -y ca-certificates git build-essential
-                    nvm alias default 16.20.1
-                    nvm use 16.20.1
+                    sudo apt-get install -y curl unzip ca-certificates git build-essential
+                    curl -fsSL https://fnm.vercel.app/install | bash
+                    PATH="$HOME/.fnm":"$HOME/.local/share/fnm":$PATH && export PATH
+                    eval "$(fnm env --shell bash)"
+            - run:
+                name: Install Node.js from fnm
+                command: |
+                    fnm install --use $(cat .node_version) && fnm use --install-if-missing $(cat .node_version) && fnm default $(cat .node_version)
+            - run:
+                name: Install NPM Packages
+                command: |
                     npm i --force --legacy-peer-deps -d
                     npm uninstall bcrypt --force && npm install bcrypt@3.0.6 --force --legacy-peer-deps --save --save-exact # temporary, remove this later
             - run:
