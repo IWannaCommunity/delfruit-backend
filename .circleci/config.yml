@@ -13,11 +13,11 @@ executors:
 jobs:
     semgrep-full-scan:
         docker:
-            - image: semgrep/semgrep
+            - image: semgrep/semgrep:1.135.0
         steps:
             - checkout
             - run:
-                    name: "Semgrep full scan"
+                    name: "Semgrep Full Scan"
                     command: semgrep ci
     semgrep-diff-scan:
         parameters:
@@ -26,11 +26,11 @@ jobs:
                 # Replace main with the repository default branch if different.
                 default: master
         docker:
-            - image: semgrep/semgrep
+            - image: semgrep/semgrep:1.135.0
         steps:
             - checkout
             - run:
-                    name: Semgrep diff scan
+                    name: Semgrep Differential Scan
                     environment:
                         SEMGREP_BASELINE_REF: << parameters.default_branch >>
                     command: semgrep ci
@@ -174,15 +174,17 @@ jobs:
                             
 workflows:
     version: 2
-    semgrep:
+    analysis:
         jobs:
             - semgrep-full-scan:
+                name: Semgrep Scan - Full
                 filters:
                     branches:
                         only: master
                 context:
                     - semgrep
             - semgrep-diff-scan:
+                name: Semgrep Scan - Diff
                 filters:
                     branches:
                         ignore: master
