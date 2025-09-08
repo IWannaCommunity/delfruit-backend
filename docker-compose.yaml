@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: dev.Dockerfile
     environment:
-        CI: true
+        __DF_TEST_RUN: true
     expose:
       - "4201"
     ports:

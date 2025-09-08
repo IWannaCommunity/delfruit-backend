@@ -1,4 +1,4 @@
-FROM node:16.20.0
+FROM node:16.20.1-bookworm
 
 RUN mkdir -p /home/node/app/node_modules && chown -R node:node /home/node/app
 
