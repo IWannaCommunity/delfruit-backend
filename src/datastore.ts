@@ -449,11 +449,14 @@ ${
 		? `ORDER BY CASE WHEN (r.comment IS NULL OR r.comment='') THEN 0 ELSE 1 END DESC,
 COUNT(l.id) DESC,
 r.date_created DESC`
-		: "ORDER BY r.date_created DESC"
+		: options.orderCol
+		? `ORDER BY ${options.orderCol} ${options.orderDir ?? "DESC"}`
+		: `ORDER BY r.date_created ${options.orderDir ?? "DESC"}`
 }
 ${options.page !== undefined ? " LIMIT ?,? " : ""}
 `;
 
+			console.log(query);
 			console.log("running");
 			const results = await database.query(
 				query,
