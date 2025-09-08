@@ -39,7 +39,6 @@ export interface AuthResponse {
 interface UserCredentials {
     username: string;
     password: string;
-    notARobot: number;
 }
 
 interface ResetRequestParams {
