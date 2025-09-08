@@ -9,7 +9,6 @@ import whitelist from "./lib/whitelist";
 import * as Minio from "minio";
 
 import multer from "multer";
-import { RE2 } from "re2";
 import handle from "./lib/express-async-catch";
 import { adminCheck, userCheck } from "./lib/auth-check";
 import Config from "./model/config";
@@ -38,7 +37,7 @@ import {
 const upload = multer({
     storage: multer.diskStorage({
         //If no destination is given, the operating system's default directory for temporary files is used.
-        filename: function (req, file, cb) {
+        filename: function(req, file, cb) {
             cb(null, file.fieldname + "-" + Date.now());
         },
     }),
@@ -464,7 +463,7 @@ export class GameController extends Controller {
             id: ssres.id,
         };
         // Using fPutObject API upload your file to the bucket europetrip.
-        minioClient.putObject(config.s3_bucket, `${ssres.id}.png`, screenshot.buffer, metaData, function (err, etag) {
+        minioClient.putObject(config.s3_bucket, `${ssres.id}.png`, screenshot.buffer, metaData, function(err, etag) {
             // TODO: don't return raw S3 errors to the user!!!
             if (err) return console.log(err);
         });

@@ -1,46 +1,62 @@
-import express from 'express';
-import datastore from './datastore';
-import AuthModule from './lib/auth';
-import { GetUsersParms } from './model/GetUsersParms';
-import handle from './lib/express-async-catch';
-import { userCheck } from './lib/auth-check';
-import { recaptchaVerify } from './auth-router';
-import { Permission } from './model/Permission';
-import moment from 'moment';
-import { Body, Controller, Delete, Get, Header, Patch, Path, Post, Put, Query, Response, Route, Security, SuccessResponse, Tags } from 'tsoa';
-import Config from './model/config';
-let config: Config = require('./config/config.json');
+import express from "express";
+import datastore from "./datastore";
+import AuthModule from "./lib/auth";
+import { GetUsersParms } from "./model/GetUsersParms";
+import handle from "./lib/express-async-catch";
+import { userCheck } from "./lib/auth-check";
+import { recaptchaVerify } from "./auth-router";
+import { Permission } from "./model/Permission";
+import moment from "moment";
+import {
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Header,
+    Patch,
+    Path,
+    Post,
+    Put,
+    Query,
+    Response,
+    Route,
+    Security,
+    SuccessResponse,
+    Tags,
+} from "tsoa";
+import Config from "./model/config";
+let config: Config = require("./config/config.json");
 const auth = new AuthModule();
 const app = express.Router();
 export default app;
 
 interface UserRegistration {
-    username: string,
-    password: string,
-    email: string,
+    username: string;
+    password: string;
+    email: string;
 }
 
 interface EditUserPermissionsParam {
-    revokedUntil: Date
+    revokedUntil: Date;
 }
 
 interface APIError {
-    error: string,
+    error: string;
 }
 
 import * as jwt from "jsonwebtoken";
-import { Review } from './model/Review';
-import { Badge } from './model/Badge';
+import { Review } from "./model/Review";
+import { Badge } from "./model/Badge";
 function extractBearerJWT(header_token: string): string | object {
     if (!header_token.includes("Bearer ")) {
-        throw new Error("missing prefix")
+        throw new Error("missing prefix");
     }
     const unverified_token = header_token.split(" ")[1];
 
     try {
         return jwt.verify(unverified_token, config.app_jwt_secret);
     } catch (e) {
-        throw new Error(`invalid token: ${e}`)
+        throw new Error(`invalid token: ${e}`);
     }
 }
 
@@ -56,16 +72,19 @@ export class UserController extends Controller {
     @Post()
     public async postUser(@Body() requestBody: UserRegistration): Promise<any> {
         const phash = await auth.hashPassword(requestBody.password);
-        const user = await datastore.addUser(requestBody.username, phash, requestBody.email)
+        const user = await datastore.addUser(requestBody.username, phash, requestBody.email);
         if (!user) {
             this.setStatus(400);
             return { error: "User Exists" };
         }
-        datastore.addReport({
-            type: "user_register",
-            targetId: "" + user.id,
-            report: "User Registered"
-        }, user.id);
+        datastore.addReport(
+            {
+                type: "user_register",
+                targetId: "" + user.id,
+                report: "User Registered",
+            },
+            user.id,
+        );
 
         user.token = auth.getToken(user.name, user.id, user.isAdmin);
 
@@ -78,15 +97,24 @@ export class UserController extends Controller {
      */
     @SuccessResponse(200, "List of users matching filters")
     @Get()
-    public async getUsers(@Header("Authorization") authorization?: string, @Query() name?: string, @Query() following?: boolean, @Query() banned?: boolean, @Query() page?: number = 0, @Query() limit?: number = 50): Promise<any[]> {
-        const params: GetUsersParms = { page, limit };
+    public async getUsers(
+        @Header("Authorization") authorization?: string,
+        @Query() name?: string,
+        @Query() following?: boolean,
+        @Query() banned?: boolean,
+        @Query() page?: number = 0,
+        @Query() limit?: number = 50,
+        @Query() orderCol?: string,
+        @Query() orderDir?: "ASC" | "DESC",
+    ): Promise<any[]> {
+        const params: GetUsersParms = { page, limit, orderCol, orderDir };
         let user = null;
         try {
             user = extractBearerJWT(authorization);
         } catch (_) {
             console.warn("user provided authorization, but it was invalid");
-			//this.setStatus(401);
-			//return { error: "unauthenticated users cannot view the user list" };
+            //this.setStatus(401);
+            //return { error: "unauthenticated users cannot view the user list" };
         }
 
         if (!user || !user.isAdmin) params.banned = false;
@@ -97,7 +125,7 @@ export class UserController extends Controller {
         const users = await datastore.getUsers(params);
 
         if (!user || !user.isAdmin) {
-            users.forEach(u => {
+            users.forEach((u) => {
                 delete u.email;
                 delete u.canReport;
                 delete u.canSubmit;
@@ -111,14 +139,22 @@ export class UserController extends Controller {
 
     @SuccessResponse(200, "User's Lists")
     @Get("{uid}/lists")
-    public async getUsersLists(@Path() uid: number, @Query() page?: number = 0, @Query() limit?: number = 50): Promise<any[]> {
+    public async getUsersLists(
+        @Path() uid: number,
+        @Query() page?: number = 0,
+        @Query() limit?: number = 50,
+    ): Promise<any[]> {
         const lists = await datastore.getLists({ uid, page, limit });
         return lists;
     }
 
     @SuccessResponse(200, "User's Reviews")
     @Get("{id}/reviews")
-    public async getUsersReviews(@Path() id: number, @Query() page?: number = 0, @Query() limit?: number = 50): Promise<Review[]> {
+    public async getUsersReviews(
+        @Path() id: number,
+        @Query() page?: number = 0,
+        @Query() limit?: number = 50,
+    ): Promise<Review[]> {
         const rows = await datastore.getReviews({ user_id: id, removed: false, page: page, limit: limit });
         return rows;
     }
@@ -134,7 +170,11 @@ export class UserController extends Controller {
     @SuccessResponse(200, "User's Permissions")
     @Response<APIError>(401, "Unauthorized")
     @Patch("{uid}/permissions/{pid}")
-    public async patchUsersPermissions(@Path() uid: number, @Path() pid: Permission, @Body() requestBody?: EditUserPermissionsParam): Promise<Permission[]> {
+    public async patchUsersPermissions(
+        @Path() uid: number,
+        @Path() pid: Permission,
+        @Body() requestBody?: EditUserPermissionsParam,
+    ): Promise<Permission[]> {
         let revokedUntilStr = null;
         if (requestBody != null) {
             revokedUntilStr = moment(requestBody.revokedUntil).format("YYYY-MM-DD HH:mm:ss");
@@ -166,7 +206,7 @@ export class UserController extends Controller {
             delete user.banned;
         }
 
-        const canSeePerms = !!(authuser && (authuser.sub == id || authuser.isAdmin))
+        const canSeePerms = !!(authuser && (authuser.sub == id || authuser.isAdmin));
         if (canSeePerms) {
             user.permissions = await datastore.getPermissions(id);
         }
@@ -183,16 +223,19 @@ export class UserController extends Controller {
     @Response<APIError>(403, "Unauthorized attempt to modify another user")
     @Response<void>(404, "Not Found")
     @Patch("{id}")
-    public async patchUser(@Header("Authorization") authorization: string, @Path() id: number, @Body() requestBody: any): Promise<any> {
+    public async patchUser(
+        @Header("Authorization") authorization: string,
+        @Path() id: number,
+        @Body() requestBody: any,
+    ): Promise<any> {
         // NOTE: auth guard should make the error condition unreachable
         const authuser = extractBearerJWT(authorization);
-
 
         const isAdmin = false;
         //if not admin (and if not, uid is not uid in token)
         if (!isAdmin && authuser.sub != id) {
             this.setStatus(403);
-            return { error: 'unauthorized access to this user' };
+            return { error: "unauthorized access to this user" };
         }
 
         let user = requestBody;
@@ -204,7 +247,7 @@ export class UserController extends Controller {
             const pwVerified = await auth.verifyPassword(targetUser.phash2, requestBody.currentPassword);
             if (!pwVerified) {
                 this.setStatus(401);
-                return { error: "password was missing or doesn't match" }
+                return { error: "password was missing or doesn't match" };
             }
             const newPassHash = await auth.hashPassword(requestBody.password);
             user.phash2 = newPassHash;
@@ -237,13 +280,17 @@ export class UserController extends Controller {
     @Response<APIError>(403, "Bad Ownership")
     @Response<APIError>(404, "Not Found")
     @Put("{id}/follows/{followerId}")
-    public async putUserFollow(@Header("Authorization") authorization: string, @Path() id: number, @Path() followerId: number): Promise<void> {
+    public async putUserFollow(
+        @Header("Authorization") authorization: string,
+        @Path() id: number,
+        @Path() followerId: number,
+    ): Promise<void> {
         // NOTE: auth guard should make the error condition unreachable
         const user = extractBearerJWT(authorization);
 
         if (user.sub != id) {
             this.setStatus(403);
-            return { error: "cannot modify another user's follower list" }
+            return { error: "cannot modify another user's follower list" };
         }
         const targetUser = await datastore.getUser(+followerId);
         if (!targetUser) return this.setStatus(404);
@@ -255,20 +302,24 @@ export class UserController extends Controller {
     /**
      * Removes a user from your following list. Idempotent.
      * @summary Unfollow User (User/Admin Only)
-    */
+     */
     @Security("bearerAuth", ["user"])
     @SuccessResponse(204, "Follower Removed")
     @Response<APIError>(401, "Not Logged In")
     @Response<APIError>(403, "Bad Onwership")
     @Response<APIError>(400, "Not Found")
     @Delete("{id}/follows/{followerId}")
-    public async deleteUserFollow(@Header("Authorization") authorization: string, @Path() id: number, @Path() followerId: number): Promise<void> {
+    public async deleteUserFollow(
+        @Header("Authorization") authorization: string,
+        @Path() id: number,
+        @Path() followerId: number,
+    ): Promise<void> {
         // NOTE: auth guard should make the error condition unreachable
         const user = extractBearerJWT(authorization);
 
         if (user.sub != id) {
             this.setStatus(403);
-            return { error: "cannot modify another user's follower list" }
+            return { error: "cannot modify another user's follower list" };
         }
 
         const targetUser = await datastore.getUser(+followerId);
