@@ -154,8 +154,20 @@ export class UserController extends Controller {
         @Path() id: number,
         @Query() page?: number = 0,
         @Query() limit?: number = 50,
+        //@Query() textReviewsFirst: boolean = false,
+        //@Query() includeOwnerReview: boolean = false,
+        //@Query() removed: boolean = false,
+        @Query() orderCol?: string,
+        @Query() orderDir?: "ASC" | "DESC",
     ): Promise<Review[]> {
-        const rows = await datastore.getReviews({ user_id: id, removed: false, page: page, limit: limit });
+        const rows = await datastore.getReviews({
+            user_id: id,
+            removed: false,
+            page: page,
+            limit: limit,
+            orderCol,
+            orderDir,
+        });
         return rows;
     }
 
