@@ -53,6 +53,7 @@ jobs:
             - run:
                 name: Install Node.js from fnm
                 command: |
+                    ls
                     __NODE_VER = $(cat .node_version)
                     fnm install $__NODE_VER && fnm use $__NODE_VER --install-if-missing && fnm default $__NODE_VER
             - restore_cache:
@@ -110,6 +111,7 @@ jobs:
             - run:
                 name: Install Node.js from fnm
                 command: |
+                    ls -a
                     __NODE_VER = $(cat .node_version)
                     fnm install $__NODE_VER && fnm use $__NODE_VER --install-if-missing && fnm default $__NODE_VER
             - run:
