@@ -255,8 +255,10 @@ export class CompositeController extends Controller {
         @Query() banned?: boolean,
         @Query() page?: number = 0,
         @Query() limit?: number = 50,
+        @Query() orderCol?: string,
+        @Query() orderDir?: "ASC" | "DESC",
     ): Promise<Array<Omit<UserExt, "ratingsCount" | "screenshotCount">>> {
-        const params: GetUsersParms = { page, limit };
+        const params: GetUsersParms = { page, limit, orderCol, orderDir };
         if (name) params.name = name;
 
         const [users, reviewCounts] = await (async () => {
