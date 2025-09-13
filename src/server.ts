@@ -258,6 +258,7 @@ async function main(): Promise<number> {
 		standardHeaders: "draft-8",
 		legacyHeaders: true,
 		ipv6Subnet: 48,
+		identifier: "exprRateLmt-",
 		store: new MemcachedStore({ prefix: "exprRateLmt-", client: memcached }),
 	});
 	app.use(expressRateLimiter);
@@ -267,6 +268,7 @@ async function main(): Promise<number> {
 		windowMs: 1000 * 60 * 15,
 		delayAfter: 30,
 		delayMs: (hits) => hits * 250,
+		identifier: "exprSpdLmt-",
 		store: new MemcachedStore({ prefix: "exprSpdLmt-", client: memcached }),
 	});
 	app.use(expressSpeedLimiter);
