@@ -254,7 +254,7 @@ async function main(): Promise<number> {
 	console.log("Initializing Rate Limiting middleware");
 	const expressRateLimiter = rateLimit({
 		windowMs: 1000 * 60 * 5,
-		limit: 130,
+		limit: 350, // TODO: lower this on release
 		standardHeaders: "draft-8",
 		legacyHeaders: true,
 		ipv6Subnet: 48,
