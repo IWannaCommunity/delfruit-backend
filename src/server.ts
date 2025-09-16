@@ -35,6 +35,7 @@ import { slowDown } from "express-slow-down";
 import { MemcachedStore } from "rate-limit-memcached";
 import { memcached } from "./datastore";
 import { rateLimit } from "express-rate-limit";
+import axios from "axios";
 
 /** Exit codes for fatal errors. */
 enum ExitCode {
@@ -45,7 +46,11 @@ enum ExitCode {
 	S3_INIT_FAIL = 2,
 }
 
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+async function sleep(ms: number): Promise<void> {
+	return new Promise((resolve) => {
+		setTimeout(resolve, ms);
+	});
+}
 
 /**
  * @swagger
@@ -68,7 +73,7 @@ async function main(): Promise<number> {
 	// HACK: but actually do db initialization, but only if we detect we're in CI
 	if (process.env.__DF_TEST_RUN) {
 		console.log("Initializing the database");
-		await delay(1000 * 45); // HACK: wait for mysql to startup
+		await sleep(1000 * 45); // HACK: wait for mysql to startup
 		const cfg = { ...config.db };
 		delete cfg.database; // HACK: we don't want to set this
 		console.log("Connecting to the database server.");
@@ -77,27 +82,20 @@ async function main(): Promise<number> {
 		conn.connect((e) => {
 			console.log(`connect error: ${e}`);
 		});
-		await delay(1000 * 5);
-		conn.execute(
-			"CREATE DATABASE IF NOT EXISTS delfruit",
-			[],
-			(e, res, fields) => {
-				console.log(`error: ${e}`);
-				console.log(`resultsrows: ${res}`);
-				console.log(`fields: ${fields}`);
-			},
-		);
-		await delay(1000 * 5);
+		await sleep(1000 * 5);
+		conn.execute("CREATE DATABASE IF NOT EXISTS delfruit", [], (e, res, fields) => {
+			console.log(`error: ${e}`);
+			console.log(`resultsrows: ${res}`);
+			console.log(`fields: ${fields}`);
+		});
+		await sleep(1000 * 5);
 
 		console.log("Running migrations");
 		const db = new Database();
 		const filenames = await fsAsync.readdir("./src/migrations");
 		console.log(`Migration files to be run: ${filenames}`);
 		for (const filename of filenames) {
-			const fileBlob = await fsAsync.readFile(
-				`./src/migrations/${filename}`,
-				{},
-			);
+			const fileBlob = await fsAsync.readFile(`./src/migrations/${filename}`, {});
 			const res = await db.execute(String(fileBlob), []);
 			console.log(`migration res: ${res}`);
 		}
@@ -189,9 +187,7 @@ async function main(): Promise<number> {
 				console.log(`Bucket ${config.s3_bucket} doesn't exist, intializing.`);
 				minioClient.makeBucket(config.s3_bucket, config.s3_region, (err) => {
 					if (err) return rej(err);
-					console.log(
-						`Bucket ${config.s3_bucket} created successfully in ${config.s3_region}.`,
-					);
+					console.log(`Bucket ${config.s3_bucket} created successfully in ${config.s3_region}.`);
 					res(true);
 				});
 			});
@@ -230,19 +226,13 @@ async function main(): Promise<number> {
 
 	console.log("Initializing swagger...");
 
-	fs.readFile(
-		path.join(__dirname, "../build/swagger.json"),
-		{ encoding: "utf-8" },
-		(err, data) => {
-			if (err) {
-				return console.error(
-					`OpenAPI definition could not be opened or found: ${err}`,
-				);
-			}
-			const specs = JSON.parse(data);
-			app.use("/", swaggerUi.serve, swaggerUi.setup(specs));
-		},
-	);
+	fs.readFile(path.join(__dirname, "../build/swagger.json"), { encoding: "utf-8" }, (err, data) => {
+		if (err) {
+			return console.error(`OpenAPI definition could not be opened or found: ${err}`);
+		}
+		const specs = JSON.parse(data);
+		app.use("/", swaggerUi.serve, swaggerUi.setup(specs));
+	});
 
 	if (config.bcrypt_rounds < 10) {
 		console.log(
@@ -283,29 +273,27 @@ async function main(): Promise<number> {
 
 	console.log("Starting app...");
 
-	const server = app.listen(config.app_port, () => {
-		console.log(`Server started at localhost:${config.app_port}!`);
-	});
+	try {
+		const server = app.listen(config.app_port, () => {
+			console.log(`Server started at localhost:${config.app_port}!`);
+		});
 
-	while (server.listening) {
-		await sleep(100);
+		process.on("SIGTERM", () => {
+			server.close(() => {});
+		});
+
+		while (server.listening) {
+			await sleep(4);
+		}
+	} catch (e) {
+		console.error(e);
+	} finally {
+		memcached.end();
 	}
 
 	console.log("app done");
 
 	return ExitCode.SUCCESS;
-}
-
-function sleep(ms: number) {
-	return new Promise((resolve) => {
-		setTimeout(resolve, ms);
-	});
-}
-
-async function main2(): Promise<number> {
-	console.log(process._getActiveHandles());
-	console.log(process._getActiveRequests());
-	return 0;
 }
 
 (async () => {
