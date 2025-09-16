@@ -1,6 +1,9 @@
 {
+	"parser": "typescript",
     "semi": true,
+	"files": "**/*.{js,mjs,cjs,ts,mts,cts}",
     "printWidth": 120,
+	"useTabs": true,
     "tabWidth": 4,
     "singleQuote": false,
     "trailingComma": "all",
