@@ -1,6 +1,6 @@
 {
     "name": "Delicious Fruit API",
-    "version": "2.0.0-rc0",
+    "version": "1.0.0-rc.0",
     "description": "The API you should use instead of throwing your monitor out the window",
     "engines": {
         "node": ">=16"
@@ -9,7 +9,7 @@
     "scripts": {
         "dev": "ts-node-dev --inspect --poll --respawn --transpileOnly ./src/server.ts",
         "start": "ts-node-transpile-only ./src/server.ts",
-		"start2": "node --inspect -r ts-node/register/transpile-only ./src/server.ts",
+        "start2": "node --inspect -r ts-node/register/transpile-only ./src/server.ts",
         "test": "jest ./tests/ --silent=false",
         "test-int": "jest tests/*.ts",
         "tsc": "tsc",
@@ -32,29 +32,33 @@
         "@types/swagger-jsdoc": "0.0.2",
         "@types/swagger-ui-express": "3.0.0",
         "@types/uuid": "3.4.4",
-        "bcrypt": "3.0.7",
+        "bcrypt": "3.0.8",
         "bcrypt-nodejs": "0.0.3",
-        "body-parser": "1.19.0",
+        "body-parser": "1.20.0",
         "cors": "2.8.5",
-        "express": "4.16.4",
-        "express-jwt": "5.3.2",
+        "express": "4.17.0",
+        "express-jwt": "5.3.3",
         "express-rate-limit": "6.7.1",
         "express-slow-down": "2.0.0",
         "jsonwebtoken": "8.2.1",
         "memcached": "2.2.2",
-        "minio": "7.0.14",
-        "moment": "2.22.1",
+        "minio": "7.0.15",
+        "moment": "2.22.2",
         "ms": "2.1.2",
-        "multer": "1.4.2",
-        "mysql2": "3.4.0",
-        "nodemailer": "6.4.17",
+        "multer": "1.4.3",
+        "mysql2": "3.4.1",
+        "nodemailer": "6.4.18",
         "option-t": "38.0.8",
+        "pino": "8.14.1",
+        "pino-http": "8.6.1",
+        "pino-pretty": "10.3.1",
+        "promise.any": "2.0.6",
         "rate-limit-memcached": "1.0.1",
         "retry": "0.13.1",
-        "swagger-jsdoc": "3.2.9",
-        "swagger-ui-express": "4.0.5",
+        "swagger-jsdoc": "3.3.0",
+        "swagger-ui-express": "4.0.6",
         "typescript": "5.0.4",
-        "uuid": "3.3.0"
+        "uuid": "3.3.2"
     },
     "devDependencies": {
         "@jest/globals": "27.2.5",
@@ -76,6 +80,6 @@
         "ts-mocha": "6.0.0",
         "ts-node": "8.10.0",
         "ts-node-dev": "1.0.0-pre.44",
-        "tsoa": "5.1.1"
+        "tsoa": "6.6.0"
     }
 }
