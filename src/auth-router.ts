@@ -85,14 +85,14 @@ export class AuthController extends Controller {
 
             if (!verified) {
                 const u = await datastore.getUser(user.id);
-                datastore.updateUser({
+                await datastore.updateUser({
                     id: user.id,
                     unsuccessfulLogins: u.unsuccessfulLogins + 1,
                 });
                 this.setStatus(401);
                 return { error: "bad credentials" };
             } else {
-                datastore.updateUser({
+                await datastore.updateUser({
                     id: user.id,
                     dateLastLogin: moment().format("YYYY-MM-DD HH:mm:ss"),
                     lastIp: this.getHeaders()["x-forwarded-for"],
