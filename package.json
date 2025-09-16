@@ -7,9 +7,9 @@
     },
     "main": "server.js",
     "scripts": {
-        "start": "ts-node-dev --poll --respawn --transpileOnly ./src/server.ts",
-        "start-ts-node": "ts-node src/server.ts",
-        "dev": "concurrently -r \"nodemon -x npm run start\" \"nodemon -x npm run tsoa spec-and-routes\" ",
+        "dev": "ts-node-dev --inspect --poll --respawn --transpileOnly ./src/server.ts",
+        "start": "ts-node-transpile-only ./src/server.ts",
+		"start2": "node --inspect -r ts-node/register/transpile-only ./src/server.ts",
         "test": "jest ./tests/ --silent=false",
         "test-int": "jest tests/*.ts",
         "tsc": "tsc",
