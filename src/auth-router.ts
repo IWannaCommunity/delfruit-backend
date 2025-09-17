@@ -10,6 +10,7 @@ import util from "util";
 import axios from "axios";
 import Config from "./model/config";
 import { Body, Controller, Get, Header, Post, Response, Route, SuccessResponse, Tags } from "tsoa";
+import { APIError } from "./model/response/error";
 let config: Config = require("./config/config.json");
 
 const app = express.Router();
@@ -50,10 +51,6 @@ interface FinalizePassResetParams {
     username: string;
     token: string;
     password: string;
-}
-
-interface APIError {
-    error: string;
 }
 
 @Route("auth")
@@ -346,36 +343,36 @@ function extractBearerJWT(header_token: string): string | object {
 }
 
 export async function recaptchaVerify(action: string, token: string, remoteIp?: string): Promise<boolean> {
-    if (!config.recaptcha_secret) {
-        //console.log('recaptcha secret missing, skipping validation');
-        return true;
-    }
-    const request: any = {
-        secret: config.recaptcha_secret,
-        response: token,
-    };
-    if (remoteIp) request.remoteip = remoteIp;
-    try {
-        const rsp = await axios.post("https://www.google.com/recaptcha/api/siteverify", request);
-        if (!rsp.data.success) {
-            console.log("reCaptcha: Invalid token!");
-            console.log(rsp.data);
-            return false;
-        }
-        if (rsp.data.action != action) {
-            console.log("reCaptcha: Action doesn't match expected action! expected: " + action);
-            console.log(rsp.data);
-            return false;
-        }
-        if (rsp.data.score < config.recaptcha_threshold) {
-            console.log("reCaptcha: score under threshold!");
-            console.log(rsp.data);
-            return false;
-        }
-        return true;
-    } catch (err) {
-        console.log("recaptcha verify error! allowing request");
-        console.log(err);
-        return true;
-    }
+	if (!config.recaptcha_secret) {
+		//console.log('recaptcha secret missing, skipping validation');
+		return true;
+	}
+	const request: any = {
+		secret: config.recaptcha_secret,
+		response: token,
+	};
+	if (remoteIp) request.remoteip = remoteIp;
+	try {
+		const rsp = await axios.post("https://www.google.com/recaptcha/api/siteverify", request);
+		if (!rsp.data.success) {
+			console.log("reCaptcha: Invalid token!");
+			console.log(rsp.data);
+			return false;
+		}
+		if (rsp.data.action != action) {
+			console.log("reCaptcha: Action doesn't match expected action! expected: " + action);
+			console.log(rsp.data);
+			return false;
+		}
+		if (rsp.data.score < config.recaptcha_threshold) {
+			console.log("reCaptcha: score under threshold!");
+			console.log(rsp.data);
+			return false;
+		}
+		return true;
+	} catch (err) {
+		console.log("recaptcha verify error! allowing request");
+		console.log(err);
+		return true;
+	}
 }

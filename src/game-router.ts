@@ -51,6 +51,7 @@ export default app;
 
 import * as jwt from "jsonwebtoken";
 import { Review } from "./model/Review";
+import { APIError } from "./model/response/error";
 function extractBearerJWT(header_token: string): string | object {
     if (!header_token.includes("Bearer ")) {
         throw new Error("missing prefix");
@@ -67,10 +68,6 @@ function extractBearerJWT(header_token: string): string | object {
 export interface Rating {
     rating: number;
     difficulty: number;
-}
-
-interface APIError {
-    error: string;
 }
 
 @Route("games")

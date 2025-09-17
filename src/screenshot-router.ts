@@ -1,34 +1,46 @@
-import express from 'express';
-import datastore from './datastore';
+import express from "express";
+import datastore from "./datastore";
 import { GetScreenshotParms } from "./model/GetScreenshotParms";
 import { Screenshot } from "./model/Screenshot";
-import handle from './lib/express-async-catch';
-import { adminCheck } from './lib/auth-check';
-import { Permission } from './model/Permission';
-import { Body, Controller, Delete, Get, Header, Patch, Path, Queries, Query, Response, Route, Security, SuccessResponse, Tags } from 'tsoa';
+import handle from "./lib/express-async-catch";
+import { adminCheck } from "./lib/auth-check";
+import { Permission } from "./model/Permission";
+import {
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Header,
+    Patch,
+    Path,
+    Queries,
+    Query,
+    Response,
+    Route,
+    Security,
+    SuccessResponse,
+    Tags,
+} from "tsoa";
 
 const app = express.Router();
 export default app;
 
-import Config from './model/config';
-let config: Config = require('./config/config.json');
+import Config from "./model/config";
+let config: Config = require("./config/config.json");
 
 import * as jwt from "jsonwebtoken";
+import { APIError } from "./model/response/error";
 function extractBearerJWT(header_token: string): string | object {
     if (!header_token.includes("Bearer ")) {
-        throw new Error("missing prefix")
+        throw new Error("missing prefix");
     }
     const unverified_token = header_token.split(" ")[1];
 
     try {
         return jwt.verify(unverified_token, config.app_jwt_secret);
     } catch (e) {
-        throw new Error(`invalid token: ${e}`)
+        throw new Error(`invalid token: ${e}`);
     }
-}
-
-interface APIError {
-    error: string,
 }
 
 @Tags("Screenshots")
@@ -40,17 +52,20 @@ export class ScreenshotController extends Controller {
      */
     @SuccessResponse(200, "List of matching Screenshots")
     @Get()
-    public async getScreenshots(@Header("Authorization") authorization?: string, @Queries() requestQuery?: GetScreenshotParms): Promise<Screenshot[]> {
+    public async getScreenshots(
+        @Header("Authorization") authorization?: string,
+        @Queries() requestQuery?: GetScreenshotParms,
+    ): Promise<Screenshot[]> {
         let isAdmin = false;
         try {
             const user = extractBearerJWT(authorization);
             isAdmin = user.isAdmin;
         } catch (_) {
-            console.warn("user provided authorization, but it was invalid")
+            console.warn("user provided authorization, but it was invalid");
         }
 
-        requestQuery.page = (+(requestQuery.page)) ?? 0;
-        requestQuery.limit = (+(requestQuery.limit)) ?? 50;
+        requestQuery.page = +requestQuery.page ?? 0;
+        requestQuery.limit = +requestQuery.limit ?? 50;
 
         if (!isAdmin) requestQuery.removed = false; // TODO: allow toggle
         const rows = await datastore.getScreenshots(requestQuery);
@@ -65,13 +80,16 @@ export class ScreenshotController extends Controller {
     @SuccessResponse(200, "Screenshot Details")
     @Response<void>(404, "Not Found")
     @Get("{id}")
-    public async getScreenshot(@Header("Authorization") authorization?: string, @Path() id: number): Promise<Screenshot> {
+    public async getScreenshot(
+        @Header("Authorization") authorization?: string,
+        @Path() id: number,
+    ): Promise<Screenshot> {
         let isAdmin = false;
         try {
             const user = extractBearerJWT(authorization);
             isAdmin = user.isAdmin;
         } catch (_) {
-            console.warn("user provided authorization, but it was invalid")
+            console.warn("user provided authorization, but it was invalid");
         }
 
         const screenshot = await datastore.getScreenshot(id);
@@ -95,19 +113,22 @@ export class ScreenshotController extends Controller {
         if (!screenshot) return this.setStatus(404);
         screenshot = screenshot!;
 
-        if (screenshot.removed) return { error: 'Screenshot is already deleted' };
+        if (screenshot.removed) return { error: "Screenshot is already deleted" };
 
         let ssPatch: any = {
             id: +id,
-            removed: true
+            removed: true,
         };
         await datastore.updateScreenshot(ssPatch, user.isAdmin);
 
-        datastore.addReport({
-            type: "screenshot_remove",
-            targetId: "" + ssPatch.id,
-            report: "Screenshot Removed"
-        }, user.sub);
+        datastore.addReport(
+            {
+                type: "screenshot_remove",
+                targetId: "" + ssPatch.id,
+                report: "Screenshot Removed",
+            },
+            user.sub,
+        );
 
         this.setStatus(204);
     }
@@ -116,7 +137,11 @@ export class ScreenshotController extends Controller {
     @SuccessResponse(200, "Successfully Updated")
     @Response<void>(404, "Not Found")
     @Patch("{id}")
-    public async patchScreenshot(@Header("Authorization") authorization: string, @Path() id: number, @Body() requestBody: Screenshot): Promise<Screenshot> {
+    public async patchScreenshot(
+        @Header("Authorization") authorization: string,
+        @Path() id: number,
+        @Body() requestBody: Screenshot,
+    ): Promise<Screenshot> {
         // NOTE: auth guard should make the error condition unreachable
         const user = extractBearerJWT(authorization);
 
@@ -129,9 +154,14 @@ export class ScreenshotController extends Controller {
         const newGame = await datastore.getScreenshot(id);
         if (newGame == null) return this.setStatus(404);
 
-        const userScreenshots = await datastore.getScreenshots({ addedById: newGame!.addedById!, approved: true, page: 0, limit: 10 });
+        const userScreenshots = await datastore.getScreenshots({
+            addedById: newGame!.addedById!,
+            approved: true,
+            page: 0,
+            limit: 10,
+        });
         if (userScreenshots.length >= 10) {
-            console.log('grant permission')
+            console.log("grant permission");
             await datastore.grantPermission(newGame!.addedById!, Permission.AUTO_APPROVE_SCREENSHOT);
         }
 

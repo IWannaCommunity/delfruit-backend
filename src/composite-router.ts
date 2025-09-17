@@ -7,285 +7,282 @@ import { Review } from "./model/Review";
 import { Screenshot } from "./model/Screenshot";
 import { AuthResponse } from "./auth-router";
 import { GetUsersParms } from "./model/GetUsersParms";
+import { APIError } from "./model/response/error";
 
 function extractBearerJWT(header_token: string): string | object {
-    if (!header_token.includes("Bearer ")) {
-        throw new Error("missing prefix");
-    }
-    const unverified_token = header_token.split(" ")[1];
+	if (!header_token.includes("Bearer ")) {
+		throw new Error("missing prefix");
+	}
+	const unverified_token = header_token.split(" ")[1];
 
-    try {
-        return jwt.verify(unverified_token, config.app_jwt_secret);
-    } catch (e) {
-        throw new Error(`invalid token: ${e}`);
-    }
-}
-
-interface APIError {
-    error: string;
+	try {
+		return jwt.verify(unverified_token, config.app_jwt_secret);
+	} catch (e) {
+		throw new Error(`invalid token: ${e}`);
+	}
 }
 
 interface GameExtTag {
-    name: string;
-    id: number;
-    count: number;
+	name: string;
+	id: number;
+	count: number;
 }
 
 interface GameExt extends Game {
-    ratings: {
-        rating: number;
-        difficulty: number;
-    };
-    reviews: Review[];
-    tags: GameExtTag[];
-    screenshots: Screenshot[];
+	ratings: {
+		rating: number;
+		difficulty: number;
+	};
+	reviews: Review[];
+	tags: GameExtTag[];
+	screenshots: Screenshot[];
 }
 
 interface UserExt extends Omit<AuthResponse, "email" | "banned" | "phash2" | "isAdmin"> {
-    reviewCount: number;
-    ratingsCount: number;
-    screenshotCount: number;
+	reviewCount: number;
+	ratingsCount: number;
+	screenshotCount: number;
 }
 
 @Route("/composite")
 @Tags("Composite")
 export class CompositeController extends Controller {
-    /**
-     * Get Game
-     * @summary Get Game
-     */
-    @Tags("Games")
-    @SuccessResponse(200, "Found Extended Game Details")
-    @Response<APIError>(400, "Unparsable ID")
-    @Response(404, "Not Found")
-    @Get("games/{id}/all")
-    public async getGameCompositeAll(@Path() id: string): Promise<GameExt> {
-        // TODO: this could be simplified by making id optional, and where it isn't provided, assume "random"
-        let game: GameExt;
-        if (id === "random") {
-            game = await datastore.getRandomGame();
-        } else if (!isNaN(+id)) {
-            const game_id = parseInt(id, 10);
-            game = await datastore.getGame(game_id);
-        } else {
-            this.setStatus(400);
-            return { error: "id must be a number" };
-        }
+	/**
+	 * Get Game
+	 * @summary Get Game
+	 */
+	@Tags("Games")
+	@SuccessResponse(200, "Found Extended Game Details")
+	@Response<APIError>(400, "Unparsable ID")
+	@Response(404, "Not Found")
+	@Get("games/{id}/all")
+	public async getGameCompositeAll(@Path() id: string): Promise<GameExt> {
+		// TODO: this could be simplified by making id optional, and where it isn't provided, assume "random"
+		let game: GameExt;
+		if (id === "random") {
+			game = await datastore.getRandomGame();
+		} else if (!isNaN(+id)) {
+			const game_id = parseInt(id, 10);
+			game = await datastore.getGame(game_id);
+		} else {
+			this.setStatus(400);
+			return { error: "id must be a number" };
+		}
 
-        if (!game) {
-            this.setStatus(404);
-            return;
-        }
+		if (!game) {
+			this.setStatus(404);
+			return;
+		}
 
-        //get owner review
-        if (game.ownerId) {
-            const ownerReviews = await datastore.getReviews({
-                game_id: game.id,
-                user_id: +game.ownerId,
-                includeOwnerReview: true,
-                removed: false,
-            });
-            if (ownerReviews.length == 1) {
-                game.ownerBio = ownerReviews[0];
-            }
-        }
+		//get owner review
+		if (game.ownerId) {
+			const ownerReviews = await datastore.getReviews({
+				game_id: game.id,
+				user_id: +game.ownerId,
+				includeOwnerReview: true,
+				removed: false,
+			});
+			if (ownerReviews.length == 1) {
+				game.ownerBio = ownerReviews[0];
+			}
+		}
 
-        const [ratings, reviews, tags, screenshots] = await Promise.all([
-            datastore.getRatings(game.id),
-            datastore.getReviews({
-                game_id: game.id,
-                page: 0,
-                limit: 5, // just enough to hydrate a page
-                textReviewsFirst: true,
-                includeOwnerReview: true,
-            }),
-            datastore.getTagSetsForGame(game.id),
-            datastore.getScreenshots({ gameId: game.id }),
-        ]);
-        game.ratings = ratings;
-        game.reviews = reviews;
-        game.tags = tags as unknown as ReadonlySet<{ name: string; id: number; count: number }>;
-        game.screenshots = screenshots;
+		const [ratings, reviews, tags, screenshots] = await Promise.all([
+			datastore.getRatings(game.id),
+			datastore.getReviews({
+				game_id: game.id,
+				page: 0,
+				limit: 5, // just enough to hydrate a page
+				textReviewsFirst: true,
+				includeOwnerReview: true,
+			}),
+			datastore.getTagSetsForGame(game.id),
+			datastore.getScreenshots({ gameId: game.id }),
+		]);
+		game.ratings = ratings;
+		game.reviews = reviews;
+		game.tags = tags as unknown as ReadonlySet<{ name: string; id: number; count: number }>;
+		game.screenshots = screenshots;
 
-        return game;
-    }
+		return game;
+	}
 
-    /**
-     * Game List
-     * @summary Game List
-     */
-    @Tags("Games")
-    @SuccessResponse(200, "List of Games matching filters")
-    @Response<APIError>(400, "Invalid Parameters")
-    @Get("games/rating")
-    public async getGamesWithRatings(
-        @Header("Authorization") authorization?: string,
-        @Query() q?: string,
-        @Query() id?: number,
-        @Query() removed?: boolean,
-        @Query() name?: string,
-        @Query() tags?: string,
-        @Query() author?: string,
-        @Query() ownerUserId?: number,
-        @Query() hasDownload?: boolean,
-        @Query() createdFrom?: Date,
-        @Query() createdTo?: Date,
-        @Query() clearedByUserId?: number,
-        @Query() reviewedByUserId?: number,
-        @Query() ratingFrom?: number,
-        @Query() ratingTo?: number,
-        @Query() difficultyFrom?: number,
-        @Query() difficultyTo?: number,
-        @Query() page?: number,
-        @Query() limit?: number,
-        @Query() order_col?: string,
-        @Query() order_dir?: string,
-    ): Promise<GameExt[]> {
-        // TODO: do type restrictions in method definition
-        order_col = whitelist(order_col, ["name", "date_created", "rating", "difficulty"], "name");
-        order_dir = whitelist(order_dir, ["asc", "desc"], "asc") as "asc" | "desc";
-        let isAdmin = false;
-        try {
-            const user = extractBearerJWT(authorization);
-            isAdmin = user.isAdmin;
-        } catch (_) {
-            console.warn("user provided authorization, but it was invalid");
-        }
+	/**
+	 * Game List
+	 * @summary Game List
+	 */
+	@Tags("Games")
+	@SuccessResponse(200, "List of Games matching filters")
+	@Response<APIError>(400, "Invalid Parameters")
+	@Get("games/rating")
+	public async getGamesWithRatings(
+		@Header("Authorization") authorization?: string,
+		@Query() q?: string,
+		@Query() id?: number,
+		@Query() removed?: boolean,
+		@Query() name?: string,
+		@Query() tags?: string,
+		@Query() author?: string,
+		@Query() ownerUserId?: number,
+		@Query() hasDownload?: boolean,
+		@Query() createdFrom?: Date,
+		@Query() createdTo?: Date,
+		@Query() clearedByUserId?: number,
+		@Query() reviewedByUserId?: number,
+		@Query() ratingFrom?: number,
+		@Query() ratingTo?: number,
+		@Query() difficultyFrom?: number,
+		@Query() difficultyTo?: number,
+		@Query() page?: number,
+		@Query() limit?: number,
+		@Query() order_col?: string,
+		@Query() order_dir?: string,
+	): Promise<GameExt[]> {
+		// TODO: do type restrictions in method definition
+		order_col = whitelist(order_col, ["name", "date_created", "rating", "difficulty"], "name");
+		order_dir = whitelist(order_dir, ["asc", "desc"], "asc") as "asc" | "desc";
+		let isAdmin = false;
+		try {
+			const user = extractBearerJWT(authorization);
+			isAdmin = user.isAdmin;
+		} catch (_) {
+			console.warn("user provided authorization, but it was invalid");
+		}
 
-        const params: GetGamesParms = {
-            page: +(page || 0),
-            limit: +(limit || 50),
-            orderCol: order_col,
-            orderDir: order_dir,
-        };
-        if (!isAdmin) params.removed = false;
+		const params: GetGamesParms = {
+			page: +(page || 0),
+			limit: +(limit || 50),
+			orderCol: order_col,
+			orderDir: order_dir,
+		};
+		if (!isAdmin) params.removed = false;
 
-        params.q = q; // QUEST: what the hell is Q?
-        params.id = id;
-        params.removed = false; // QUEST: shouldn't this just use the removed query parameter?
-        params.name = name;
+		params.q = q; // QUEST: what the hell is Q?
+		params.id = id;
+		params.removed = false; // QUEST: shouldn't this just use the removed query parameter?
+		params.name = name;
 
-        if (tags) {
-            try {
-                params.tags = <string[]>JSON.parse(tags);
-                params.tags.forEach((s, i) => {
-                    if (+s === NaN) throw "tag #" + i + " was not a number -> " + s;
-                });
-            } catch (e) {
-                this.setStatus(400);
-                return { error: "tags must be an array of numbers" };
-            }
-        }
-        params.author = author;
-        params.hasDownload = hasDownload;
-        params.createdFrom = createdFrom?.toString();
-        params.createdTo = createdTo?.toString();
-        params.clearedByUserId = clearedByUserId;
-        params.reviewedByUserId = reviewedByUserId;
+		if (tags) {
+			try {
+				params.tags = <string[]>JSON.parse(tags);
+				params.tags.forEach((s, i) => {
+					if (+s === NaN) throw "tag #" + i + " was not a number -> " + s;
+				});
+			} catch (e) {
+				this.setStatus(400);
+				return { error: "tags must be an array of numbers" };
+			}
+		}
+		params.author = author;
+		params.hasDownload = hasDownload;
+		params.createdFrom = createdFrom?.toString();
+		params.createdTo = createdTo?.toString();
+		params.clearedByUserId = clearedByUserId;
+		params.reviewedByUserId = reviewedByUserId;
 
-        params.ratingFrom = ratingFrom;
-        params.ratingTo = ratingTo;
-        params.difficultyFrom = difficultyFrom;
-        params.difficultyTo = difficultyTo;
-        params.ownerUserId = ownerUserId;
+		params.ratingFrom = ratingFrom;
+		params.ratingTo = ratingTo;
+		params.difficultyFrom = difficultyFrom;
+		params.difficultyTo = difficultyTo;
+		params.ownerUserId = ownerUserId;
 
-        const rows: GameExt[] = await datastore.getGames(params);
-        if (!params.page) {
-            const total = await datastore.countGames(params);
-            this.setHeader("total-count", total);
-        }
+		const rows: GameExt[] = await datastore.getGames(params);
+		if (!params.page) {
+			const total = await datastore.countGames(params);
+			this.setHeader("total-count", total);
+		}
 
-        for (const row of rows) {
-            row.ratings = await datastore.getRatings(row.id);
-        }
+		for (const row of rows) {
+			row.ratings = await datastore.getRatings(row.id);
+		}
 
-        return rows;
-    }
+		return rows;
+	}
 
-    /**
-     * Get User
-     * @summary Get User
-     */
-    @Tags("Users")
-    @SuccessResponse(200, "Found Extended User Details")
-    @Response<APIError>(400, "Unparsable ID")
-    @Response(404, "Not Found")
-    @Get("users/{id}/all")
-    public async getUserCompositeAll(@Path() id: number): Promise<UserExt> {
-        const params = { id, page: 0, limit: 1 } as GetUsersParms;
-        const users: AuthResponse[] | null = await datastore.getUsers(params);
-        if (users === null || users.length === 0) {
-            this.setStatus(404);
-            return { error: "not found" } satisfies APIError;
-        }
-        const user: UserExt = (() => {
-            const user = users[0];
-            // DANGER: we really need a User model
-            delete user.banned;
-            delete user.email;
-            delete user.phash2;
-            delete user.isAdmin;
-            return user;
-        })();
+	/**
+	 * Get User
+	 * @summary Get User
+	 */
+	@Tags("Users")
+	@SuccessResponse(200, "Found Extended User Details")
+	@Response<APIError>(400, "Unparsable ID")
+	@Response(404, "Not Found")
+	@Get("users/{id}/all")
+	public async getUserCompositeAll(@Path() id: number): Promise<UserExt> {
+		const params = { id, page: 0, limit: 1 } as GetUsersParms;
+		const users: AuthResponse[] | null = await datastore.getUsers(params);
+		if (users === null || users.length === 0) {
+			this.setStatus(404);
+			return { error: "not found" } satisfies APIError;
+		}
+		const user: UserExt = (() => {
+			const user = users[0];
+			// DANGER: we really need a User model
+			delete user.banned;
+			delete user.email;
+			delete user.phash2;
+			delete user.isAdmin;
+			return user;
+		})();
 
-        const [reviewCount, ratingsCount, screenshotCount] = await Promise.all([
-            datastore.getUserReviewCount(id),
-            datastore.getUserRatingCount(id),
-            datastore.getUserScreenshotCount(id),
-        ]);
+		const [reviewCount, ratingsCount, screenshotCount] = await Promise.all([
+			datastore.getUserReviewCount(id),
+			datastore.getUserRatingCount(id),
+			datastore.getUserScreenshotCount(id),
+		]);
 
-        user.reviewCount = reviewCount;
-        user.ratingsCount = ratingsCount;
-        user.screenshotCount = screenshotCount;
+		user.reviewCount = reviewCount;
+		user.ratingsCount = ratingsCount;
+		user.screenshotCount = screenshotCount;
 
-        return user;
-    }
+		return user;
+	}
 
-    /**
-     * User List
-     * @summary User List
-     */
-    @Tags("Users")
-    @SuccessResponse(200, "List of users matching filters")
-    @Get("users")
-    public async getUsersWithReviewsCount(
-        @Header("Authorization") authorization?: string,
-        @Query() name?: string,
-        @Query() following?: boolean,
-        @Query() banned?: boolean,
-        @Query() page?: number = 0,
-        @Query() limit?: number = 50,
-        @Query() orderCol?: string,
-        @Query() orderDir?: "ASC" | "DESC",
-    ): Promise<Array<Omit<UserExt, "ratingsCount" | "screenshotCount">>> {
-        const params: GetUsersParms = { page, limit, orderCol, orderDir };
-        if (name) params.name = name;
+	/**
+	 * User List
+	 * @summary User List
+	 */
+	@Tags("Users")
+	@SuccessResponse(200, "List of users matching filters")
+	@Get("users")
+	public async getUsersWithReviewsCount(
+		@Header("Authorization") authorization?: string,
+		@Query() name?: string,
+		@Query() following?: boolean,
+		@Query() banned?: boolean,
+		@Query() page?: number = 0,
+		@Query() limit?: number = 50,
+		@Query() orderCol?: string,
+		@Query() orderDir?: "ASC" | "DESC",
+	): Promise<Array<Omit<UserExt, "ratingsCount" | "screenshotCount">>> {
+		const params: GetUsersParms = { page, limit, orderCol, orderDir };
+		if (name) params.name = name;
 
-        const [users, reviewCounts] = await (async () => {
-            const users: ReadonlyArray<AuthResponse> = await datastore.getUsers(params);
-            const dbQueries: Array<Promise<number>> = new Array(users.length);
+		const [users, reviewCounts] = await (async () => {
+			const users: ReadonlyArray<AuthResponse> = await datastore.getUsers(params);
+			const dbQueries: Array<Promise<number>> = new Array(users.length);
 
-            let idx = 0;
-            for (const user of users) {
-                dbQueries[idx] = datastore.getUserReviewCount(user.id);
-                // DANGER: where's my user model
-                delete user.email;
-                delete user.banned;
-                delete user.phash2;
-                delete user.isAdmin;
+			let idx = 0;
+			for (const user of users) {
+				dbQueries[idx] = datastore.getUserReviewCount(user.id);
+				// DANGER: where's my user model
+				delete user.email;
+				delete user.banned;
+				delete user.phash2;
+				delete user.isAdmin;
 
-                ++idx;
-            }
+				++idx;
+			}
 
-            const reviewCounts = (await Promise.all(dbQueries)).reverse();
+			const reviewCounts = (await Promise.all(dbQueries)).reverse();
 
-            return [users as unknown as Array<Omit<UserExt, "ratingsCount" | "screenshotCount">>, reviewCounts];
-        })();
+			return [users as unknown as Array<Omit<UserExt, "ratingsCount" | "screenshotCount">>, reviewCounts];
+		})();
 
-        for (const user of users) {
-            user.reviewCount = reviewCounts.pop();
-        }
+		for (const user of users) {
+			user.reviewCount = reviewCounts.pop();
+		}
 
-        return users;
-    }
+		return users;
+	}
 }
