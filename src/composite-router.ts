@@ -255,7 +255,7 @@ export class CompositeController extends Controller {
                     const db = new Database();
                     const queryRes: [{ is_following: boolean }] = await db.query(
                         "SELECT IF(EXISTS(SELECT 1 FROM `UserFollow` WHERE `user_id` = ? AND `user_follow_id` = ?), TRUE, FALSE) AS is_following",
-                        [Number(reqUser.sub), Number(user.id)],
+                        [Number(user.id), Number(reqUser.sub)],
                     );
                     return queryRes[0].is_following;
                 } catch (e) {

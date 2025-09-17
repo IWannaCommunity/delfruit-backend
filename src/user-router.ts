@@ -298,7 +298,7 @@ export class UserController extends Controller {
 		const db = new Database();
 		const queryRes: [{ result: boolean }] = await db.query(
 			"SELECT IF(EXISTS(SELECT 1 FROM `UserFollow` WHERE `user_id` = ? AND `user_follow_id` = ?), TRUE, FALSE) AS result",
-			[Number(user.sub), followerId],
+			[followerId, Number(user.sub)],
 		);
 		return { following: queryRes[0].result };
 	}
