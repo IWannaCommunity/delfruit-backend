@@ -44,6 +44,7 @@ import * as jwt from "jsonwebtoken";
 import { Review } from "./model/Review";
 import { Badge } from "./model/Badge";
 import { APIError } from "./model/response/error";
+import { Database } from "./database";
 function extractBearerJWT(header_token: string): string | object {
 	if (!header_token.includes("Bearer ")) {
 		throw new Error("missing prefix");
@@ -277,6 +278,29 @@ export class UserController extends Controller {
 		const newUser = await datastore.getUser(id);
 		if (newUser == null) return this.setStatus(404);
 		else return newUser;
+	}
+
+	/**
+	 * Returns if you are following a user.
+	 * @summary Check Following (User/Admin Only)
+	 */
+	@Security("bearerAuth", ["user"])
+	@SuccessResponse<{ following: boolean }>(200, "Following")
+	@Response<APIError>(401, "Not Logged In")
+	@Get("follows/{followerId}")
+	public async getUserFollow(
+		@Header("Authorization") authorization: string,
+		@Path() followerId: number,
+	): Promise<{ following: boolean } | APIError> {
+		// NOTE: auth guard should make the error condition unreachable
+		const user = extractBearerJWT(authorization);
+
+		const db = new Database();
+		const queryRes: [{ result: boolean }] = await db.query(
+			"SELECT IF(EXISTS(SELECT 1 FROM `UserFollow` WHERE `user_id` = ? AND `user_follow_id` = ?), TRUE, FALSE) AS result",
+			[Number(user.sub), followerId],
+		);
+		return { following: queryRes[0].result };
 	}
 
 	/**
