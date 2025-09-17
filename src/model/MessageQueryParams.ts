@@ -1,4 +1,5 @@
 export interface MessageQueryParams {
-  userToId?: number;
-  threadId?: number;
+	userToId?: number;
+	userFromId?: number;
+	threadId?: number;
 }
