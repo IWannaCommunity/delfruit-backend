@@ -193,7 +193,7 @@ export class ReviewController extends Controller {
     @Response<void>(403, "Bad Ownership")
     @Response<void>(404, "Not Found")
     @Get("{id}/likes/{userId}")
-    public async deleteReviewLike(
+    public async getReviewLike(
         @Header("Authorization") authorization: string,
         @Path() id: number,
         @Path() userId: number,
