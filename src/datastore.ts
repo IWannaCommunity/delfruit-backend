@@ -23,8 +23,8 @@ import Config from "./model/config";
 import { Rating } from "./game-router";
 let config: Config = require("./config/config.json");
 
-var Memcached = require("memcached");
-export const memcached = new Memcached(
+import Memcached = require("memcached");
+export const memcached: Memcached = new Memcached(
 	config.memcache.hosts,
 	config.memcache.options,
 );
@@ -82,7 +82,7 @@ VALUES ( ?, ?, ? )
 		updateList.add("twitch_link", user.twitchLink);
 		updateList.add("nico_link", user.nicoLink);
 		updateList.add("youtube_link", user.youtubeLink);
-		updateList.add("twitterLink", user.twitterLink);
+		updateList.add("twitter_link", user.twitterLink);
 		updateList.add("bio", user.bio);
 		updateList.add("locale", user.locale);
 		updateList.add("unsuccessful_logins", user.unsuccessfulLogins);
