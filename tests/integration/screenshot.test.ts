@@ -3,7 +3,7 @@ import { createUser, createGame, addScreenshot, hasPermission, expectToContainAl
 import { fail } from "assert";
 import FormData from "form-data";
 import fs from "fs";
-import { Permission } from "../src/model/Permission";
+import { Permission } from "../../src/model/Permission";
 import { test, describe, expect } from "@jest/globals";
 
 describe("screenshot endpoint", () => {

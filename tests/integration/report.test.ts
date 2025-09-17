@@ -6,7 +6,7 @@ import {
 	createGame,
 	expectToContainAllKeys,
 } from "./testing-utilities";
-import { Report } from "../src/model/Report";
+import { Report } from "../../src/model/Report";
 
 async function createReport(parameters?: any): Promise<Report> {
 	const user = await createUser(false);

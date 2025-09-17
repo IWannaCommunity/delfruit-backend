@@ -2,7 +2,7 @@ import axios from "axios";
 import { fail, ok } from "assert";
 import { createUser, setUserToken, genUsername, expectToContainAllKeys } from "./testing-utilities";
 import { test, describe, expect } from "@jest/globals";
-import AuthModule from "../src/lib/auth";
+import AuthModule from "../../src/lib/auth";
 import jwt from "jsonwebtoken";
 
 describe("auth endpoint", function () {

@@ -4,7 +4,7 @@ import { createUser, expectToContainAllKeys } from "./testing-utilities";
 import FormData from "form-data";
 import fs from "fs";
 import { hashSync } from "bcrypt";
-import { News } from "../src/model/News";
+import { News } from "../../src/model/News";
 import { test, describe, expect } from "@jest/globals";
 
 async function createNews(): Promise<News> {

@@ -3,7 +3,7 @@ import { test, describe, expect } from "@jest/globals";
 import { assertAxiosError, assertAxiosRequest, createUser, createGame, addReview, addTag, genUsername, genGamename, grantPermission, assertAxiosReqDataHasPropAndEquals, assertAxiosReqDataHasPropAndStrictEquals } from "./testing-utilities";
 import FormData from 'form-data';
 import fs from 'fs';
-import { Permission } from '../src/model/Permission';
+import { Permission } from '../../src/model/Permission';
 var Moniker = require('moniker');
 
 var gamenamegen = Moniker.generator([Moniker.adjective, Moniker.noun], { glue: ' ' });
