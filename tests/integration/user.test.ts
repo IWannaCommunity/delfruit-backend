@@ -6,7 +6,7 @@ import FormData from "form-data";
 import moment from "moment";
 var Moniker = require("moniker");
 
-var usergen = Moniker.generator(["./tests/usernames"]);
+var usergen = Moniker.generator(["./tests/integration/usernames"]);
 
 describe("user endpoint", () => {
     test("returns a 401 if the token is invalid", async () => {
