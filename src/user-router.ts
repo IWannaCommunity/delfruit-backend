@@ -191,7 +191,7 @@ export class UserController extends Controller {
     public async getUsersPermissions(@Path() uid: number): Promise<UserPermissions> {
         const db = new Database();
         const queryRes: [UserPermissions] = (await db.query(
-            "SELECT `can_report`,`can_submit`,`can_review`,`can_screenshot`,`can_message` FROM `User` WHERE `id` = 1",
+            "SELECT `can_report`,`can_submit`,`can_review`,`can_screenshot`,`can_message` FROM `User` WHERE `id` = ?",
             [Number(uid)],
         )) as unknown as any;
         await db.close();
