@@ -24,7 +24,7 @@ import {
 	SuccessResponse,
 	Tags,
 } from "tsoa";
-import { objectToCamel } from "ts-case-convert";
+import { objectToCamel, objectToSnake } from "ts-case-convert";
 import Config from "./model/config";
 let config: Config = require("./config/config.json");
 const auth = new AuthModule();
@@ -211,6 +211,33 @@ export class UserController extends Controller {
 		)) as unknown as any;
 		await db.close();
 		return objectToCamel(queryRes[0]);
+	}
+
+	@Security("bearerAuth", ["admin"])
+	@SuccessResponse(200, "Edited Cans")
+	@Response<APIError>(401, "Unauthorized")
+	@Patch("{uid}/can")
+	public async patchUserCan(@Path() uid: number, @Body() can: Partial<UserCan>): Promise<UserCan> {
+		const db = new Database();
+		const canS = objectToSnake(can);
+		let updateStmt = "UPDATE `User` SET ";
+		const values = [];
+		for (const [k, v] of Object.entries(canS)) {
+			updateStmt += `, ${k} = ?`;
+			values.push(v);
+		}
+		updateStmt += " WHERE `id` = ?";
+		updateStmt = updateStmt.replace("SET ,", "SET "); // HACK: just dumb
+		values.push(Number(uid));
+
+		await db.query(updateStmt, values);
+
+		const queryStmtRes: [UserCanQueryResult] = (await db.query(
+			"SELECT `can_report`,`can_submit`,`can_review`,`can_screenshot`,`can_message` FROM `User` WHERE `id` = ?",
+			[Number(uid)],
+		)) as unknown as any;
+		await db.close();
+		return objectToCamel(queryStmtRes[0]);
 	}
 
 	@Security("bearerAuth", ["admin"])

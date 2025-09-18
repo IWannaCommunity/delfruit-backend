@@ -58,6 +58,7 @@
         "retry": "0.13.1",
         "swagger-jsdoc": "3.3.0",
         "swagger-ui-express": "4.0.6",
+        "ts-case-convert": "2.0.2",
         "typescript": "5.0.4",
         "uuid": "3.3.2"
     },
