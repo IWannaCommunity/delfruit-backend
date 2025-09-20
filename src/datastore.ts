@@ -578,6 +578,15 @@ ${options.page !== undefined ? " LIMIT ?,? " : ""}
 		}
 	},
 
+	async countReviews(): Promise<number> {
+		const db = new Database();
+		const qry: [{ cnt: number }] = await db.query(
+			"SELECT COUNT(*) AS cnt FROM `Rating` AS `r` INNER JOIN `Game` AS `g` ON `g`.`id` = `r`.`game_id` AND `g`.`removed` = 0 RIGHT OUTER JOIN `User` AS `u` ON `u`.`id` = `r`.`user_id` AND `u`.`banned` = 0 WHERE `r`.`removed` = 0",
+		);
+		await db.close();
+		return qry[0].cnt;
+	},
+
 	async isLiked(reviewId: number, userId: number): Promise<boolean> {
 		const users = await cache(`review-likes-${reviewId}`, async () => {
 			const database = new Database();
