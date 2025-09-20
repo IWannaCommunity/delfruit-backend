@@ -1064,10 +1064,13 @@ ${whereList.getClause()}
 		}
 	},
 
-	async countGames(params: GetGamesParms) {
-		const rows = await this.getGames(params, true);
-		if (!rows || rows.length == 0) return 0;
-		return rows[0].total_count;
+	async countGames() {
+		const db = new Database();
+		const qry =
+			"SELECT COUNT(*) AS `cnt` FROM `Game` AS `g` WHERE `g`.removed = 0";
+		const res: [{ cnt: number }] = await db.query(qry);
+		await db.close();
+		return res[0].cnt;
 	},
 
 	async getGames(params: GetGamesParms, countOnly?: boolean) {
