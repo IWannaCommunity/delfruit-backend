@@ -74,6 +74,16 @@ export interface Rating {
 @Tags("Games")
 export class GameController extends Controller {
 	/**
+	 * Get Game Count
+	 * @summary Get Game Count
+	 */
+	@SuccessResponse(200, "Total Game Count")
+	@Get("/count")
+	public async getGameCount(): Promise<{ count: number }> {
+		return { count: await datastore.countGames() };
+	}
+
+	/**
 	 * Add Game (Admin Only)
 	 * @summary Add Game (Admin Only)
 	 */
