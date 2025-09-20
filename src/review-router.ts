@@ -45,6 +45,16 @@ function extractBearerJWT(header_token: string): string | object {
 @Route("reviews")
 export class ReviewController extends Controller {
 	/**
+	 * Get Review Count
+	 * @summary Get Review Count
+	 */
+	@SuccessResponse(200, "Review Details")
+	@Get("/count")
+	public async getReviewCount(): Promise<{ count: number }> {
+		return { count: await datastore.countReviews() };
+	}
+
+	/**
 	 * Get Review
 	 * @summary Get Review
 	 */
