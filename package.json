@@ -13,6 +13,7 @@
         "test": "jest --forceExit --detectOpenHandles ./tests/ --silent=false",
         "test-int": "jest --forceExit --detectOpenHandles --silent=false --bail=5 --notify --runTestsByPath=./tests/integration/*.test.ts ",
         "test-int-on-ci": "jest --forceExit --detectOpenHandles --silent=false --bail=5 --ci --runTestsByPath=./tests/integration/*.test.ts ",
+        "lint": "eslint \"./src/**/*.{js,cjs,mjs,ts,cts,mts}\"",
         "tsc": "tsc",
         "start-plain": "node build/server.js",
         "docker-reboot": "docker build -t delfruit-server . && docker kill df-server & docker rm df-server & docker run -d --name df-server --network df-network -p 4201:4201 -v D:\\Projects\\delfruit2-server\\config:/home/node/app/config delfruit-server",
@@ -69,8 +70,15 @@
         "@types/jest": "27.4.0",
         "@types/multer": "1.3.7",
         "@types/retry": "0.12.2",
+        "@typescript-eslint/eslint-plugin": "5.54.0",
+        "@typescript-eslint/parser": "5.54.0",
         "axios": "0.19.0",
         "concurrently": "8.2.0",
+        "eslint": "8.31.0",
+        "eslint-config-airbnb": "19.0.4",
+        "eslint-config-prettier": "8.7.0",
+        "eslint-plugin-import": "2.27.4",
+        "eslint-plugin-prettier": "4.2.1",
         "form-data": "2.5.0",
         "jest": "27.2.5",
         "jest-junit": "16.0.0",
@@ -83,6 +91,7 @@
         "ts-mocha": "6.0.0",
         "ts-node": "8.10.0",
         "ts-node-dev": "1.0.0-pre.44",
-        "tsoa": "6.6.0"
+        "tsoa": "6.6.0",
+        "vscode-langservers-extracted": "4.8.0"
     }
 }
