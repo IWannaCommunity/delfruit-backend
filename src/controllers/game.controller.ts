@@ -1,20 +1,20 @@
 import express from "express";
-import datastore from "./datastore";
-import { GetGamesParms } from "./model/GetGamesParms";
-import { GetScreenshotParms } from "./model/GetScreenshotParms";
-import { Screenshot } from "./model/Screenshot";
-import { Game } from "./model/Game";
-import whitelist from "./lib/whitelist";
+import datastore from "../datastore";
+import { GetGamesParms } from "../model/GetGamesParms";
+import { GetScreenshotParms } from "../model/GetScreenshotParms";
+import { Screenshot } from "../model/Screenshot";
+import { Game } from "../model/Game";
+import whitelist from "../lib/whitelist";
 
 import * as Minio from "minio";
 
 import multer from "multer";
-import handle from "./lib/express-async-catch";
-import { adminCheck, userCheck } from "./lib/auth-check";
-import Config from "./model/config";
-let config: Config = require("./config/config.json");
+import handle from "../lib/express-async-catch";
+import { adminCheck, userCheck } from "../lib/auth-check";
+import Config from "../model/config";
+let config: Config = require("../config/config.json");
 
-import { Permission, hasPermission } from "./model/Permission";
+import { Permission, hasPermission } from "../model/Permission";
 import {
 	Body,
 	Controller,
@@ -50,8 +50,8 @@ const app = express.Router();
 export default app;
 
 import * as jwt from "jsonwebtoken";
-import { Review } from "./model/Review";
-import { APIError } from "./model/response/error";
+import { Review } from "../model/Review";
+import { APIError } from "../model/response/error";
 function extractBearerJWT(header_token: string): string | object {
 	if (!header_token.includes("Bearer ")) {
 		throw new Error("missing prefix");

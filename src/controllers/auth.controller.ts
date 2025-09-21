@@ -1,17 +1,17 @@
 import express from "express";
-import { Database } from "./database";
-import AuthModule from "./lib/auth";
-import datastore from "./datastore";
+import { Database } from "../database";
+import AuthModule from "../lib/auth";
+import datastore from "../datastore";
 import moment = require("moment");
 import crypto from "crypto";
 import nodemailer from "nodemailer";
 import * as jwt from "jsonwebtoken";
 import util from "util";
 import axios from "axios";
-import Config from "./model/config";
+import Config from "../model/config";
 import { Body, Controller, Get, Header, Post, Response, Route, SuccessResponse, Tags } from "tsoa";
-import { APIError } from "./model/response/error";
-let config: Config = require("./config/config.json");
+import { APIError } from "../model/response/error";
+let config: Config = require("../config/config.json");
 
 const app = express.Router();
 const auth = new AuthModule();
@@ -62,6 +62,7 @@ export class AuthController extends Controller {
      */
     @SuccessResponse(200, "Logged In")
     @Response<APIError>(401, "Invalid Credentials")
+    @Response<APIError>(418, "Dishonorable or Low Reputation")
     @Post("login")
     public async postLogin(@Body() requestBody: UserCredentials): Promise<AuthResponse> {
         const username = requestBody.username;

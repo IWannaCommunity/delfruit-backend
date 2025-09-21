@@ -1,11 +1,11 @@
 import express from "express";
-import datastore from "./datastore";
-import AuthModule from "./lib/auth";
-import { GetUsersParms } from "./model/GetUsersParms";
-import handle from "./lib/express-async-catch";
-import { userCheck } from "./lib/auth-check";
-import { recaptchaVerify } from "./auth-router";
-import { Permission } from "./model/Permission";
+import datastore from "../datastore";
+import AuthModule from "../lib/auth";
+import { GetUsersParms } from "../model/GetUsersParms";
+import handle from "../lib/express-async-catch";
+import { userCheck } from "../lib/auth-check";
+import { recaptchaVerify } from "../auth-router";
+import { Permission } from "../model/Permission";
 import moment from "moment";
 import {
 	Body,
@@ -25,8 +25,8 @@ import {
 	Tags,
 } from "tsoa";
 import { objectToCamel, objectToSnake } from "ts-case-convert";
-import Config from "./model/config";
-let config: Config = require("./config/config.json");
+import Config from "../model/config";
+let config: Config = require("../config/config.json");
 const auth = new AuthModule();
 const app = express.Router();
 export default app;
@@ -41,11 +41,15 @@ interface EditUserPermissionsParam {
 	revokedUntil: Date;
 }
 
+type SnakeCase<S extends string> = S extends `${infer T}${infer U}`
+	? `${T extends Capitalize<T> ? "_" : ""}${Lowercase<T>}${SnakeCase<U>}`
+	: S;
+
 import * as jwt from "jsonwebtoken";
-import { Review } from "./model/Review";
-import { Badge } from "./model/Badge";
-import { APIError } from "./model/response/error";
-import { Database } from "./database";
+import { Review } from "../model/Review";
+import { Badge } from "../model/Badge";
+import { APIError } from "../model/response/error";
+import { Database } from "../database";
 function extractBearerJWT(header_token: string): string | object {
 	if (!header_token.includes("Bearer ")) {
 		throw new Error("missing prefix");

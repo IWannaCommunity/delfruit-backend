@@ -1,5 +1,5 @@
 import express from 'express';
-import handle from './lib/express-async-catch';
+import handle from '../lib/express-async-catch';
 import { Controller, Get, Response, Route, SuccessResponse, Tags } from 'tsoa';
 
 const app = express.Router();

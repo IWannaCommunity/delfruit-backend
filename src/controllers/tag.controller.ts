@@ -1,10 +1,10 @@
 import express from 'express';
-import datastore from './datastore';
+import datastore from '../datastore';
 
-import handle from './lib/express-async-catch';
-import { userCheck } from './lib/auth-check';
+import handle from '../lib/express-async-catch';
+import { userCheck } from '../lib/auth-check';
 import { Body, Controller, Get, Post, Queries, Query, Route, Security, SuccessResponse, Tags } from 'tsoa';
-import { getTagsParms } from './model/getTagsParms';
+import { getTagsParms } from '../model/getTagsParms';
 
 const app = express.Router();
 export default app;

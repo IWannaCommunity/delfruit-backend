@@ -1,8 +1,8 @@
 import express from "express";
-import datastore from "./datastore";
-import { Report } from "./model/Report";
-import handle from "./lib/express-async-catch";
-import { adminCheck, userCheck } from "./lib/auth-check";
+import datastore from "../datastore";
+import { Report } from "../model/Report";
+import handle from "../lib/express-async-catch";
+import { adminCheck, userCheck } from "../lib/auth-check";
 import {
 	Body,
 	Controller,
@@ -19,13 +19,13 @@ import {
 	SuccessResponse,
 	Tags,
 } from "tsoa";
-import { GetReportParams } from "./model/GetReportParams";
+import { GetReportParams } from "../model/GetReportParams";
 
 const app = express.Router();
 export default app;
 
-import Config from "./model/config";
-let config: Config = require("./config/config.json");
+import Config from "../model/config";
+let config: Config = require("../config/config.json");
 
 import * as jwt from "jsonwebtoken";
 function extractBearerJWT(header_token: string): string | object {

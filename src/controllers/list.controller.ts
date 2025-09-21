@@ -1,15 +1,15 @@
 import express from 'express';
-import datastore from './datastore';
-import handle from './lib/express-async-catch';
-import { userCheck } from './lib/auth-check';
+import datastore from '../datastore';
+import handle from '../lib/express-async-catch';
+import { userCheck } from '../lib/auth-check';
 import { Body, Controller, Delete, Get, Header, Patch, Path, Post, Put, Response, Route, Security, SuccessResponse, Tags } from 'tsoa';
-import { List } from './model/List';
+import { List } from '../model/List';
 
 const app = express.Router();
 export default app;
 
-import Config from './model/config';
-let config: Config = require('./config/config.json');
+import Config from '../model/config';
+let config: Config = require('../config/config.json');
 
 import * as jwt from "jsonwebtoken";
 function extractBearerJWT(header_token: string): string | object {

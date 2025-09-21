@@ -1,16 +1,16 @@
 import express from 'express';
-import datastore from './datastore';
-import { News } from './model/News';
-import handle from './lib/express-async-catch';
-import { adminCheck } from './lib/auth-check';
+import datastore from '../datastore';
+import { News } from '../model/News';
+import handle from '../lib/express-async-catch';
+import { adminCheck } from '../lib/auth-check';
 import { Body, Controller, Delete, Get, Header, Patch, Path, Post, Query, Response, Route, Security, SuccessResponse, Tags } from 'tsoa';
 
 const app = express.Router();
 export default app;
 
 import * as jwt from "jsonwebtoken";
-import Config from './model/config';
-let config: Config = require('./config/config.json');
+import Config from '../model/config';
+let config: Config = require('../config/config.json');
 function extractBearerJWT(header_token: string): string | object {
     if (!header_token.includes("Bearer ")) {
         throw new Error("missing prefix")

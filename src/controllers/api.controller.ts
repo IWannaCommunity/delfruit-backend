@@ -1,4 +1,4 @@
-import datastore from './datastore';
+import datastore from '../datastore';
 import { Controller, Get, Tags, Query, Route, SuccessResponse, Security } from "tsoa";
 
 export interface ApiUser {

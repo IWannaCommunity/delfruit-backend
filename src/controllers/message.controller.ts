@@ -1,19 +1,19 @@
 import express from "express";
-import { Database } from "./database";
-import InsertList from "./lib/insert-list";
-import WhereList from "./lib/where-list";
-import { Message } from "./model/Message";
-import { MessageQueryParams } from "./model/MessageQueryParams";
-import handle from "./lib/express-async-catch";
-import { userCheck } from "./lib/auth-check";
+import { Database } from "../database";
+import InsertList from "../lib/insert-list";
+import WhereList from "../lib/where-list";
+import { Message } from "../model/Message";
+import { MessageQueryParams } from "../model/MessageQueryParams";
+import handle from "../lib/express-async-catch";
+import { userCheck } from "../lib/auth-check";
 import { Body, Controller, Get, Header, Path, Post, Route, Security, SuccessResponse, Tags } from "tsoa";
 
 const app = express.Router();
 export default app;
 
 import * as jwt from "jsonwebtoken";
-import Config from "./model/config";
-let config: Config = require("./config/config.json");
+import Config from "../model/config";
+let config: Config = require("../config/config.json");
 function extractBearerJWT(header_token: string): string | object {
 	if (!header_token.includes("Bearer ")) {
 		throw new Error("missing prefix");

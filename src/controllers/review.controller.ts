@@ -1,7 +1,7 @@
-import datastore from "./datastore";
+import datastore from "../datastore";
 import express from "express";
-import handle from "./lib/express-async-catch";
-import { userCheck } from "./lib/auth-check";
+import handle from "../lib/express-async-catch";
+import { userCheck } from "../lib/auth-check";
 import {
 	Body,
 	Controller,
@@ -18,16 +18,16 @@ import {
 	SuccessResponse,
 	Tags,
 } from "tsoa";
-import { Review } from "./model/Review";
+import { Review } from "../model/Review";
 
 const app = express.Router();
 export default app;
 
-import Config from "./model/config";
-let config: Config = require("./config/config.json");
+import Config from "../model/config";
+let config: Config = require("../config/config.json");
 
 import * as jwt from "jsonwebtoken";
-import { GetReviewOptions } from "./model/GetReviewOptions";
+import { GetReviewOptions } from "../model/GetReviewOptions";
 function extractBearerJWT(header_token: string): string | object {
 	if (!header_token.includes("Bearer ")) {
 		throw new Error("missing prefix");

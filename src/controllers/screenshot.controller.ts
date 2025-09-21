@@ -1,10 +1,10 @@
 import express from "express";
-import datastore from "./datastore";
-import { GetScreenshotParms } from "./model/GetScreenshotParms";
-import { Screenshot } from "./model/Screenshot";
-import handle from "./lib/express-async-catch";
-import { adminCheck } from "./lib/auth-check";
-import { Permission } from "./model/Permission";
+import datastore from "../datastore";
+import { GetScreenshotParms } from "../model/GetScreenshotParms";
+import { Screenshot } from "../model/Screenshot";
+import handle from "../lib/express-async-catch";
+import { adminCheck } from "../lib/auth-check";
+import { Permission } from "../model/Permission";
 import {
     Body,
     Controller,
@@ -25,11 +25,11 @@ import {
 const app = express.Router();
 export default app;
 
-import Config from "./model/config";
-let config: Config = require("./config/config.json");
+import Config from "../model/config";
+let config: Config = require("../config/config.json");
 
 import * as jwt from "jsonwebtoken";
-import { APIError } from "./model/response/error";
+import { APIError } from "../model/response/error";
 function extractBearerJWT(header_token: string): string | object {
     if (!header_token.includes("Bearer ")) {
         throw new Error("missing prefix");
