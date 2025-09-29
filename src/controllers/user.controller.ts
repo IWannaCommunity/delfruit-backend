@@ -74,14 +74,13 @@ type CamelCase<S> = S extends `${infer First}_${infer SecondFirst}${infer Rest}`
 	? `${First}${Capitalize<SecondFirst>}${CamelCase<Rest>}`
 	: S;
 
-type KeysToCamelCase<T> =
-	T extends Record<string, unknown>
-		? {
-				[K in keyof T as CamelCase<K>]: KeysToCamelCase<T[K]>;
-			}
-		: T extends Array<infer U>
-			? Array<KeysToCamelCase<U>>
-			: T;
+type KeysToCamelCase<T> = T extends Record<string, unknown>
+	? {
+			[K in keyof T as CamelCase<K>]: KeysToCamelCase<T[K]>;
+	  }
+	: T extends Array<infer U>
+	  ? Array<KeysToCamelCase<U>>
+	  : T;
 
 type UserCan = KeysToCamelCase<UserCanQueryResult>;
 
@@ -93,32 +92,32 @@ export class UserController extends Controller {
 	 * @summary Register New User
 	 */
 	@SuccessResponse(201, "Created User, with token for auth.")
-	@Response<Problem>(400, "Bad Username", void 0, "application/problem+json")
-	@Post()
-	public async postUser(@Body() requestBody: UserRegistration): Promise<UserRegistrationResponse> {
-		const phash = await auth.hashPassword(requestBody.password);
-		const user = await datastore.addUser(requestBody.username, phash, requestBody.email);
-		if (!user) {
-			this.setStatus(400);
-			return {
-				type: new URL("about:blank"),
-				title: "Username already claimed.",
-				status: 400,
-				detail: "User with username is already in-use.",
-				instance: new URL("about:blank"),
-			} satisfies Problem;
-		}
-		datastore.addReport(
-			{
-				type: "user_register",
-				targetId: user.id,
-				report: "User Registered",
-			},
-			user.id,
-		);
+    @Response<Problem>(400, "Bad Username", void 0, "application/problem+json")
+    @Post()
+    public async postUser(@Body() requestBody: UserRegistration): Promise<UserRegistrationResponse> {
+        const phash = await auth.hashPassword(requestBody.password);
+        const user = await datastore.addUser(requestBody.username, phash, requestBody.email);
+        if (!user) {
+            this.setStatus(400);
+            return {
+                type: new URL("about:blank"),
+                title: "Username already claimed.",
+                status: 400,
+                detail: "User with username is already in-use.",
+                instance: new URL("about:blank"),
+            } satisfies Problem;
+        }
+        datastore.addReport(
+            {
+                type: "user_register",
+                targetId: user.id,
+                report: "User Registered",
+            },
+            user.id,
+        );
 
-		return { token: auth.getToken(user.name, user.id, user.isAdmin) };
-	}
+        return { token: auth.getToken(user.name, user.id, user.isAdmin) };
+    }
 
 	/**
 	 * User List
@@ -136,7 +135,18 @@ export class UserController extends Controller {
 		@Query() orderCol?: string,
 		@Query() orderDir?: "ASC" | "DESC",
 	): Promise<
-		Array<Omit<User, "email" | "isAdmin" | "canReport" | "canSubmit" | "canReview" | "canScreenshot" | "banned">>
+		Array<
+			Omit<
+				User,
+				| "email"
+				| "isAdmin"
+				| "canReport"
+				| "canSubmit"
+				| "canReview"
+				| "canScreenshot"
+				| "banned"
+			>
+		>
 	> {
 		const params: GetUsersParams = { page, limit, orderCol, orderDir };
 		let user = null;
@@ -204,31 +214,34 @@ export class UserController extends Controller {
 	}
 
 	@SuccessResponse(200, "User's Badges")
-	@Get("{id}/badges")
-	public async getUsersBadges(@Path() id: number): Promise<Badge[]> {
-		const rows = await datastore.getBadges({ user_id: id });
-		return rows;
-	}
+    @Get("{id}/badges")
+    public async getUsersBadges(@Path() id: number): Promise<Badge[]> {
+        const rows = await datastore.getBadges({ user_id: id });
+        return rows;
+    }
 
 	@Security("bearerAuth", ["admin"])
-	@SuccessResponse(200, "User's Permissions")
-	@Response<APIError>(401, "Unauthorized")
-	@Get("{uid}/can")
-	public async getUsersCan(@Path() uid: number): Promise<KeysToCamelCase<UserCanQueryResult>> {
-		const db = new Database();
-		const queryRes: [UserCanQueryResult] = (await db.query(
-			"SELECT `can_report`,`can_submit`,`can_review`,`can_screenshot`,`can_message` FROM `User` WHERE `id` = ?",
-			[Number(uid)],
-		)) as unknown as any;
-		await db.close();
-		return objectToCamel(queryRes[0]);
-	}
+    @SuccessResponse(200, "User's Permissions")
+    @Response<APIError>(401, "Unauthorized")
+    @Get("{uid}/can")
+    public async getUsersCan(@Path() uid: number): Promise<KeysToCamelCase<UserCanQueryResult>> {
+        const db = new Database();
+        const queryRes: [UserCanQueryResult] = (await db.query(
+            "SELECT `can_report`,`can_submit`,`can_review`,`can_screenshot`,`can_message` FROM `User` WHERE `id` = ?",
+            [Number(uid)],
+        )) as unknown as any;
+        await db.close();
+        return objectToCamel(queryRes[0]);
+    }
 
 	@Security("bearerAuth", ["admin"])
 	@SuccessResponse(200, "Edited Cans")
 	@Response<APIError>(401, "Unauthorized")
 	@Patch("{uid}/can")
-	public async patchUserCan(@Path() uid: number, @Body() can: Partial<UserCan>): Promise<UserCan, APIError> {
+	public async patchUserCan(
+		@Path() uid: number,
+		@Body() can: Partial<UserCan>,
+	): Promise<UserCan> {
 		const db = new Database();
 		const canS = objectToSnake(can);
 		let updateStmt = "UPDATE `User` SET ";
@@ -252,12 +265,12 @@ export class UserController extends Controller {
 	}
 
 	@Security("bearerAuth", ["admin"])
-	@SuccessResponse(200, "User's Permissions")
-	@Response<APIError>(401, "Unauthorized")
-	@Get("{uid}/permissions")
-	public async getUsersPermissions(@Path() uid: number): Promise<Permission[]> {
-		return await datastore.getPermissions(uid);
-	}
+    @SuccessResponse(200, "User's Permissions")
+    @Response<APIError>(401, "Unauthorized")
+    @Get("{uid}/permissions")
+    public async getUsersPermissions(@Path() uid: number): Promise<Permission[]> {
+        return await datastore.getPermissions(uid);
+    }
 
 	@Security("bearerAuth", ["admin"])
 	@SuccessResponse(200, "User's Permissions")
@@ -270,7 +283,9 @@ export class UserController extends Controller {
 	): Promise<Permission[]> {
 		let revokedUntilStr = null;
 		if (requestBody != null) {
-			revokedUntilStr = moment(requestBody.revokedUntil).format("YYYY-MM-DD HH:mm:ss");
+			revokedUntilStr = moment(requestBody.revokedUntil).format(
+				"YYYY-MM-DD HH:mm:ss",
+			);
 		}
 
 		await datastore.updatePermission(uid, pid as Permission, revokedUntilStr);
@@ -281,7 +296,10 @@ export class UserController extends Controller {
 	@SuccessResponse(200, "User")
 	@Response<void>(404, "Not Found")
 	@Get("{id}")
-	public async getUser(@Header("Authorization") authorization?: string, @Path() id: number): Promise<User> {
+	public async getUser(
+		@Header("Authorization") authorization?: string,
+		@Path() id: number,
+	): Promise<User> {
 		let authuser = null;
 		try {
 			authuser = extractBearerJWT(authorization);
@@ -299,7 +317,10 @@ export class UserController extends Controller {
 			delete user.banned;
 		}
 
-		const canSeePerms = !!(authuser && (authuser.sub == id || authuser.isAdmin));
+		const canSeePerms = !!(
+			authuser &&
+			(authuser.sub == id || authuser.isAdmin)
+		);
 		if (canSeePerms) {
 			user.permissions = await datastore.getPermissions(id);
 		}
@@ -322,7 +343,9 @@ export class UserController extends Controller {
 		@Body() requestBody: Partial<PatchUserParams & User>,
 	): Promise<User> {
 		// NOTE: auth guard should make the error condition unreachable
-		const authuser: { isAdmin: boolean } = extractBearerJWT(authorization) as unknown as any;
+		const authuser: { isAdmin: boolean } = extractBearerJWT(
+			authorization,
+		) as unknown as any;
 
 		const isAdmin = false;
 		//if not admin (and if not, uid is not uid in token)
@@ -337,7 +360,10 @@ export class UserController extends Controller {
 		if (requestBody.password) {
 			//verify password and abort if incorrect
 			const targetUser = await datastore.getUserForLogin({ id: id });
-			const pwVerified = await auth.verifyPassword(targetUser.phash2, requestBody.currentPassword);
+			const pwVerified = await auth.verifyPassword(
+				targetUser.phash2,
+				requestBody.currentPassword,
+			);
 			if (!pwVerified) {
 				this.setStatus(401);
 				return { error: "password was missing or doesn't match" };
