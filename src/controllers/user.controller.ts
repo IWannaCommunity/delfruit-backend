@@ -6,6 +6,12 @@ import handle from "../lib/express-async-catch";
 import { userCheck } from "../lib/auth-check";
 import { recaptchaVerify } from "../auth-router";
 import { Permission } from "../model/Permission";
+import * as jwt from "jsonwebtoken";
+import { Review } from "../model/Review";
+import { Badge } from "../model/Badge";
+import { APIError } from "../model/response/error";
+import { Database } from "../database";
+import { Problem } from "../model/response/problem";
 import moment from "moment";
 import {
 	Body,
@@ -26,10 +32,12 @@ import {
 } from "tsoa";
 import { objectToCamel, objectToSnake } from "ts-case-convert";
 import Config from "../model/config";
+import { Result } from "../model/response/result";
+import { User, UserRegistrationResponse } from "../model/response/user";
+import { GetUsersParams, PatchUserParams } from "../model/params/user";
+import { User as UserEntity } from "../model/entity/user";
 let config: Config = require("../config/config.json");
 const auth = new AuthModule();
-const app = express.Router();
-export default app;
 
 interface UserRegistration {
 	username: string;
@@ -41,15 +49,6 @@ interface EditUserPermissionsParam {
 	revokedUntil: Date;
 }
 
-type SnakeCase<S extends string> = S extends `${infer T}${infer U}`
-	? `${T extends Capitalize<T> ? "_" : ""}${Lowercase<T>}${SnakeCase<U>}`
-	: S;
-
-import * as jwt from "jsonwebtoken";
-import { Review } from "../model/Review";
-import { Badge } from "../model/Badge";
-import { APIError } from "../model/response/error";
-import { Database } from "../database";
 function extractBearerJWT(header_token: string): string | object {
 	if (!header_token.includes("Bearer ")) {
 		throw new Error("missing prefix");
@@ -80,8 +79,8 @@ type KeysToCamelCase<T> = T extends Record<string, unknown>
 			[K in keyof T as CamelCase<K>]: KeysToCamelCase<T[K]>;
 	  }
 	: T extends Array<infer U>
-	? Array<KeysToCamelCase<U>>
-	: T;
+	  ? Array<KeysToCamelCase<U>>
+	  : T;
 
 type UserCan = KeysToCamelCase<UserCanQueryResult>;
 
@@ -93,28 +92,32 @@ export class UserController extends Controller {
 	 * @summary Register New User
 	 */
 	@SuccessResponse(201, "Created User, with token for auth.")
-	@Response<APIError>(400, "Bad Username")
-	@Post()
-	public async postUser(@Body() requestBody: UserRegistration): Promise<any> {
-		const phash = await auth.hashPassword(requestBody.password);
-		const user = await datastore.addUser(requestBody.username, phash, requestBody.email);
-		if (!user) {
-			this.setStatus(400);
-			return { error: "User Exists" };
-		}
-		datastore.addReport(
-			{
-				type: "user_register",
-				targetId: "" + user.id,
-				report: "User Registered",
-			},
-			user.id,
-		);
+    @Response<Problem>(400, "Bad Username", void 0, "application/problem+json")
+    @Post()
+    public async postUser(@Body() requestBody: UserRegistration): Promise<UserRegistrationResponse> {
+        const phash = await auth.hashPassword(requestBody.password);
+        const user = await datastore.addUser(requestBody.username, phash, requestBody.email);
+        if (!user) {
+            this.setStatus(400);
+            return {
+                type: new URL("about:blank"),
+                title: "Username already claimed.",
+                status: 400,
+                detail: "User with username is already in-use.",
+                instance: new URL("about:blank"),
+            } satisfies Problem;
+        }
+        datastore.addReport(
+            {
+                type: "user_register",
+                targetId: user.id,
+                report: "User Registered",
+            },
+            user.id,
+        );
 
-		user.token = auth.getToken(user.name, user.id, user.isAdmin);
-
-		return user;
-	}
+        return { token: auth.getToken(user.name, user.id, user.isAdmin) };
+    }
 
 	/**
 	 * User List
@@ -131,8 +134,21 @@ export class UserController extends Controller {
 		@Query() limit?: number = 50,
 		@Query() orderCol?: string,
 		@Query() orderDir?: "ASC" | "DESC",
-	): Promise<any[]> {
-		const params: GetUsersParms = { page, limit, orderCol, orderDir };
+	): Promise<
+		Array<
+			Omit<
+				User,
+				| "email"
+				| "isAdmin"
+				| "canReport"
+				| "canSubmit"
+				| "canReview"
+				| "canScreenshot"
+				| "banned"
+			>
+		>
+	> {
+		const params: GetUsersParams = { page, limit, orderCol, orderDir };
 		let user = null;
 		try {
 			user = extractBearerJWT(authorization);
@@ -152,6 +168,7 @@ export class UserController extends Controller {
 		if (!user || !user.isAdmin) {
 			users.forEach((u) => {
 				delete u.email;
+				delete u.isAdmin;
 				delete u.canReport;
 				delete u.canSubmit;
 				delete u.canReview;
@@ -197,31 +214,34 @@ export class UserController extends Controller {
 	}
 
 	@SuccessResponse(200, "User's Badges")
-	@Get("{id}/badges")
-	public async getUsersBadges(@Path() id: number): Promise<Badge[]> {
-		const rows = await datastore.getBadges({ user_id: id });
-		return rows;
-	}
+    @Get("{id}/badges")
+    public async getUsersBadges(@Path() id: number): Promise<Badge[]> {
+        const rows = await datastore.getBadges({ user_id: id });
+        return rows;
+    }
 
 	@Security("bearerAuth", ["admin"])
-	@SuccessResponse(200, "User's Permissions")
-	@Response<APIError>(401, "Unauthorized")
-	@Get("{uid}/can")
-	public async getUsersCan(@Path() uid: number): Promise<KeysToCamelCase<UserCanQueryResult>> {
-		const db = new Database();
-		const queryRes: [UserCanQueryResult] = (await db.query(
-			"SELECT `can_report`,`can_submit`,`can_review`,`can_screenshot`,`can_message` FROM `User` WHERE `id` = ?",
-			[Number(uid)],
-		)) as unknown as any;
-		await db.close();
-		return objectToCamel(queryRes[0]);
-	}
+    @SuccessResponse(200, "User's Permissions")
+    @Response<APIError>(401, "Unauthorized")
+    @Get("{uid}/can")
+    public async getUsersCan(@Path() uid: number): Promise<KeysToCamelCase<UserCanQueryResult>> {
+        const db = new Database();
+        const queryRes: [UserCanQueryResult] = (await db.query(
+            "SELECT `can_report`,`can_submit`,`can_review`,`can_screenshot`,`can_message` FROM `User` WHERE `id` = ?",
+            [Number(uid)],
+        )) as unknown as any;
+        await db.close();
+        return objectToCamel(queryRes[0]);
+    }
 
 	@Security("bearerAuth", ["admin"])
 	@SuccessResponse(200, "Edited Cans")
 	@Response<APIError>(401, "Unauthorized")
 	@Patch("{uid}/can")
-	public async patchUserCan(@Path() uid: number, @Body() can: Partial<UserCan>): Promise<UserCan> {
+	public async patchUserCan(
+		@Path() uid: number,
+		@Body() can: Partial<UserCan>,
+	): Promise<Result<UserCan, APIError>> {
 		const db = new Database();
 		const canS = objectToSnake(can);
 		let updateStmt = "UPDATE `User` SET ";
@@ -245,12 +265,12 @@ export class UserController extends Controller {
 	}
 
 	@Security("bearerAuth", ["admin"])
-	@SuccessResponse(200, "User's Permissions")
-	@Response<APIError>(401, "Unauthorized")
-	@Get("{uid}/permissions")
-	public async getUsersPermissions(@Path() uid: number): Promise<Permission[]> {
-		return await datastore.getPermissions(uid);
-	}
+    @SuccessResponse(200, "User's Permissions")
+    @Response<APIError>(401, "Unauthorized")
+    @Get("{uid}/permissions")
+    public async getUsersPermissions(@Path() uid: number): Promise<Permission[]> {
+        return await datastore.getPermissions(uid);
+    }
 
 	@Security("bearerAuth", ["admin"])
 	@SuccessResponse(200, "User's Permissions")
@@ -263,7 +283,9 @@ export class UserController extends Controller {
 	): Promise<Permission[]> {
 		let revokedUntilStr = null;
 		if (requestBody != null) {
-			revokedUntilStr = moment(requestBody.revokedUntil).format("YYYY-MM-DD HH:mm:ss");
+			revokedUntilStr = moment(requestBody.revokedUntil).format(
+				"YYYY-MM-DD HH:mm:ss",
+			);
 		}
 
 		await datastore.updatePermission(uid, pid as Permission, revokedUntilStr);
@@ -274,7 +296,10 @@ export class UserController extends Controller {
 	@SuccessResponse(200, "User")
 	@Response<void>(404, "Not Found")
 	@Get("{id}")
-	public async getUser(@Header("Authorization") authorization?: string, @Path() id: number): Promise<any> {
+	public async getUser(
+		@Header("Authorization") authorization?: string,
+		@Path() id: number,
+	): Promise<User> {
 		let authuser = null;
 		try {
 			authuser = extractBearerJWT(authorization);
@@ -292,7 +317,10 @@ export class UserController extends Controller {
 			delete user.banned;
 		}
 
-		const canSeePerms = !!(authuser && (authuser.sub == id || authuser.isAdmin));
+		const canSeePerms = !!(
+			authuser &&
+			(authuser.sub == id || authuser.isAdmin)
+		);
 		if (canSeePerms) {
 			user.permissions = await datastore.getPermissions(id);
 		}
@@ -312,10 +340,12 @@ export class UserController extends Controller {
 	public async patchUser(
 		@Header("Authorization") authorization: string,
 		@Path() id: number,
-		@Body() requestBody: any,
-	): Promise<any> {
+		@Body() requestBody: Partial<PatchUserParams & User>,
+	): Promise<User> {
 		// NOTE: auth guard should make the error condition unreachable
-		const authuser = extractBearerJWT(authorization);
+		const authuser: { isAdmin: boolean } = extractBearerJWT(
+			authorization,
+		) as unknown as any;
 
 		const isAdmin = false;
 		//if not admin (and if not, uid is not uid in token)
@@ -324,13 +354,16 @@ export class UserController extends Controller {
 			return { error: "unauthorized access to this user" };
 		}
 
-		let user = requestBody;
+		let user: UserEntity = requestBody as unknown as any;
 		user.id = id;
 
 		if (requestBody.password) {
 			//verify password and abort if incorrect
 			const targetUser = await datastore.getUserForLogin({ id: id });
-			const pwVerified = await auth.verifyPassword(targetUser.phash2, requestBody.currentPassword);
+			const pwVerified = await auth.verifyPassword(
+				targetUser.phash2,
+				requestBody.currentPassword,
+			);
 			if (!pwVerified) {
 				this.setStatus(401);
 				return { error: "password was missing or doesn't match" };
@@ -343,6 +376,7 @@ export class UserController extends Controller {
 			delete user.banned;
 			delete user.unsuccessfulLogins;
 			delete user.lastIp;
+			delete user.lastIP;
 			delete user.dateLastLogin;
 		}
 
@@ -361,13 +395,13 @@ export class UserController extends Controller {
 	 * @summary Check Following (User/Admin Only)
 	 */
 	@Security("bearerAuth", ["user"])
-	@SuccessResponse<{ following: boolean }>(200, "Following")
+	@SuccessResponse(200, "Following")
 	@Response<APIError>(401, "Not Logged In")
 	@Get("follows/{followerId}")
 	public async getUserFollow(
 		@Header("Authorization") authorization: string,
 		@Path() followerId: number,
-	): Promise<{ following: boolean } | APIError> {
+	): Promise<{ following: boolean }> {
 		// NOTE: auth guard should make the error condition unreachable
 		const user = extractBearerJWT(authorization);
 
