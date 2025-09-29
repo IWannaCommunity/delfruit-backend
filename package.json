@@ -24,6 +24,7 @@
     "author": "klazen108",
     "license": "ISC",
     "dependencies": {
+        "@sinclair/typebox": "0.31.15",
         "@types/bcrypt": "3.0.0",
         "@types/express": "4.16.1",
         "@types/express-jwt": "0.0.42",
