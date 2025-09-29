@@ -3,7 +3,7 @@
 module.exports = {
 	env: {
 		webextensions: false,
-		browser: false,
+		browser: true,
 		es6: true,
 		amd: true,
 	},
