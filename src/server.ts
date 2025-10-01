@@ -23,6 +23,7 @@ import { MemcachedStore } from "rate-limit-memcached";
 import { memcached } from "./datastore";
 import { rateLimit } from "express-rate-limit";
 import axios from "axios";
+import { StdLogger } from "./logger";
 
 /** Exit codes for fatal errors. */
 enum ExitCode {
@@ -53,51 +54,66 @@ async function sleep(ms: number): Promise<void> {
  */
 
 async function main(): Promise<number> {
-	console.log("Welcome to delfruit server 2.0!");
+	const LOG: StdLogger = new StdLogger("info", false);
+
+	LOG.info("Initiating Delicious Fruit NG 1.0.0-rc.0 server startup.");
 
 	// TODO: database initialization step, currently assumed database is already initialized
 
 	// HACK: but actually do db initialization, but only if we detect we're in CI
 	if (process.env.__DF_TEST_RUN) {
-		console.log("Initializing the database");
+		LOG.debug("Test run detected, executing alternative startup actions.");
 		await sleep(1000 * 45); // HACK: wait for mysql to startup
 		const cfg = { ...config.db };
 		delete cfg.database; // HACK: we don't want to set this
-		console.log("Connecting to the database server.");
+		LOG.debug("Connecting to the database server.");
 		const conn: Connection = mysql.createConnection(cfg);
-		console.log("Creating the database.");
+		LOG.debug("Creating the database.");
 		conn.connect((e) => {
-			console.log(`connect error: ${e}`);
+			LOG.error(e, "Connection to database could not be established.");
 		});
 		await sleep(1000 * 5);
-		conn.execute("CREATE DATABASE IF NOT EXISTS delfruit", [], (e, res, fields) => {
-			console.log(`error: ${e}`);
-			console.log(`resultsrows: ${res}`);
-			console.log(`fields: ${fields}`);
-		});
+		conn.execute(
+			"CREATE DATABASE IF NOT EXISTS delfruit",
+			[],
+			(e, res, fields) => {
+				LOG.trace(
+					{ error: e, resultsrows: res, fields },
+					"SQL Execution of the create database statement.",
+				);
+			},
+		);
 		await sleep(1000 * 5);
 
-		console.log("Running migrations");
+		LOG.debug("Running migrations from scratch.");
 		const db = new Database();
+		LOG.trace("Loading migrations from disk.");
 		const filenames = await fsAsync.readdir("./src/migrations");
-		console.log(`Migration files to be run: ${filenames}`);
+		LOG.trace(filenames, "Migration files to be ran.");
 		for (const filename of filenames) {
-			const fileBlob = await fsAsync.readFile(`./src/migrations/${filename}`, {});
+			const fileBlob = await fsAsync.readFile(
+				`./src/migrations/${filename}`,
+				{},
+			);
 			const res = await db.execute(String(fileBlob), []);
-			console.log(`migration res: ${res}`);
+			LOG.debug(res, "Migration result");
 		}
 	}
 
-	console.log("Initializing express...");
+	LOG.info("Initializing Express.js.");
 
 	const app = express();
+	app.locals = { LOG };
 
+	LOG.debug("Enabling CORS middleware for Express.js.");
 	app.use(cors());
 
+	LOG.debug("Enabling JSON Body Parser middleware for Express.js.");
 	app.use(bodyParser.json({ type: "application/json" }));
 
-	console.log("Initializing jwt middleware...");
-
+	LOG.debug(
+		"Enabling JSON Web Tokens w/ Refresh Tokens middleware for Express.js.",
+	);
 	app.use(
 		jwt_middleware({
 			secret: config.app_jwt_secret,
@@ -106,8 +122,7 @@ async function main(): Promise<number> {
 	);
 	app.use(refreshToken());
 
-	console.log("Initializing role middleware...");
-
+	LOG.debug("Enabling Role middleware for Express.js.");
 	app.use((req, res, next) => {
 		if (req.user) {
 			req.user.roles = ["game_update"];
@@ -115,6 +130,7 @@ async function main(): Promise<number> {
 		next();
 	});
 
+	LOG.debug("Enabling Custom Error Request Handler middleware for Express.js.");
 	const e: ErrorRequestHandler = (err, req, res, next) => {
 		if (err && err.name && err.name === "UnauthorizedError") {
 			//invalid token, jwt middleware returns more info in the err
@@ -162,8 +178,7 @@ async function main(): Promise<number> {
 		next();
 	});
 
-	console.log("Initializing object storage...");
-
+	LOG.info("Initializing S3 Object Storage.");
 	try {
 		const minioClient = new Minio.Client(config.s3);
 
@@ -171,17 +186,19 @@ async function main(): Promise<number> {
 			minioClient.bucketExists(config.s3_bucket, (err, exists) => {
 				if (err) return rej(err);
 				else if (exists) return res(false);
-				console.log(`Bucket ${config.s3_bucket} doesn't exist, intializing.`);
+				LOG.warn(config.s3_bucket, "Bucket doesn't exist, creating a new one.");
 				minioClient.makeBucket(config.s3_bucket, config.s3_region, (err) => {
 					if (err) return rej(err);
-					console.log(`Bucket ${config.s3_bucket} created successfully in ${config.s3_region}.`);
+					console.log(
+						`Bucket ${config.s3_bucket} created successfully in ${config.s3_region}.`,
+					);
 					res(true);
 				});
 			});
 		});
 
 		if (bucketJustCreated) {
-			console.log(`Setting public read policy on ${config.s3_bucket}`);
+			LOG.warn(config.s3_bucket, "Setting public read policy on bucket.");
 			await new Promise((res, rej) => {
 				minioClient.setBucketPolicy(
 					config.s3_bucket,
@@ -206,29 +223,33 @@ async function main(): Promise<number> {
 			});
 		}
 	} catch (e) {
-		console.error("S3 initialization failed!");
-		console.error(e);
+		LOG.fatal(e, "S3 Object Storage initialization failure.");
 		return ExitCode.S3_INIT_FAIL;
 	}
 
-	console.log("Initializing swagger...");
-
-	fs.readFile(path.join(__dirname, "../build/swagger.json"), { encoding: "utf-8" }, (err, data) => {
-		if (err) {
-			return console.error(`OpenAPI definition could not be opened or found: ${err}`);
-		}
-		const specs = JSON.parse(data);
-		app.use("/", swaggerUi.serve, swaggerUi.setup(specs));
-	});
+	LOG.debug("Initalizing Swagger UI middleware for Express.js.");
+	fs.readFile(
+		path.join(__dirname, "../build/swagger.json"),
+		{ encoding: "utf-8" },
+		(err, data) => {
+			if (err) {
+				return console.error(
+					`OpenAPI definition could not be opened or found: ${err}`,
+				);
+			}
+			const specs = JSON.parse(data);
+			app.use("/", swaggerUi.serve, swaggerUi.setup(specs));
+		},
+	);
 
 	if (config.bcrypt_rounds < 10) {
-		console.log(
-			"WARNING!! bcrypt_rounds is less than 10. " +
-				"Lower values mean faster hash attempts for password crackers!",
+		LOG.warn(
+			config.bcrypt_rounds,
+			"bcrypt_rounds in config is less than 10. Lower values mean faster hash attempts for password crackers!",
 		);
 	}
 
-	console.log("Initializing Rate Limiting middleware");
+	LOG.debug("Initializing Rate Limiting middleware for Express.js.");
 	const expressRateLimiter = rateLimit({
 		windowMs: 1000 * 60 * 5,
 		max: 350, // TODO: remove this on a newer version of this library
@@ -239,10 +260,9 @@ async function main(): Promise<number> {
 		identifier: "exprRateLmt-",
 		store: new MemcachedStore({ prefix: "exprRateLmt-", client: memcached }),
 	});
-	console.log(expressRateLimiter);
 	app.use(expressRateLimiter);
 
-	console.log("Initializing Speed Limiting middleware");
+	LOG.debug("Initalizing Speed Limiter middleware for Express.js.");
 	const expressSpeedLimiter = slowDown({
 		windowMs: 1000 * 60 * 15,
 		delayAfter: 30,
@@ -250,19 +270,16 @@ async function main(): Promise<number> {
 		identifier: "exprSpdLmt-",
 		store: new MemcachedStore({ prefix: "exprSpdLmt-", client: memcached }),
 	});
-	console.log(expressSpeedLimiter);
 	app.use(expressSpeedLimiter);
 
-	console.log("Initializing routers...");
-
+	LOG.info("Registering API routes.");
 	app.use(urlencoded({ extended: true }));
 	RegisterRoutes(app);
 
-	console.log("Starting app...");
-
+	LOG.info("Startup finished.");
 	try {
 		const server = app.listen(config.app_port, () => {
-			console.log(`Server started at localhost:${config.app_port}!`);
+			LOG.info(`Server started at localhost:${config.app_port}!`);
 		});
 
 		process.on("SIGTERM", () => {
@@ -273,12 +290,12 @@ async function main(): Promise<number> {
 			await sleep(4);
 		}
 	} catch (e) {
-		console.error(e);
+		LOG.fatal(e, "Application unexpectantly terminated.");
 	} finally {
 		memcached.end();
 	}
 
-	console.log("app done");
+	LOG.info("Application finished, shutting down.");
 
 	return ExitCode.SUCCESS;
 }
