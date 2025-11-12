@@ -173,8 +173,9 @@ export class GameController extends Controller {
 					},
 				);
 				params.tags.forEach((s, i) => {
-					if (Number(s) === Number.NaN)
-						throw "tag #" + i + " was not a number -> " + s;
+					if (isNaN(Number(s))) {
+						throw Error("tag #" + i + " was not a number -> " + s);
+					}
 				});
 			} catch (e) {
 				this.setStatus(400);
