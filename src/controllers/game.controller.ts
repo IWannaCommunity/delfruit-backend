@@ -35,12 +35,7 @@ import {
 } from "tsoa";
 import { Permission, hasPermission } from "../model/Permission";
 
-console.log("config:");
-console.log(config);
 const minioClient = new Minio.Client(config.s3);
-
-const app = express.Router();
-export default app;
 
 import * as jwt from "jsonwebtoken";
 import type { Review } from "../model/Review";
@@ -224,42 +219,42 @@ export class GameController extends Controller {
 	 * @summary Get Game
 	 */
 	@SuccessResponse(200, "Found Game Details")
-	@Response<APIError>(400, "Unparsable ID")
-	@Response(404, "Not Found")
-	@Get("{id}")
-	public async getGame(@Path() id: string): Promise<Game> {
-		// TODO: this could be simplified by making id optional, and where it isn't provided, assume "random"
-		let game;
-		if (id === "random") {
-			game = await datastore.getRandomGame();
-		} else if (!isNaN(+id)) {
-			const game_id = Number.parseInt(id, 10);
-			game = await datastore.getGame(game_id);
-		} else {
-			this.setStatus(400);
-			return { error: "id must be a number" };
-		}
+    @Response<APIError>(400, "Unparsable ID")
+    @Response(404, "Not Found")
+    @Get("{id}")
+    public async getGame(@Path() id: string): Promise<Game> {
+        // TODO: this could be simplified by making id optional, and where it isn't provided, assume "random"
+        let game;
+        if (id === "random") {
+            game = await datastore.getRandomGame();
+        } else if (!isNaN(+id)) {
+            const game_id = Number.parseInt(id, 10);
+            game = await datastore.getGame(game_id);
+        } else {
+            this.setStatus(400);
+            return { error: "id must be a number" };
+        }
 
-		if (!game) {
-			this.setStatus(404);
-			return;
-		}
+        if (!game) {
+            this.setStatus(404);
+            return;
+        }
 
-		//get owner review
-		if (game.ownerId) {
-			const ownerReviews = await datastore.getReviews({
-				game_id: game.id,
-				user_id: +game.ownerId,
-				includeOwnerReview: true,
-				removed: false,
-			});
-			if (ownerReviews.length == 1) {
-				game.ownerBio = ownerReviews[0];
-			}
-		}
+        //get owner review
+        if (game.ownerId) {
+            const ownerReviews = await datastore.getReviews({
+                game_id: game.id,
+                user_id: +game.ownerId,
+                includeOwnerReview: true,
+                removed: false,
+            });
+            if (ownerReviews.length == 1) {
+                game.ownerBio = ownerReviews[0];
+            }
+        }
 
-		return game;
-	}
+        return game;
+    }
 
 	/**
 	 * Remove Game. This is idempotent - repeated deletions of the same game have no effect.
@@ -654,22 +649,22 @@ export class GameController extends Controller {
 	 * @summary Get Ratings for Game
 	 */
 	@SuccessResponse(200, "Rating for Game")
-	@Response<APIError>(400, "Invalid Game ID")
-	@Response<APIError>(404, "Game Not Found")
-	@Tags("Ratings")
-	@Get("{id}/ratings")
-	public async getGameRatings(@Path() id: number): Promise<Rating> {
-		if (isNaN(+id)) {
-			this.setStatus(400);
-			return { error: "id must be a number" };
-		}
+    @Response<APIError>(400, "Invalid Game ID")
+    @Response<APIError>(404, "Game Not Found")
+    @Tags("Ratings")
+    @Get("{id}/ratings")
+    public async getGameRatings(@Path() id: number): Promise<Rating> {
+        if (isNaN(+id)) {
+            this.setStatus(400);
+            return { error: "id must be a number" };
+        }
 
-		const game = await datastore.gameExists(id);
-		if (!game) {
-			this.setStatus(404);
-			return { error: "no game with this id currently exists" };
-		}
+        const game = await datastore.gameExists(id);
+        if (!game) {
+            this.setStatus(404);
+            return { error: "no game with this id currently exists" };
+        }
 
-		return await datastore.getRatings(id);
-	}
+        return await datastore.getRatings(id);
+    }
 }
