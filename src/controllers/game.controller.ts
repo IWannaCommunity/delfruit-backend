@@ -1,20 +1,19 @@
 import express from "express";
 import datastore from "../datastore";
-import { GetGamesParms } from "../model/GetGamesParms";
-import { GetScreenshotParms } from "../model/GetScreenshotParms";
-import { Screenshot } from "../model/Screenshot";
-import { Game } from "../model/Game";
 import whitelist from "../lib/whitelist";
+import type { Game } from "../model/Game";
+import type { GetGamesParms } from "../model/GetGamesParms";
+import type { GetScreenshotParms } from "../model/GetScreenshotParms";
+import type { Screenshot } from "../model/Screenshot";
 
 import * as Minio from "minio";
 
 import multer from "multer";
-import handle from "../lib/express-async-catch";
 import { adminCheck, userCheck } from "../lib/auth-check";
-import Config from "../model/config";
-let config: Config = require("../config/config.json");
+import handle from "../lib/express-async-catch";
+import type Config from "../model/config";
+const config: Config = require("../config/config.json");
 
-import { Permission, hasPermission } from "../model/Permission";
 import {
 	Body,
 	Controller,
@@ -34,14 +33,8 @@ import {
 	Tags,
 	UploadedFile,
 } from "tsoa";
-const upload = multer({
-	storage: multer.diskStorage({
-		//If no destination is given, the operating system's default directory for temporary files is used.
-		filename: function (req, file, cb) {
-			cb(null, file.fieldname + "-" + Date.now());
-		},
-	}),
-});
+import { Permission, hasPermission } from "../model/Permission";
+
 console.log("config:");
 console.log(config);
 const minioClient = new Minio.Client(config.s3);
@@ -50,8 +43,8 @@ const app = express.Router();
 export default app;
 
 import * as jwt from "jsonwebtoken";
-import { Review } from "../model/Review";
-import { APIError } from "../model/response/error";
+import type { Review } from "../model/Review";
+import type { APIError } from "../model/response/error";
 function extractBearerJWT(header_token: string): string | object {
 	if (!header_token.includes("Bearer ")) {
 		throw new Error("missing prefix");
@@ -147,7 +140,11 @@ export class GameController extends Controller {
 		@Query() order_dir?: string,
 	): Promise<Game[]> {
 		// TODO: do type restrictions in method definition
-		order_col = whitelist(order_col, ["name", "date_created", "rating", "difficulty"], "name");
+		order_col = whitelist(
+			order_col,
+			["name", "date_created", "rating", "difficulty"],
+			"name",
+		);
 		order_dir = whitelist(order_dir, ["asc", "desc"], "asc") as "asc" | "desc";
 		let isAdmin = false;
 		try {
@@ -175,11 +172,14 @@ export class GameController extends Controller {
 		if (tags) {
 			try {
 				const tagNames = tags.trim().split(",");
-				params.tags = (await datastore.getTagsByName(tagNames)).flatMap((v, idx, a) => {
-					return String(v.id);
-				});
+				params.tags = (await datastore.getTagsByName(tagNames)).flatMap(
+					(v, idx, a) => {
+						return String(v.id);
+					},
+				);
 				params.tags.forEach((s, i) => {
-					if (Number(s) === NaN) throw "tag #" + i + " was not a number -> " + s;
+					if (Number(s) === Number.NaN)
+						throw "tag #" + i + " was not a number -> " + s;
 				});
 			} catch (e) {
 				this.setStatus(400);
@@ -233,7 +233,7 @@ export class GameController extends Controller {
 		if (id === "random") {
 			game = await datastore.getRandomGame();
 		} else if (!isNaN(+id)) {
-			const game_id = parseInt(id, 10);
+			const game_id = Number.parseInt(id, 10);
 			game = await datastore.getGame(game_id);
 		} else {
 			this.setStatus(400);
@@ -270,7 +270,10 @@ export class GameController extends Controller {
 	@Response<APIError>(403, "Insufficient Privileges")
 	@Response(404, "Not Found")
 	@Delete("{id}")
-	public async deleteGame(@Header("Authorization") authorization: string, @Path() id: number): Promise<Game | void> {
+	public async deleteGame(
+		@Header("Authorization") authorization: string,
+		@Path() id: number,
+	): Promise<Game | void> {
 		// NOTE: auth guard should make the error condition unreachable
 		const user = extractBearerJWT(authorization);
 
@@ -281,7 +284,7 @@ export class GameController extends Controller {
 
 		if (game.removed) return this.setStatus(204);
 
-		let gamePatch: Game = {
+		const gamePatch: Game = {
 			id: +id,
 			removed: true,
 		};
@@ -375,7 +378,10 @@ export class GameController extends Controller {
 			requestBody.rating = Math.min(Math.max(requestBody.rating, 0), 100);
 		}
 		if (requestBody.difficulty) {
-			requestBody.difficulty = Math.min(Math.max(requestBody.difficulty, 0), 100);
+			requestBody.difficulty = Math.min(
+				Math.max(requestBody.difficulty, 0),
+				100,
+			);
 		}
 
 		const newReview = await datastore.addReview(requestBody, id, user.sub);
@@ -421,7 +427,7 @@ export class GameController extends Controller {
 
 		if (!isAdmin) approved = true; //only return approved screenshots
 
-		let parms: GetScreenshotParms = { id, page, limit, approved };
+		const parms: GetScreenshotParms = { id, page, limit, approved };
 		if (!isAdmin) parms.removed = false;
 		const rows = await datastore.getScreenshots(parms);
 
@@ -454,7 +460,10 @@ export class GameController extends Controller {
 			return { error: "id must be a number" };
 		}
 		const permissions = await datastore.getPermissions(user.sub);
-		const autoApprove = hasPermission(permissions, Permission.AUTO_APPROVE_SCREENSHOT);
+		const autoApprove = hasPermission(
+			permissions,
+			Permission.AUTO_APPROVE_SCREENSHOT,
+		);
 		const canScreenshot = hasPermission(permissions, Permission.CAN_SCREENSHOT);
 		if (!canScreenshot) {
 			this.setStatus(403);
@@ -481,10 +490,16 @@ export class GameController extends Controller {
 			id: ssres.id,
 		};
 		// Using fPutObject API upload your file to the bucket europetrip.
-		minioClient.putObject(config.s3_bucket, `${ssres.id}.png`, screenshot.buffer, metaData, function (err, etag) {
-			// TODO: don't return raw S3 errors to the user!!!
-			if (err) return console.log(err);
-		});
+		minioClient.putObject(
+			config.s3_bucket,
+			`${ssres.id}.png`,
+			screenshot.buffer,
+			metaData,
+			(err, etag) => {
+				// TODO: don't return raw S3 errors to the user!!!
+				if (err) return console.log(err);
+			},
+		);
 
 		if (autoApprove) {
 			datastore.addReport(
@@ -518,7 +533,10 @@ export class GameController extends Controller {
 	@Response<APIError>(400, "Invalid Game ID")
 	@Response<APIError>(404, "Game Not Found")
 	// TODO: add a game tag type
-	public async getGameTags(@Path() id: number, @Query() userId?: number): Promise<any | any[]> {
+	public async getGameTags(
+		@Path() id: number,
+		@Query() userId?: number,
+	): Promise<any | any[]> {
 		if (isNaN(+id)) {
 			this.setStatus(400);
 			return { error: "id must be a number" };
