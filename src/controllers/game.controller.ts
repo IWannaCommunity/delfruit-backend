@@ -39,6 +39,7 @@ const minioClient = new Minio.Client(config.s3);
 
 import * as jwt from "jsonwebtoken";
 import type { Review } from "../model/Review";
+import type { PostGameParams } from "../model/params/game";
 import type { APIError } from "../model/response/error";
 function extractBearerJWT(header_token: string): string | object {
 	if (!header_token.includes("Bearer ")) {
@@ -81,7 +82,7 @@ export class GameController extends Controller {
 	@Post()
 	public async postGame(
 		@Header("Authorization") authorization: string,
-		@Body() requestBody: Pick<Game, "name" | "url" | "urlSpdrn" | "author" | "collab" | "dateCreated" | "ownerId">,
+		@Body() requestBody: PostGameParams,
 	): Promise<Game> {
 		const user = extractBearerJWT(authorization);
 
