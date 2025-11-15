@@ -39,7 +39,7 @@ const minioClient = new Minio.Client(config.s3);
 
 import * as jwt from "jsonwebtoken";
 import type { Review } from "../model/Review";
-import type { PostGameParams } from "../model/params/game";
+import type { GetGamesParams, PostGameParams } from "../model/params/game";
 import type { APIError } from "../model/response/error";
 function extractBearerJWT(header_token: string): string | object {
 	if (!header_token.includes("Bearer ")) {
@@ -132,16 +132,17 @@ export class GameController extends Controller {
 		@Query() difficultyTo?: number,
 		@Query() page?: number,
 		@Query() limit?: number,
-		@Query() order_col?: string,
-		@Query() order_dir?: string,
-	): Promise<Game[]> {
+		@Query() orderCol?: string,
+		@Query() orderDir?: string,
+	): Promise<Array<Game>> {
 		// TODO: do type restrictions in method definition
-		order_col = whitelist(
-			order_col,
+		orderCol = whitelist(
+			orderCol,
 			["name", "date_created", "rating", "difficulty"],
 			"name",
 		);
-		order_dir = whitelist(order_dir, ["asc", "desc"], "asc") as "asc" | "desc";
+		orderDir = whitelist(orderDir, ["asc", "desc"], "asc") as "asc" | "desc";
+
 		let isAdmin = false;
 		try {
 			const user = extractBearerJWT(authorization);
@@ -150,11 +151,11 @@ export class GameController extends Controller {
 			console.warn("user provided authorization, but it was invalid");
 		}
 
-		const params: GetGamesParms = {
-			page: +(page || 0),
-			limit: +(limit || 50),
-			orderCol: order_col,
-			orderDir: order_dir,
+		const params: GetGamesParams = {
+			page: Number(page || 0),
+			limit: Number(limit || 50),
+			orderCol,
+			orderDir,
 		};
 		if (!isAdmin) params.removed = false;
 
