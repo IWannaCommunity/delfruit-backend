@@ -1,8 +1,4 @@
 import express from "express";
-import datastore from "../datastore";
-import { Report } from "../model/Report";
-import handle from "../lib/express-async-catch";
-import { adminCheck, userCheck } from "../lib/auth-check";
 import {
 	Body,
 	Controller,
@@ -19,13 +15,17 @@ import {
 	SuccessResponse,
 	Tags,
 } from "tsoa";
-import { GetReportParams } from "../model/GetReportParams";
+import datastore from "../datastore";
+import { adminCheck, userCheck } from "../lib/auth-check";
+import handle from "../lib/express-async-catch";
+import type { GetReportParams } from "../model/GetReportParams";
+import type { Report } from "../model/Report";
 
 const app = express.Router();
 export default app;
 
-import Config from "../model/config";
-let config: Config = require("../config/config.json");
+import type Config from "../model/config";
+const config: Config = require("../config/config.json");
 
 import * as jwt from "jsonwebtoken";
 function extractBearerJWT(header_token: string): string | object {
@@ -49,35 +49,35 @@ export class ReportController extends Controller {
 	 * @summary Repost List (Admin Only)
 	 */
 	@Security("bearerAuth", ["admin"])
-	@SuccessResponse(200, "List of Reports within matching filters.")
-	@Get()
-	public async getReports(@Queries() requestQuery?: GetReportParams): Promise<Report[]> {
-		const n = await datastore.getReports({
-			type: requestQuery.type,
-			answered: requestQuery.answered,
-			id: requestQuery.id ? +requestQuery.id : undefined,
-			page: +requestQuery.page || 0,
-			limit: +requestQuery.limit || 50,
-			orderCol: requestQuery.orderCol,
-			orderDir: requestQuery.orderDir,
-		});
+    @SuccessResponse(200, "List of Reports within matching filters.")
+    @Get()
+    public async getReports(@Queries() requestQuery?: GetReportParams): Promise<Report[]> {
+        const n = await datastore.getReports({
+            type: requestQuery.type,
+            answered: requestQuery.answered,
+            id: requestQuery.id ? +requestQuery.id : undefined,
+            page: +requestQuery.page || 0,
+            limit: Math.min(Math.max(+requestQuery.limit || 50, 1), 50),
+            orderCol: requestQuery.orderCol,
+            orderDir: requestQuery.orderDir,
+        });
 
-		return n;
-	}
+        return n;
+    }
 
 	/**
 	 * Get Report (Admin Only)
 	 * @summary Get Report (Admin Only)
 	 */
 	@Security("bearerAuth", ["admin"])
-	@SuccessResponse(200, "Get Report")
-	@Response<void>(404, "Not Found")
-	@Get("{id}")
-	public async getReport(@Path() id: number): Promise<Report> {
-		const report = await datastore.getReport(+id);
-		if (!report) return this.setStatus(404);
-		return report;
-	}
+    @SuccessResponse(200, "Get Report")
+    @Response<void>(404, "Not Found")
+    @Get("{id}")
+    public async getReport(@Path() id: number): Promise<Report> {
+        const report = await datastore.getReport(+id);
+        if (!report) return this.setStatus(404);
+        return report;
+    }
 
 	/**
 	 * Allows admins to update the report, such as marking it as resolved.
@@ -87,7 +87,10 @@ export class ReportController extends Controller {
 	@SuccessResponse(200, "Updated Report")
 	@Response<void>(404, "Not Found")
 	@Patch("{id}")
-	public async patchReport(@Path() id: number, @Body() requestBody: Report): Promise<Report> {
+	public async patchReport(
+		@Path() id: number,
+		@Body() requestBody: Report,
+	): Promise<Report> {
 		const ogReport = await datastore.getReport(id);
 		if (!ogReport) return this.setStatus(404);
 

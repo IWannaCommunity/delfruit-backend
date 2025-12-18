@@ -135,6 +135,8 @@ export class GameController extends Controller {
 		@Query() orderCol?: string,
 		@Query() orderDir?: string,
 	): Promise<Array<Game>> {
+		limit = Math.min(Math.max(limit, 1), 50);
+
 		// TODO: do type restrictions in method definition
 		orderCol = whitelist(
 			orderCol,
@@ -318,6 +320,8 @@ export class GameController extends Controller {
 		@Query() page?: number = 0,
 		@Query() limit?: number = 50,
 	): Promise<Review[]> {
+		limit = Math.min(Math.max(limit, 1), 50);
+
 		if (isNaN(+id)) {
 			this.setStatus(400);
 			return { error: "id must be a number" };
@@ -402,6 +406,8 @@ export class GameController extends Controller {
 		@Query() page?: number = 0,
 		@Query() limit?: number = 50,
 	): Promise<Screenshot[]> {
+		limit = Math.min(Math.max(limit, 1), 50);
+
 		const isAdmin = false;
 		if (authorization) {
 			try {

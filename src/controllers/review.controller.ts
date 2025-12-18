@@ -1,7 +1,4 @@
-import datastore from "../datastore";
 import express from "express";
-import handle from "../lib/express-async-catch";
-import { userCheck } from "../lib/auth-check";
 import {
 	Body,
 	Controller,
@@ -18,16 +15,19 @@ import {
 	SuccessResponse,
 	Tags,
 } from "tsoa";
-import { Review } from "../model/Review";
+import datastore from "../datastore";
+import { userCheck } from "../lib/auth-check";
+import handle from "../lib/express-async-catch";
+import type { Review } from "../model/Review";
 
 const app = express.Router();
 export default app;
 
-import Config from "../model/config";
-let config: Config = require("../config/config.json");
+import type Config from "../model/config";
+const config: Config = require("../config/config.json");
 
 import * as jwt from "jsonwebtoken";
-import { GetReviewOptions } from "../model/GetReviewOptions";
+import type { GetReviewOptions } from "../model/GetReviewOptions";
 function extractBearerJWT(header_token: string): string | object {
 	if (!header_token.includes("Bearer ")) {
 		throw new Error("missing prefix");
@@ -59,13 +59,13 @@ export class ReviewController extends Controller {
 	 * @summary Get Review
 	 */
 	@SuccessResponse(200, "Review Details")
-	@Response<void>(400, "Not Found")
-	@Get("{id}")
-	public async getReview(@Path() id: number): Promise<Review> {
-		const review = await datastore.getReview(id);
-		if (review == null) return this.setStatus(404);
-		return review;
-	}
+    @Response<void>(400, "Not Found")
+    @Get("{id}")
+    public async getReview(@Path() id: number): Promise<Review> {
+        const review = await datastore.getReview(id);
+        if (review == null) return this.setStatus(404);
+        return review;
+    }
 
 	/**
 	 * Get List of Reviews
@@ -85,6 +85,8 @@ export class ReviewController extends Controller {
 		@Query() orderCol?: string,
 		@Query() orderDir?: "ASC" | "DESC",
 	): Promise<Review[]> {
+		limit = Math.min(Math.max(limit, 1), 50);
+
 		// TODO: allow admins to toggle removed reviews
 		const params: GetReviewOptions = {
 			game_id: gameId,

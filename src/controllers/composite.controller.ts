@@ -1,17 +1,27 @@
-import datastore from "../datastore";
-import { Controller, Get, Tags, Query, Route, SuccessResponse, Header, Response, Path } from "tsoa";
-import { GetGamesParms } from "../model/GetGamesParms";
-import whitelist from "../lib/whitelist";
-import { Game } from "../model/Game";
-import { Review } from "../model/Review";
-import { Screenshot } from "../model/Screenshot";
-import { AuthResponse } from "./auth.controller";
-import { GetUsersParms } from "../model/GetUsersParms";
-import { APIError } from "../model/response/error";
-import { Database } from "../database";
 import * as jwt from "jsonwebtoken";
-import Config from "../model/config";
-let config: Config = require("../config/config.json");
+import {
+	Controller,
+	Get,
+	Header,
+	Path,
+	Query,
+	Response,
+	Route,
+	SuccessResponse,
+	Tags,
+} from "tsoa";
+import { Database } from "../database";
+import datastore from "../datastore";
+import whitelist from "../lib/whitelist";
+import type { Game } from "../model/Game";
+import type { GetGamesParms } from "../model/GetGamesParms";
+import type { GetUsersParms } from "../model/GetUsersParms";
+import type { Review } from "../model/Review";
+import type { Screenshot } from "../model/Screenshot";
+import type Config from "../model/config";
+import type { APIError } from "../model/response/error";
+import type { AuthResponse } from "./auth.controller";
+const config: Config = require("../config/config.json");
 
 function extractBearerJWT(header_token: string): string | object {
 	if (!header_token.includes("Bearer ")) {
@@ -42,7 +52,8 @@ interface GameExt extends Game {
 	screenshots: Screenshot[];
 }
 
-interface UserExt extends Omit<AuthResponse, "email" | "banned" | "phash2" | "isAdmin"> {
+interface UserExt
+	extends Omit<AuthResponse, "email" | "banned" | "phash2" | "isAdmin"> {
 	reviewCount: number;
 	ratingsCount: number;
 	screenshotCount: number;
@@ -57,60 +68,60 @@ export class CompositeController extends Controller {
 	 * @summary Get Game
 	 */
 	@Tags("Games")
-	@SuccessResponse(200, "Found Extended Game Details")
-	@Response<APIError>(400, "Unparsable ID")
-	@Response(404, "Not Found")
-	@Get("games/{id}/all")
-	public async getGameCompositeAll(@Path() id: string): Promise<GameExt> {
-		// TODO: this could be simplified by making id optional, and where it isn't provided, assume "random"
-		let game: GameExt;
-		if (id === "random") {
-			game = await datastore.getRandomGame();
-		} else if (!isNaN(+id)) {
-			const game_id = parseInt(id, 10);
-			game = await datastore.getGame(game_id);
-		} else {
-			this.setStatus(400);
-			return { error: "id must be a number" };
-		}
+    @SuccessResponse(200, "Found Extended Game Details")
+    @Response<APIError>(400, "Unparsable ID")
+    @Response(404, "Not Found")
+    @Get("games/{id}/all")
+    public async getGameCompositeAll(@Path() id: string): Promise<GameExt> {
+        // TODO: this could be simplified by making id optional, and where it isn't provided, assume "random"
+        let game: GameExt;
+        if (id === "random") {
+            game = await datastore.getRandomGame();
+        } else if (!isNaN(+id)) {
+            const game_id = Number.parseInt(id, 10);
+            game = await datastore.getGame(game_id);
+        } else {
+            this.setStatus(400);
+            return { error: "id must be a number" };
+        }
 
-		if (!game) {
-			this.setStatus(404);
-			return;
-		}
+        if (!game) {
+            this.setStatus(404);
+            return;
+        }
 
-		//get owner review
-		if (game.ownerId) {
-			const ownerReviews = await datastore.getReviews({
-				game_id: game.id,
-				user_id: +game.ownerId,
-				includeOwnerReview: true,
-				removed: false,
-			});
-			if (ownerReviews.length == 1) {
-				game.ownerBio = ownerReviews[0];
-			}
-		}
+        //get owner review
+        if (game.ownerId) {
+            const ownerReviews = await datastore.getReviews({
+                game_id: game.id,
+                user_id: +game.ownerId,
+                includeOwnerReview: true,
+                removed: false,
+            });
+            if (ownerReviews.length == 1) {
+                game.ownerBio = ownerReviews[0];
+            }
+        }
 
-		const [ratings, reviews, tags, screenshots] = await Promise.all([
-			datastore.getRatings(game.id),
-			datastore.getReviews({
-				game_id: game.id,
-				page: 0,
-				limit: 5, // just enough to hydrate a page
-				textReviewsFirst: true,
-				includeOwnerReview: true,
-			}),
-			datastore.getTagSetsForGame(game.id),
-			datastore.getScreenshots({ gameId: game.id }),
-		]);
-		game.ratings = ratings;
-		game.reviews = reviews;
-		game.tags = tags as unknown as ReadonlySet<{ name: string; id: number; count: number }>;
-		game.screenshots = screenshots;
+        const [ratings, reviews, tags, screenshots] = await Promise.all([
+            datastore.getRatings(game.id),
+            datastore.getReviews({
+                game_id: game.id,
+                page: 0,
+                limit: 5, // just enough to hydrate a page
+                textReviewsFirst: true,
+                includeOwnerReview: true,
+            }),
+            datastore.getTagSetsForGame(game.id),
+            datastore.getScreenshots({ gameId: game.id }),
+        ]);
+        game.ratings = ratings;
+        game.reviews = reviews;
+        game.tags = tags as unknown as ReadonlySet<{ name: string; id: number; count: number }>;
+        game.screenshots = screenshots;
 
-		return game;
-	}
+        return game;
+    }
 
 	/**
 	 * Game List
@@ -143,8 +154,14 @@ export class CompositeController extends Controller {
 		@Query() order_col?: string,
 		@Query() order_dir?: string,
 	): Promise<GameExt[]> {
+		limit = Math.min(Math.max(limit, 1), 50);
+
 		// TODO: do type restrictions in method definition
-		order_col = whitelist(order_col, ["name", "date_created", "rating", "difficulty"], "name");
+		order_col = whitelist(
+			order_col,
+			["name", "date_created", "rating", "difficulty"],
+			"name",
+		);
 		order_dir = whitelist(order_dir, ["asc", "desc"], "asc") as "asc" | "desc";
 		let isAdmin = false;
 		try {
@@ -171,7 +188,8 @@ export class CompositeController extends Controller {
 			try {
 				params.tags = <string[]>JSON.parse(tags);
 				params.tags.forEach((s, i) => {
-					if (+s === NaN) throw "tag #" + i + " was not a number -> " + s;
+					if (+s === Number.NaN)
+						throw "tag #" + i + " was not a number -> " + s;
 				});
 			} catch (e) {
 				this.setStatus(400);
@@ -244,29 +262,30 @@ export class CompositeController extends Controller {
 			return user;
 		})();
 
-		const [reviewCount, ratingsCount, screenshotCount, isFollowing] = await Promise.all([
-			datastore.getUserReviewCount(id),
-			datastore.getUserRatingCount(id),
-			datastore.getUserScreenshotCount(id),
-			(async (): Promise<boolean> => {
-				if (!authorization) {
-					return null;
-				}
-				try {
-					const reqUser = extractBearerJWT(authorization);
+		const [reviewCount, ratingsCount, screenshotCount, isFollowing] =
+			await Promise.all([
+				datastore.getUserReviewCount(id),
+				datastore.getUserRatingCount(id),
+				datastore.getUserScreenshotCount(id),
+				(async (): Promise<boolean> => {
+					if (!authorization) {
+						return null;
+					}
+					try {
+						const reqUser = extractBearerJWT(authorization);
 
-					const db = new Database();
-					const queryRes: [{ is_following: boolean }] = await db.query(
-						"SELECT IF(EXISTS(SELECT 1 FROM `UserFollow` WHERE `user_id` = ? AND `user_follow_id` = ?), TRUE, FALSE) AS is_following",
-						[Number(user.id), Number(reqUser.sub)],
-					);
-					return Boolean(queryRes[0].is_following);
-				} catch (e) {
-					console.error(e);
-					return false;
-				}
-			})(),
-		]);
+						const db = new Database();
+						const queryRes: [{ is_following: boolean }] = await db.query(
+							"SELECT IF(EXISTS(SELECT 1 FROM `UserFollow` WHERE `user_id` = ? AND `user_follow_id` = ?), TRUE, FALSE) AS is_following",
+							[Number(user.id), Number(reqUser.sub)],
+						);
+						return Boolean(queryRes[0].is_following);
+					} catch (e) {
+						console.error(e);
+						return false;
+					}
+				})(),
+			]);
 
 		user.reviewCount = reviewCount;
 		user.ratingsCount = ratingsCount;
@@ -293,11 +312,14 @@ export class CompositeController extends Controller {
 		@Query() orderCol?: string,
 		@Query() orderDir?: "ASC" | "DESC",
 	): Promise<Array<Omit<UserExt, "ratingsCount" | "screenshotCount">>> {
+		limit = Math.min(Math.max(limit, 1), 50);
+
 		const params: GetUsersParms = { page, limit, orderCol, orderDir };
 		if (name) params.name = name;
 
 		const [users, reviewCounts] = await (async () => {
-			const users: ReadonlyArray<AuthResponse> = await datastore.getUsers(params);
+			const users: ReadonlyArray<AuthResponse> =
+				await datastore.getUsers(params);
 			const dbQueries: Array<Promise<number>> = new Array(users.length);
 
 			let idx = 0;
@@ -314,7 +336,12 @@ export class CompositeController extends Controller {
 
 			const reviewCounts = (await Promise.all(dbQueries)).reverse();
 
-			return [users as unknown as Array<Omit<UserExt, "ratingsCount" | "screenshotCount">>, reviewCounts];
+			return [
+				users as unknown as Array<
+					Omit<UserExt, "ratingsCount" | "screenshotCount">
+				>,
+				reviewCounts,
+			];
 		})();
 
 		for (const user of users) {
