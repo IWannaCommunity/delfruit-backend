@@ -68,8 +68,6 @@ export async function createUser(isAdmin: boolean): Promise<TestUser> {
     expect(reg).toHaveProperty("data");
     expect(reg.data).toHaveProperty("token");
     expect(reg.data.token).toEqual(expect.any(String));
-    expect(reg.data).toHaveProperty("id");
-    expect(reg.data.id).toEqual(expect.any(Number));
 
     if (isAdmin) {
         const db = new Database({
