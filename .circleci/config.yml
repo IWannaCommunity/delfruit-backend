@@ -3,7 +3,7 @@ version: 2.1
 executors:
   linux-minimal:
     working_directory: /tmp/workspace
-    machine:
+    docker:
       - image: alpine:3.10.9
   node:
     working_directory: /tmp/int_tests
