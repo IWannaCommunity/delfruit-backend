@@ -1,6 +1,10 @@
 version: 2.1
 
 executors:
+  linux-minimal:
+    working_directory: /tmp/workspace
+    machine:
+      - image: alpine:3.10.9
   node:
     working_directory: /tmp/int_tests
     machine:
@@ -11,6 +15,32 @@ executors:
       - image: docker:20.10.1
 
 jobs:
+    harper-lint:
+        executor: linux-minimal
+        steps:
+            - checkout
+            - run:
+                name: Refresh Package List
+                command: apk update
+            - run:
+                name: Update System Packages
+                command: apk upgrade
+            - run:
+                name: Install wget
+                command: apk add wget ca-certificates
+            - run:
+                name: Install Harper CLI
+                command: |
+                    wget https://github.com/Automattic/harper/releases/download/v0.47.0/harper-cli-x86_64-unknown-linux-musl.tar.gz --output-document harper.tar.gz
+                    tar -xvzf ./harper.tar.gz -C /usr/bin/
+                    chmod +x /usr/bin/harper-cli
+            - run:
+                name: Run Harper lint
+                command: |
+                    for f in ./src/*
+                    do
+                        harper-cli lint "$f" || true
+                    done
     semgrep-full-scan:
         docker:
             - image: semgrep/semgrep:1.135.0
@@ -180,7 +210,11 @@ jobs:
                                         docker push $CONTAINER_REGISTRY_URL/$CONTAINER_REGISTRY/delfruit-backend:stable
                             
 workflows:
-    version: 2
+    version: 2.0
+    check:
+      jobs:
+          - harper-lint:
+              name: Harper grammar checker
     analysis:
         jobs:
             - semgrep-full-scan:
