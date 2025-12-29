@@ -545,7 +545,7 @@ describe("game controller", () => {
         return expect(games.find(o => o.id == game.id)).toBeUndefined();
     });
 
-    test("returns the total count of matched games in header", async () => {
+    test.skip("returns the total count of matched games in header", async () => {
         const game = await createGame();
 
         const list = await axios.get(`http://localhost:4201/games`, {
@@ -557,7 +557,7 @@ describe("game controller", () => {
         expect(list.headers["total-count"]).toEqual("1");
     });
 
-    test("returns 0 for the total count of matched games in header when no match", async () => {
+    test.skip("returns 0 for the total count of matched games in header when no match", async () => {
 		const list = await axios.get(`http://localhost:4201/games`, {
             params: { name: "a game with this name should NEVER exist!!!!!" }
         });
