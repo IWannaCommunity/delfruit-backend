@@ -13,7 +13,7 @@ describe("game controller", () => {
     test("allows admins to add a game", async () => {
         const user = await createUser(true);
 
-        const rsp = await axios.post("http://localhost:4201/games", { name: "i wanna " + user.username, url: "example.com/" + user.username, author: user.username }, { headers: { "Authorization": "Bearer " + user.token } });
+        const rsp = await axios.post("http://localhost:4201/games", { name: "i wanna " + user.username, url: "example.com/" + user.username, author: [user.username], collab: false }, { headers: { "Authorization": "Bearer " + user.token } });
 
         assertAxiosRequest(rsp, 201);
 
@@ -54,7 +54,7 @@ describe("game controller", () => {
         const name = genGamename();
 
         // we need a game to delete first!
-        const rsp = await axios.post("http://localhost:4201/games", { name: "i wanna be the " + name, url: "example.com/" + name, author: user.username }, { headers: { "Authorization": "Bearer " + user.token } });
+        const rsp = await axios.post("http://localhost:4201/games", { name: "i wanna be the " + name, url: "example.com/" + name, author: [user.username], collab: false }, { headers: { "Authorization": "Bearer " + user.token } });
         assertAxiosRequest(rsp, 201);
 
         expect(rsp).toHaveProperty("data");
@@ -84,7 +84,8 @@ describe("game controller", () => {
             {
                 name: "i wanna " + user.username,
                 url: "example.com/" + user.username,
-                author: user.username
+                author: [user.username],
+				collab: false
             },
             { headers: { 'Authorization': "Bearer " + user.token } });
 
