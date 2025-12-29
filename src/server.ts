@@ -270,7 +270,7 @@ async function main(): Promise<number> {
 		identifier: "exprSpdLmt-",
 		store: new MemcachedStore({ prefix: "exprSpdLmt-", client: memcached }),
 	});
-	app.use(expressSpeedLimiter);
+	//app.use(expressSpeedLimiter);
 
 	LOG.info("Registering API routes.");
 	app.use(urlencoded({ extended: true }));
