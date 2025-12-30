@@ -121,7 +121,8 @@ export async function createGame(parameters?: any): Promise<any> {
         "http://localhost:4201/games",
         {
             name: "i wanna be the " + name,
-            author: user.username,
+            author: [user.username],
+			collab: false,
             ...parameters,
         },
         { headers: { Authorization: "Bearer " + user.token } },
