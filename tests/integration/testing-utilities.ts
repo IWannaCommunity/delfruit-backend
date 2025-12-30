@@ -79,7 +79,7 @@ export async function createUser(isAdmin: boolean): Promise<TestUser> {
             connectTimeout: 1000,
         });
         try {
-            const success = await db.execute("update User set is_admin = 1 WHERE id = ?", [reg.data.id]);
+            const success = await db.execute("update User set is_admin = 1 WHERE name = ?", [usernameA]);
             expect(success.affectedRows).toEqual(1);
         } catch (err) {
             throw new Error("failed to connect to database!\n" + err);
