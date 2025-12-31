@@ -102,7 +102,7 @@ async function main(): Promise<number> {
         LOG.debug("Setting up a fallback Admin user.");
         const fallbackCiUser = await datastore.addUser("ci", config.db.password, "ci@example.com");
 		LOG.trace(fallbackCiUser, "CI user created.");
-        const dbSetAdminRes = await db.execute(`UPDATE delfruit.User u SET u.is_admin = 1 WHERE u.id = `, [fallbackCiUser.id]);
+        const dbSetAdminRes = await db.execute(`UPDATE User u SET u.is_admin = 1 WHERE u.id = ?`, [fallbackCiUser.id]);
         LOG.debug(dbSetAdminRes, "Fallback CI account result.");
 	}
 
