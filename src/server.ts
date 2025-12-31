@@ -98,6 +98,10 @@ async function main(): Promise<number> {
 			const res = await db.execute(String(fileBlob), []);
 			LOG.debug(res, "Migration result");
 		}
+        LOG.debug("Setting up a fallback Admin user.");
+        const fallbackCiUser = await datastore.addUser("ci", config.db.password, "ci@example.com");
+        const dbSetAdminRes = await db.execute(`UPDATE User SET is_admin = 1 WHERE id = `, [fallbackCiUser.id]);
+        LOG.debug(dbSetAdminRes, "Fallback CI account result.");
 	}
 
 	LOG.info("Initializing Express.js.");
