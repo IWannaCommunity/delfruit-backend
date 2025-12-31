@@ -1,6 +1,6 @@
 {
   "db":{
-    "host": "localhost",
+    "host": "mysql",
     "database": "delfruit",
     "user": "root",
     "password": "my-secret-pw",
