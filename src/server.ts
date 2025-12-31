@@ -21,6 +21,7 @@ import mysql, { Connection } from "mysql2";
 import { slowDown } from "express-slow-down";
 import { MemcachedStore } from "rate-limit-memcached";
 import { memcached } from "./datastore";
+import datastore from "./datastore";
 import { rateLimit } from "express-rate-limit";
 import axios from "axios";
 import { StdLogger } from "./logger";
