@@ -195,7 +195,7 @@ export async function addTag(user: TestUser): Promise<any> {
 
 export async function setUserToken(user: TestUser, token: string): Promise<any> {
     const database = new Database({
-        host: "localhost",
+        host: config.db.host,
         port: 3306,
         database: config.db.database,
         user: config.db.user,
