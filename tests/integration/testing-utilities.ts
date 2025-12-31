@@ -76,7 +76,7 @@ export async function createUser(isAdmin: boolean): Promise<TestUser> {
             database: config.db.database,
             user: config.db.user,
             password: config.db.password,
-            connectTimeout: 1000,
+            connectTimeout: 5000,
         });
         try {
             const success = await db.execute("update User set is_admin = 1 WHERE name = ?", [usernameA]);
