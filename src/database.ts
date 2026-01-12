@@ -5,6 +5,7 @@ import mysql, {
 	type QueryError,
 } from "mysql2";
 import type Config from "./model/config";
+
 const config: Config = require("./config/config.json");
 
 export class Database {
@@ -62,19 +63,100 @@ export class Database {
 	}
 
 	query(sql: string, args?: any[]): Promise<any[]> {
+		console.log(sql);
+		args = args ?? [];
+		if (typeof args !== "object") {
+			console.warn("Argument passed in was not an array.");
+			args = [args];
+		}
 		return new Promise((resolve, reject) => {
-			this.connection.query(sql, args, (err, rows) => {
-				if (err) reject(err);
-				else resolve(rows as any[]);
+			this.connection.prepare(sql, (e, stmt) => {
+				if (e) reject(e);
+				else {
+					console.log("query");
+					console.log(args);
+					// WTF: unfixed prepared statement bug from 2020, wow (https://github.com/sidorares/node-mysql2/issues/1239#issuecomment-766867699)
+					// FIX: issue is fixed by wrapping numbers into strings, then letting a adapter driver resolve it's actual type
+					if (typeof args === "object") {
+						args = args.map((v) => {
+							if (typeof v === "number") {
+								return String(v);
+							} else {
+								return v;
+							}
+						});
+					}
+					console.log(args);
+
+					stmt.execute(args, (err, rows) => {
+						if (err) {
+							stmt.close();
+							reject(err);
+						} else resolve(rows as any[]);
+					});
+				}
+			});
+		});
+	}
+
+	query_unsafe(sql: string, args?: any[]): Promise<any[]> {
+		args = args ?? [];
+		if (typeof args !== "object") {
+			console.warn("Argument passed in was not an array.");
+			args = [args];
+		}
+
+		if (typeof args === "object") {
+			args = args.map((v) => {
+				if (typeof v === "string") {
+					return this.connection.escape(v);
+				} else {
+					return v;
+				}
+			});
+		}
+		console.log(sql);
+
+		return new Promise((resolve, reject) => {
+			this.connection.query(sql, args, (e, rows) => {
+				if (e) reject(e);
+				else {
+					resolve(rows as any[]);
+				}
 			});
 		});
 	}
 
 	execute(sql: string, args?: any[]): Promise<any> {
+		args = args ?? [];
+		if (typeof args !== "object") {
+			console.warn("Argument passed in was not an array.");
+			args = [args];
+		}
+
+		console.log(sql);
 		return new Promise((resolve, reject) => {
-			this.connection.query(sql, args, (err, rows) => {
-				if (err) reject(err);
-				else resolve(rows as any);
+			this.connection.prepare(sql, (e, stmt) => {
+				if (e) reject(e);
+				else {
+					console.log("execute");
+					console.log(args);
+					if (typeof args === "object") {
+						args = args.map((v) => {
+							if (typeof v === "number") {
+								return String(v);
+							} else {
+								return v;
+							}
+						});
+					}
+					stmt.execute(args, (err, rows) => {
+						if (err) {
+							stmt.close();
+							reject(err);
+						} else resolve(rows as any[]);
+					});
+				}
 			});
 		});
 	}
