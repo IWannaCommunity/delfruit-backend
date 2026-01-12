@@ -458,7 +458,7 @@ ${options.page !== undefined ? " LIMIT ?,? " : ""}
 
 			console.log(query);
 			console.log("running");
-			const results = await database.query(
+			const results = await database.query_unsafe(
 				query,
 				where.getParams().concat(params),
 			);
@@ -751,7 +751,7 @@ LEFT JOIN Rating r ON r.game_id = g.id AND r.removed = 0
 WHERE g.id = ?
 `;
 			try {
-				const res = await db.query(query, [id]);
+				const res = await db.query_unsafe(query, [id]);
 				if (!res || res.length == 0) return null;
 
 				const game = res[0];
@@ -955,7 +955,7 @@ GROUP BY gt.game_id, gt.tag_id
 
 			const database = new Database();
 			try {
-				return await database.query(query, whereList.getParams());
+				return await database.query_unsafe(query, whereList.getParams());
 			} finally {
 				database.close();
 			}
