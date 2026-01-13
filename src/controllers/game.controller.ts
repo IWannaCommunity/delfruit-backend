@@ -387,6 +387,7 @@ export class GameController extends Controller {
 		}
 
 		const newReview = await datastore.addReview(requestBody, id, user.sub);
+		await datastore.setTags(id, requestBody.user_id, requestBody.tags); // TODO: make this a async job
 		return newReview;
 	}
 
