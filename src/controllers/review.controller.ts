@@ -9,6 +9,7 @@ import {
 	Path,
 	Put,
 	Query,
+	Request,
 	Response,
 	Route,
 	Security,
@@ -24,10 +25,13 @@ const app = express.Router();
 export default app;
 
 import type Config from "../model/config";
+
 const config: Config = require("../config/config.json");
 
 import * as jwt from "jsonwebtoken";
+import type { RequestExt } from "../model/app/request";
 import type { GetReviewOptions } from "../model/GetReviewOptions";
+
 function extractBearerJWT(header_token: string): string | object {
 	if (!header_token.includes("Bearer ")) {
 		throw new Error("missing prefix");
@@ -117,25 +121,24 @@ export class ReviewController extends Controller {
 	@Response<void>(400, "Not Found")
 	@Patch("{id}")
 	public async patchReview(
+		@Request() req: RequestExt,
 		@Header("Authorization") authorization: string,
 		@Path() id: number,
 		@Body() requestBody: Review,
 	): Promise<void> {
-		// NOTE: auth guard should make the error condition unreachable
-		const user = extractBearerJWT(authorization);
-
-		const isAdmin = user.isAdmin;
+		const isAdmin = req.app_user.isAdmin;
 
 		const ogReview = await datastore.getReview(+id);
 		if (ogReview === null) return this.setStatus(404);
 
-		const isReviewer = +ogReview.user_id! == +user.sub;
+		const isReviewer = +ogReview.user_id! == Number(req.app_user.sub);
 
-		if (!isAdmin && !isReviewer) return this.setStatus(403);
+		if (!isAdmin || !isReviewer) return this.setStatus(403);
 
 		const review = requestBody;
 		review.id = +id;
 
+		// QUEST: what is the purpose of this check
 		if (!isAdmin && !isReviewer) {
 			delete review.removed;
 		}
