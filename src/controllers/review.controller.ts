@@ -133,7 +133,7 @@ export class ReviewController extends Controller {
 
 		const isReviewer = +ogReview.user_id! == Number(req.app_user.sub);
 
-		if (!isAdmin || !isReviewer) return this.setStatus(403);
+		if (!isAdmin && !isReviewer) return this.setStatus(403);
 
 		const review = requestBody;
 		review.id = +id;
