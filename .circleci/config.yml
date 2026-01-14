@@ -48,7 +48,7 @@ jobs:
             - checkout
             - run:
                     name: "Semgrep Full Scan"
-                    command: semgrep ci --max-memory 3072 --optimizations=all --oss-only --develop
+                    command: semgrep ci --max-memory 3072 --optimizations=all --oss-only --develop --timeout 60 --timeout-threshold 3
     semgrep-diff-scan:
         parameters:
             default_branch:
