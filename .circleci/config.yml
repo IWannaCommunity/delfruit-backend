@@ -41,29 +41,56 @@ jobs:
                     do
                         harper-cli lint "$f" || true
                     done
-    semgrep-full-scan:
+    semgrep-full-scan-code:
         docker:
             - image: semgrep/semgrep:1.136.0
+        resource_class: medium+
         steps:
             - checkout
             - run:
-                    name: "Semgrep Full Scan"
-                    command: semgrep ci --max-memory 3072 --optimizations=all --oss-only --timeout 60 --timeout-threshold 3
-    semgrep-diff-scan:
+                    name: "Semgrep Full Scan (Code)"
+                    command: semgrep ci --code --max-memory 5120 --optimizations=all --oss-only --timeout 60 --timeout-threshold 3
+    semgrep-full-scan-supplychain:
+        docker:
+            - image: semgrep/semgrep:1.136.0
+        resource_class: medium+
+        steps:
+            - checkout
+            - run:
+                    name: "Semgrep Full Scan (Supply Chain)"
+                    command: semgrep ci --supply-chain --max-memory 5120 --optimizations=all --oss-only --timeout 60 --timeout-threshold 3
+    semgrep-diff-scan-code:
         parameters:
             default_branch:
                 type: string
                 # Replace main with the repository default branch if different.
                 default: master
         docker:
-            - image: semgrep/semgrep:1.135.0
+            - image: semgrep/semgrep:1.136.0
+        resource_class: medium+
         steps:
             - checkout
             - run:
-                    name: Semgrep Differential Scan
+                    name: Semgrep Differential Scan (Code)
                     environment:
                         SEMGREP_BASELINE_REF: << parameters.default_branch >>
-                    command: semgrep ci
+                    command: semgrep ci --code
+    semgrep-diff-scan-supplychain:
+        parameters:
+            default_branch:
+                type: string
+                # Replace main with the repository default branch if different.
+                default: master
+        docker:
+            - image: semgrep/semgrep:1.136.0
+        resource_class: medium+
+        steps:
+            - checkout
+            - run:
+                    name: Semgrep Differential Scan (Supply Chain)
+                    environment:
+                        SEMGREP_BASELINE_REF: << parameters.default_branch >>
+                    command: semgrep ci --supply-chain
     integration-tests:
         executor: node
         steps:
@@ -217,15 +244,29 @@ workflows:
               name: Harper grammar checker
     analysis:
         jobs:
-            - semgrep-full-scan:
-                name: Semgrep Scan - Full
+            - semgrep-full-scan-code:
+                name: Semgrep Scan (Code) - Full
                 filters:
                     branches:
                         only: master
                 context:
                     - semgrep
-            - semgrep-diff-scan:
-                name: Semgrep Scan - Diff
+            - semgrep-full-scan-supplychain:
+                name: Semgrep Scan (Supply Chain) - Full
+                filters:
+                    branches:
+                        only: master
+                context:
+                    - semgrep
+            - semgrep-diff-scan-code:
+                name: Semgrep Scan (Code) - Diff
+                filters:
+                    branches:
+                        ignore: master
+                context:
+                    - semgrep
+            - semgrep-diff-scan-supplychain:
+                name: Semgrep Scan (Supply Chain) - Diff
                 filters:
                     branches:
                         ignore: master
