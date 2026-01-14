@@ -25,6 +25,7 @@ import datastore from "./datastore";
 import { rateLimit } from "express-rate-limit";
 import axios from "axios";
 import { StdLogger } from "./logger";
+import multer from "multer";
 
 /** Exit codes for fatal errors. */
 enum ExitCode {
@@ -278,9 +279,12 @@ async function main(): Promise<number> {
 	});
 	//app.use(expressSpeedLimiter);
 
+	LOG.debug("Initializing Multer file upload storage.");
+	const multerCfg = multer({ limits: { files: 1, fileSize: 5242880 } });
+
 	LOG.info("Registering API routes.");
 	app.use(urlencoded({ extended: true }));
-	RegisterRoutes(app);
+	RegisterRoutes(app, { multer: multerCfg });
 
 	LOG.info("Startup finished.");
 	try {
