@@ -62,39 +62,39 @@ export function expressAuthentication(
 		);
 	}
 
-	// HACK: actually check scopes instead of whatever the fuck is happen below here
-	if (scopes && scopes[0] === "user") {
-		if (userCheck(token) === AuthnCheck.Authorized) {
-			req.app_user = token;
-			return Promise.resolve({});
+	if (scopes) {
+		switch (scopes[0]) {
+			case "user":
+				if (userCheck(token) === AuthnCheck.Authorized) {
+					req.app_user = token;
+					return Promise.resolve({});
+				}
+				return Promise.reject(
+					resp
+						.status(403)
+						.contentType("application/json")
+						.send({ error: "not signed in" }),
+				);
+
+			case "admin":
+				if (adminCheck(token) === AuthnCheck.Authorized) {
+					req.app_user = token;
+					return Promise.resolve({});
+				}
+				return Promise.reject(
+					resp
+						.status(403)
+						.contentType("application/json")
+						.send({ error: "endpoint requires admin permission" }),
+				);
+
+			default:
+				return Promise.reject(
+					resp
+						.status(403)
+						.contentType("application/json")
+						.send({ error: "valid authn required" }),
+				);
 		}
 	}
-
-	if (token.isAdmin === false) {
-		if (userCheck(token) === AuthnCheck.Authorized) {
-			req.app_user = token;
-			return Promise.resolve({});
-		} else {
-			return Promise.reject(
-				resp
-					.status(403)
-					.contentType("application/json")
-					.send({ error: "not signed in" }),
-			);
-		}
-	} else {
-		if (adminCheck(token) === AuthnCheck.Authorized) {
-			req.app_user = token;
-			return Promise.resolve({});
-		} else {
-			return Promise.reject(
-				resp
-					.status(403)
-					.contentType("application/json")
-					.send({ error: "endpoint requires admin permission" }),
-			);
-		}
-	}
-
-	return Promise.reject({ error: "" });
 }
