@@ -111,8 +111,8 @@ jobs:
             - run:
                 name: Install Node.js from fnm
                 command: |
-                    __NODE_VER=$(cat .node-version)
-                    fnm install $(cat .node-version) && fnm use $(cat .node-version) --install-if-missing && fnm default $(cat .node-version)
+                    __CI_REPO_NODEJS_VER=$(cat .node-version)
+                    fnm install $__CI_REPO_NODEJS_VER && fnm use $__CI_REPO_NODEJS_VER --install-if-missing && fnm default $__CI_REPO_NODEJS_VER
             - restore_cache:
                 keys:
                     - node-v1-{{ checksum "package-lock.json" }}
