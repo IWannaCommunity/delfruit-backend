@@ -53,7 +53,7 @@ jobs:
     semgrep-full-scan-supplychain:
         docker:
             - image: semgrep/semgrep:1.136.0
-        resource_class: medium+
+        resource_class: large
         steps:
             - checkout
             - run:
