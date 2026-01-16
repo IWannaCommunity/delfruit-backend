@@ -93,6 +93,7 @@ jobs:
                     command: semgrep ci --supply-chain
     integration-tests:
         executor: node
+        resource_class: large
         steps:
             - checkout
             - run:
