@@ -29,7 +29,7 @@ export function expressAuthentication(
 	}
 	const resp = req.res;
 
-	if (!req.headers.authorization.includes("Bearer ")) {
+	if (!req.headers.authorization?.includes("Bearer ")) {
 		return Promise.reject(
 			resp
 				.status(401)
