@@ -58,7 +58,7 @@ jobs:
             - checkout
             - run:
                     name: "Semgrep Full Scan (Supply Chain)"
-                    command: semgrep ci --supply-chain --max-memory 5120 --optimizations=all --oss-only --timeout 60 --timeout-threshold 3
+                    command: semgrep ci --supply-chain --max-memory 7168 --optimizations=all --oss-only --timeout 60 --timeout-threshold 3
     semgrep-diff-scan-code:
         parameters:
             default_branch:
@@ -128,7 +128,6 @@ jobs:
                 command: |
                     npm i --force --legacy-peer-deps -d
                     sleep 30
-                    npm uninstall bcrypt --force && npm install bcrypt@3.0.6 --force --legacy-peer-deps --save --save-exact # temporary, remove this later
             - run:
                 name: Run Integration Tests
                 command: |
