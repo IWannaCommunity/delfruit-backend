@@ -155,7 +155,7 @@ VALUES ( ?, ?, ? )
 			insertList.add("sortname", sortname);
 			insertList.add("url", game.url);
 			insertList.add("url_spdrn", game.urlSpdrn);
-			insertList.add("author", game.author);
+			insertList.add("author", game.author.join(" "));
 			insertList.add("collab", game.collab ? 1 : 0);
 			//insertList.add('date_created',);
 			insertList.add("adder_id", adderId);
