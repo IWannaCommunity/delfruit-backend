@@ -1121,9 +1121,14 @@ ${whereList.getClause()}
 			"g.date_created >= ?",
 			new Date(params.createdFrom ?? new Date(0)),
 		);
+		// HACK: did this mostly for tests, but occasionally a new game might be unsearchable for a few hours.
+		// because of this, I've decided to use a default initialized value that represents 48 hours from now,
+		// just to be safe. unsure if this has any real consequences, other than setting a game's date created
+		// value to 2 days in the future would no longer hide it from being searchable until that date. easily
+		// worked around by just adding 2 days on top of when you'd actually want it to be searchable.
 		whereList.add2(
 			"g.date_created <= ?",
-			new Date(params.createdTo ?? Date.now()),
+			new Date(params.createdTo ?? Date.now() + 48 * 60 * 60 * 1000), // use provided value or 48 hours from now
 		);
 
 		if (params.reviewedByUserId !== undefined) {
@@ -1217,7 +1222,7 @@ LIMIT ?,?
 			]);
 		console.log(`queryparms: ${queryparms}`);
 		try {
-			const rows = await database.query(query, queryparms);
+			const rows = await database.query_unsafe(query, queryparms);
 			console.log(`rows: ${rows}`);
 
 			if (!countOnly) {
