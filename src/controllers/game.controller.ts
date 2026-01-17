@@ -26,6 +26,7 @@ import {
 	Post,
 	Put,
 	Query,
+	Request,
 	Response,
 	Route,
 	Security,
@@ -41,6 +42,7 @@ import * as jwt from "jsonwebtoken";
 import type { Review } from "../model/Review";
 import type { GetGamesParams, PostGameParams } from "../model/params/game";
 import type { APIError } from "../model/response/error";
+import { RequestExt } from "../model/app/request";
 function extractBearerJWT(header_token: string): string | object {
 	if (!header_token.includes("Bearer ")) {
 		throw new Error("missing prefix");
@@ -358,13 +360,11 @@ export class GameController extends Controller {
 	@Response<APIError>(404, "Game Not Found")
 	@Put("{id}/reviews")
 	public async putGameReview(
+		@Request() req: RequestExt,
 		@Header("Authorization") authorization: string,
 		@Path() id: number,
 		@Body() requestBody: Review,
 	): Promise<Review> {
-		// NOTE: auth guard should make the error condition unreachable
-		const user = extractBearerJWT(authorization);
-
 		if (isNaN(+id)) {
 			this.setStatus(400);
 			return { error: "id must be a number" };
@@ -386,7 +386,11 @@ export class GameController extends Controller {
 			);
 		}
 
-		const newReview = await datastore.addReview(requestBody, id, user.sub);
+		const newReview = await datastore.addReview(
+			requestBody,
+			id,
+			Number(req.app_user.sub),
+		);
 		await datastore.setTags(id, requestBody.user_id, requestBody.tags); // TODO: make this a async job
 		return newReview;
 	}
