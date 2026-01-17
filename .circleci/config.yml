@@ -126,7 +126,7 @@ jobs:
             - run:
                 name: Wait For Server Warmup
                 command: |
-                    npm i --force --legacy-peer-deps -d
+                    npm ci
                     sleep 30
             - run:
                 name: Run Integration Tests
