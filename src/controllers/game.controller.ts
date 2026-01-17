@@ -391,7 +391,9 @@ export class GameController extends Controller {
 			id,
 			Number(req.app_user.sub),
 		);
-		await datastore.setTags(id, requestBody.user_id, requestBody.tags); // TODO: make this a async job
+		if (requestBody.tags) {
+			await datastore.setTags(id, Number(req.app_user.sub), requestBody.tags); // TODO: make this a async job
+		}
 		return newReview;
 	}
 
