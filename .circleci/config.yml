@@ -17,6 +17,7 @@ executors:
 jobs:
     harper-lint:
         executor: linux-minimal
+        resource_class: small
         steps:
             - checkout
             - run:
