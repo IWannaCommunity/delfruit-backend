@@ -24,6 +24,7 @@ import { Rating } from "./game-router";
 let config: Config = require("./config/config.json");
 
 import Memcached = require("memcached");
+import type { GetGameParams } from "./model/params/game";
 export const memcached: Memcached = new Memcached(
 	config.memcache.hosts,
 	config.memcache.options,
@@ -1082,7 +1083,7 @@ ${whereList.getClause()}
 		return res[0].cnt;
 	},
 
-	async getGames(params: GetGamesParms, countOnly?: boolean) {
+	async getGames(params: GetGameParams, countOnly?: boolean) {
 		const database = new Database();
 
 		const whereList = new WhereList();
