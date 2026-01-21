@@ -17,7 +17,7 @@ export type User = {
 	bio: string;
 	selectedBadge: number;
 	banned?: boolean;
-	email?: Email;
+	email?: string | Email;
 };
 
 export type UserRegistrationResponse = {
