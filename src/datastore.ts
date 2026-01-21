@@ -1223,7 +1223,7 @@ LIMIT ?,?
 			]);
 		console.log(`queryparms: ${queryparms}`);
 		try {
-			const rows = await database.query_unsafe(query, queryparms);
+			const rows = await database.query(query, queryparms);
 			console.log(`rows: ${rows}`);
 
 			if (!countOnly) {
