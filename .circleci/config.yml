@@ -182,7 +182,7 @@ jobs:
             - run:
                 name: Generate SDK from Swagger Codegen
                 command: |
-                    docker run --rm -v ${PWD}:/local swaggerapi/swagger-codegen-cli-v3:3.0.71 generate -i /local/build/swagger.json -l typescript-axios --additional-properties "npmName=delfruit-swagger-cg-sdk,supportsES6=true,withInterfaces=false" -o /local/build/swagger-cg-sdk
+                    docker run --rm -v ${PWD}:/local swaggerapi/swagger-codegen-cli-v3:3.0.71 generate -i /local/build/swagger.json -l typescript-axios --additional-properties "npmName=delfruit-swagger-cg-sdk,supportsES6=true" -o /local/build/swagger-cg-sdk
             - run:
                 name: Upload SDK
                 command: |
