@@ -267,7 +267,7 @@ async function main(): Promise<number> {
 		identifier: "exprRateLmt-",
 		store: new MemcachedStore({ prefix: "exprRateLmt-", client: memcached }),
 	});
-	app.use(expressRateLimiter);
+	//app.use(expressRateLimiter);
 
 	LOG.debug("Initalizing Speed Limiter middleware for Express.js.");
 	const expressSpeedLimiter = slowDown({
