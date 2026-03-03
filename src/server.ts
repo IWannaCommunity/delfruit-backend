@@ -100,11 +100,18 @@ async function main(): Promise<number> {
 			const res = await db.execute(String(fileBlob), []);
 			LOG.debug(res, "Migration result");
 		}
-        LOG.debug("Setting up a fallback Admin user.");
-        const fallbackCiUser = await datastore.addUser("ci", config.db.password, "ci@example.com");
+		LOG.debug("Setting up a fallback Admin user.");
+		const fallbackCiUser = await datastore.addUser(
+			"ci",
+			config.db.password,
+			"ci@example.com",
+		);
 		LOG.trace(fallbackCiUser, "CI user created.");
-        const dbSetAdminRes = await db.execute(`UPDATE User u SET u.is_admin = 1 WHERE u.id = ?`, [fallbackCiUser.id]);
-        LOG.debug(dbSetAdminRes, "Fallback CI account result.");
+		const dbSetAdminRes = await db.execute(
+			`UPDATE User u SET u.is_admin = 1 WHERE u.id = ?`,
+			[fallbackCiUser.id],
+		);
+		LOG.debug(dbSetAdminRes, "Fallback CI account result.");
 	}
 
 	LOG.info("Initializing Express.js.");
@@ -251,7 +258,7 @@ async function main(): Promise<number> {
 
 	if (config.bcrypt_rounds < 10) {
 		LOG.warn(
-			config.bcrypt_rounds,
+			{ rounds: config.bcrypt_rounds },
 			"bcrypt_rounds in config is less than 10. Lower values mean faster hash attempts for password crackers!",
 		);
 	}
