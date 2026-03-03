@@ -56,7 +56,7 @@ async function sleep(ms: number): Promise<void> {
  */
 
 async function main(): Promise<number> {
-	const LOG: StdLogger = new StdLogger("trace", false);
+	const LOG: StdLogger = new StdLogger("debug", false);
 
 	LOG.info("Initiating Delicious Fruit NG 1.0.0-rc.0 server startup.");
 
