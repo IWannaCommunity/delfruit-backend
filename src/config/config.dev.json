@@ -39,5 +39,12 @@
     "options": {
       "maxExpiration": 86400
     }
-  }
+  },
+  "logLevel": "debug",
+  "initDatabase": true,
+  "captcha": {
+	  "cfTurnstileSecret": "1x0000000000000000000000000000000AA"
+  },
+  "registrationsEnabled": true,
+  "loginsEnabled": true
 }
