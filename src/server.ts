@@ -20,25 +20,23 @@ import { Database } from "./database";
 import datastore, { memcached } from "./datastore";
 import { refreshToken } from "./lib/auth-check";
 import { StdLogger } from "./logger";
-import type Config from "./model/config";
-
-const config: Config = require("./config/config.json");
+import Config from "./repository/config";
 
 const fsAsync = fs.promises;
 
 /** Exit codes for fatal errors. */
 enum ExitCode {
-    SUCCESS = 0,
-    /** Database initialization failed. */
-    DB_INIT_FAIL = 1,
-    /** S3 Object storage initialization failed. */
-    S3_INIT_FAIL = 2,
+	SUCCESS = 0,
+	/** Database initialization failed. */
+	DB_INIT_FAIL = 1,
+	/** S3 Object storage initialization failed. */
+	S3_INIT_FAIL = 2,
 }
 
 async function sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => {
-        setTimeout(resolve, ms);
-    });
+	return new Promise((resolve) => {
+		setTimeout(resolve, ms);
+	});
 }
 
 /**
@@ -55,170 +53,192 @@ async function sleep(ms: number): Promise<void> {
  */
 
 async function main(): Promise<number> {
-    const LOG: StdLogger = new StdLogger(config.logLevel, false);
+	const abrtCtrl = new AbortController();
 
-    LOG.info("Initiating Delicious Fruit NG 1.0.0-rc.0 server startup.");
+	const cfg = new Config();
+	await cfg.init(
+		"./src/config/config.json",
+		async (evt, f) => {
+			console.log(`Reloading config from event: ${evt}`);
+			await cfg.clearAndReload();
+		},
+		abrtCtrl.signal,
+	);
 
-    // TODO: database initialization step, currently assumed database is already initialized
+	const LOG: StdLogger = new StdLogger(cfg.getConfig().logLevel, false);
 
-    // HACK: but actually do db initialization, but only if we detect we're in CI
-    if (process.env.__DF_TEST_RUN) {
-        LOG.debug("Test run detected, executing alternative startup actions.");
-        await sleep(1000 * 45); // HACK: wait for mysql to startup
-        const cfg = { ...config.db };
-        delete cfg.database; // HACK: we don't want to set this
-        LOG.debug("Connecting to the database server.");
-        const conn: Connection = mysql.createConnection(cfg);
-        LOG.debug("Creating the database.");
-        conn.connect((e) => {
-            LOG.error(e, "Connection to database could not be established.");
-        });
-        await sleep(1000 * 5);
-        conn.execute(
-            "CREATE DATABASE IF NOT EXISTS delfruit",
-            [],
-            (e, res, fields) => {
-                LOG.trace(
-                    { error: e, resultsrows: res, fields },
-                    "SQL Execution of the create database statement.",
-                );
-            },
-        );
-        await sleep(1000 * 5);
+	LOG.info("Initiating Delicious Fruit NG 1.0.0-rc.0 server startup.");
 
-        LOG.debug("Running migrations from scratch.");
-        const db = new Database();
-        LOG.trace("Loading migrations from disk.");
-        const filenames = await fsAsync.readdir("./src/migrations");
-        LOG.trace(filenames, "Migration files to be ran.");
-        for (const filename of filenames) {
-            const fileBlob = await fsAsync.readFile(
-                `./src/migrations/${filename}`,
-                {},
-            );
-            const res = await db.execute(String(fileBlob), []);
-            LOG.debug(res, "Migration result");
-        }
-        LOG.debug("Setting up a fallback Admin user.");
-        const fallbackCiUser = await datastore.addUser(
-            "ci",
-            config.db.password,
-            "ci@example.com",
-        );
-        LOG.trace(fallbackCiUser, "CI user created.");
-        const dbSetAdminRes = await db.execute(
-            `UPDATE User u SET u.is_admin = 1 WHERE u.id = ?`,
-            [fallbackCiUser.id],
-        );
-        LOG.debug(dbSetAdminRes, "Fallback CI account result.");
-    }
+	// TODO: database initialization step, currently assumed database is already initialized
 
-    LOG.info("Initializing Express.js.");
+	// HACK: but actually do db initialization, but only if we detect we're in CI
+	if (process.env.__DF_TEST_RUN) {
+		LOG.debug("Test run detected, executing alternative startup actions.");
+		await sleep(1000 * 45); // HACK: wait for mysql to startup
+		const cfg_ = { ...cfg.getConfig().db };
+		delete cfg_.database; // HACK: we don't want to set this
+		LOG.debug("Connecting to the database server.");
+		const conn: Connection = mysql.createConnection(cfg_);
+		LOG.debug("Creating the database.");
+		conn.connect((e) => {
+			LOG.error(e, "Connection to database could not be established.");
+		});
+		await sleep(1000 * 5);
+		conn.execute(
+			"CREATE DATABASE IF NOT EXISTS delfruit",
+			[],
+			(e, res, fields) => {
+				LOG.trace(
+					{ error: e, resultsrows: res, fields },
+					"SQL Execution of the create database statement.",
+				);
+			},
+		);
+		await sleep(1000 * 5);
 
-    const app = express();
-    app.locals = { LOG };
-    app.use((req, res, next) => {
-        LOG.http(req, res, next);
-    });
+		LOG.debug("Running migrations from scratch.");
+		const db = new Database();
+		LOG.trace("Loading migrations from disk.");
+		const filenames = await fsAsync.readdir("./src/migrations");
+		LOG.trace(filenames, "Migration files to be ran.");
+		for (const filename of filenames) {
+			const fileBlob = await fsAsync.readFile(
+				`./src/migrations/${filename}`,
+				{},
+			);
+			const res = await db.execute(String(fileBlob), []);
+			LOG.debug(res, "Migration result");
+		}
+		LOG.debug("Setting up a fallback Admin user.");
+		const fallbackCiUser = await datastore.addUser(
+			"ci",
+			cfg.getConfig().db.password,
+			"ci@example.com",
+		);
+		LOG.trace(fallbackCiUser, "CI user created.");
+		const dbSetAdminRes = await db.execute(
+			`UPDATE User u SET u.is_admin = 1 WHERE u.id = ?`,
+			[fallbackCiUser.id],
+		);
+		LOG.debug(dbSetAdminRes, "Fallback CI account result.");
+	}
 
-    LOG.debug("Enabling CORS middleware for Express.js.");
-    app.use(cors());
+	LOG.info("Initializing Express.js.");
 
-    LOG.debug("Enabling JSON Body Parser middleware for Express.js.");
-    app.use(bodyParser.json({ type: "application/json" }));
+	const app = express();
+	app.locals = { LOG };
+	app.use((req, res, next) => {
+		LOG.http(req, res, next);
+	});
 
-    LOG.debug(
-        "Enabling JSON Web Tokens w/ Refresh Tokens middleware for Express.js.",
-    );
-    app.use(
-        jwt_middleware({
-            secret: config.app_jwt_secret,
-            credentialsRequired: false,
-        }),
-    );
-    app.use(refreshToken());
+	LOG.debug("Enabling CORS middleware for Express.js.");
+	app.use(cors());
 
-    LOG.debug("Enabling Role middleware for Express.js.");
-    app.use((req, res, next) => {
-        if (req.user) {
-            req.user.roles = ["game_update"];
-        }
-        next();
-    });
+	LOG.debug("Enabling JSON Body Parser middleware for Express.js.");
+	app.use(bodyParser.json({ type: "application/json" }));
 
-    LOG.debug("Enabling Custom Error Request Handler middleware for Express.js.");
-    const e: ErrorRequestHandler = (err, req, res, next) => {
-        if (err && err.name && err.name === "UnauthorizedError") {
-            //invalid token, jwt middleware returns more info in the err
-            //but we don't want the client to see
-            // message: 'jwt malformed',
-            // code: 'invalid_token',
-            return res.sendStatus(401);
-        }
+	LOG.debug(
+		"Enabling JSON Web Tokens w/ Refresh Tokens middleware for Express.js.",
+	);
+	app.use(
+		jwt_middleware({
+			secret: cfg.getConfig().app_jwt_secret,
+			credentialsRequired: false,
+		}),
+	);
+	app.use(refreshToken());
 
-        const id = uuid();
-        console.log(`severe error: id ${id}`);
-        console.log(err);
-        res.status(500).send({
-            error: "Internal Server Error",
-            id: id,
-        });
-    };
-    app.use(e);
+	LOG.debug("Enabling Role middleware for Express.js.");
+	app.use((req, res, next) => {
+		if (req.user) {
+			req.user.roles = ["game_update"];
+		}
+		next();
+	});
 
-    // DEBUG ERROR LOGGING
-    app.use((req, res, next) => {
-        var oldWrite = res.write,
-            oldEnd = res.end;
+	LOG.debug("Enabling Custom Error Request Handler middleware for Express.js.");
+	const e: ErrorRequestHandler = (err, req, res, next) => {
+		if (err && err.name && err.name === "UnauthorizedError") {
+			//invalid token, jwt middleware returns more info in the err
+			//but we don't want the client to see
+			// message: 'jwt malformed',
+			// code: 'invalid_token',
+			return res.sendStatus(401);
+		}
 
-        var chunks: any[] = [];
+		const id = uuid();
+		console.log(`severe error: id ${id}`);
+		console.log(err);
+		res.status(500).send({
+			error: "Internal Server Error",
+			id: id,
+		});
+	};
+	app.use(e);
 
-        res.write = function(chunk: any) {
-            chunks.push(chunk);
-            // @ts-expect-error
-            return oldWrite.apply(res, arguments);
-        };
+	// DEBUG ERROR LOGGING
+	app.use((req, res, next) => {
+		var oldWrite = res.write,
+			oldEnd = res.end;
 
-        res.end = function(chunk: any) {
-            if (chunk) chunks.push(chunk);
-            if (this.statusCode >= 400) {
-                let body: string;
-                if (typeof chunks[0] === "string") body = chunks.join();
-                else body = Buffer.concat(chunks).toString("utf8");
-                console.log("ERROR: ", res.statusCode, req.path, body);
-            }
-            // @ts-expect-error
-            oldEnd.apply(res, arguments);
-        };
+		var chunks: any[] = [];
 
-        next();
-    });
+		res.write = function (chunk: any) {
+			chunks.push(chunk);
+			// @ts-expect-error
+			return oldWrite.apply(res, arguments);
+		};
 
-    LOG.info("Initializing S3 Object Storage.");
-    try {
-        const minioClient = new Minio.Client(config.s3);
+		res.end = function (chunk: any) {
+			if (chunk) chunks.push(chunk);
+			if (this.statusCode >= 400) {
+				let body: string;
+				if (typeof chunks[0] === "string") body = chunks.join();
+				else body = Buffer.concat(chunks).toString("utf8");
+				console.log("ERROR: ", res.statusCode, req.path, body);
+			}
+			// @ts-expect-error
+			oldEnd.apply(res, arguments);
+		};
 
-        const bucketJustCreated = await new Promise((res, rej) => {
-            minioClient.bucketExists(config.s3_bucket, (err, exists) => {
-                if (err) return rej(err);
-                else if (exists) return res(false);
-                LOG.warn(config.s3_bucket, "Bucket doesn't exist, creating a new one.");
-                minioClient.makeBucket(config.s3_bucket, config.s3_region, (err) => {
-                    if (err) return rej(err);
-                    console.log(
-                        `Bucket ${config.s3_bucket} created successfully in ${config.s3_region}.`,
-                    );
-                    res(true);
-                });
-            });
-        });
+		next();
+	});
 
-        if (bucketJustCreated) {
-            LOG.warn(config.s3_bucket, "Setting public read policy on bucket.");
-            await new Promise((res, rej) => {
-                minioClient.setBucketPolicy(
-                    config.s3_bucket,
-                    `{
+	LOG.info("Initializing S3 Object Storage.");
+	try {
+		const minioClient = new Minio.Client(cfg.getConfig().s3);
+
+		const bucketJustCreated = await new Promise((res, rej) => {
+			minioClient.bucketExists(cfg.getConfig().s3_bucket, (err, exists) => {
+				if (err) return rej(err);
+				else if (exists) return res(false);
+				LOG.warn(
+					cfg.getConfig().s3_bucket,
+					"Bucket doesn't exist, creating a new one.",
+				);
+				minioClient.makeBucket(
+					cfg.getConfig().s3_bucket,
+					cfg.getConfig().s3_region,
+					(err) => {
+						if (err) return rej(err);
+						console.log(
+							`Bucket ${cfg.getConfig().s3_bucket} created successfully in ${cfg.getConfig().s3_region}.`,
+						);
+						res(true);
+					},
+				);
+			});
+		});
+
+		if (bucketJustCreated) {
+			LOG.warn(
+				cfg.getConfig().s3_bucket,
+				"Setting public read policy on bucket.",
+			);
+			await new Promise((res, rej) => {
+				minioClient.setBucketPolicy(
+					cfg.getConfig().s3_bucket,
+					`{
           "Version": "2012-10-17",
           "Id": "Public Access to Screenshots",
           "Statement": [
@@ -227,98 +247,100 @@ async function main(): Promise<number> {
               "Effect": "Allow",
               "Principal": "*",
               "Action": "s3:GetObject",
-              "Resource": "arn:aws:s3:::${config.s3_bucket}/*"
+              "Resource": "arn:aws:s3:::${cfg.getConfig().s3_bucket}/*"
             }
           ]
                     }`,
-                    (err) => {
-                        if (err) return rej(err);
-                        else res();
-                    },
-                );
-            });
-        }
-    } catch (e) {
-        LOG.fatal(e, "S3 Object Storage initialization failure.");
-        return ExitCode.S3_INIT_FAIL;
-    }
+					(err) => {
+						if (err) return rej(err);
+						else res();
+					},
+				);
+			});
+		}
+	} catch (e) {
+		LOG.fatal(e, "S3 Object Storage initialization failure.");
+		return ExitCode.S3_INIT_FAIL;
+	}
 
-    LOG.debug("Initalizing Swagger UI middleware for Express.js.");
-    fs.readFile(
-        path.join(__dirname, "../build/swagger.json"),
-        { encoding: "utf-8" },
-        (err, data) => {
-            if (err) {
-                return console.error(
-                    `OpenAPI definition could not be opened or found: ${err}`,
-                );
-            }
-            const specs = JSON.parse(data);
-            app.use("/", swaggerUi.serve, swaggerUi.setup(specs));
-        },
-    );
+	LOG.debug("Initalizing Swagger UI middleware for Express.js.");
+	fs.readFile(
+		path.join(__dirname, "../build/swagger.json"),
+		{ encoding: "utf-8" },
+		(err, data) => {
+			if (err) {
+				return console.error(
+					`OpenAPI definition could not be opened or found: ${err}`,
+				);
+			}
+			const specs = JSON.parse(data);
+			app.use("/", swaggerUi.serve, swaggerUi.setup(specs));
+		},
+	);
 
-    if (config.bcrypt_rounds < 10) {
-        LOG.warn(
-            { rounds: config.bcrypt_rounds },
-            "bcrypt_rounds in config is less than 10. Lower values mean faster hash attempts for password crackers!",
-        );
-    }
+	if (cfg.getConfig().bcrypt_rounds < 10) {
+		LOG.warn(
+			{ rounds: cfg.getConfig().bcrypt_rounds },
+			"bcrypt_rounds in config is less than 10. Lower values mean faster hash attempts for password crackers!",
+		);
+	}
 
-    LOG.debug("Initializing Rate Limiting middleware for Express.js.");
-    const expressRateLimiter = rateLimit({
-        windowMs: 1000 * 60 * 5,
-        max: 350, // TODO: remove this on a newer version of this library
-        limit: 350, // TODO: lower this on release
-        standardHeaders: "draft-8",
-        legacyHeaders: true,
-        ipv6Subnet: 48,
-        identifier: "exprRateLmt-",
-        store: new MemcachedStore({ prefix: "exprRateLmt-", client: memcached }),
-    });
-    //app.use(expressRateLimiter);
+	LOG.debug("Initializing Rate Limiting middleware for Express.js.");
+	const expressRateLimiter = rateLimit({
+		windowMs: 1000 * 60 * 5,
+		max: 350, // TODO: remove this on a newer version of this library
+		limit: 350, // TODO: lower this on release
+		standardHeaders: "draft-8",
+		legacyHeaders: true,
+		ipv6Subnet: 48,
+		identifier: "exprRateLmt-",
+		store: new MemcachedStore({ prefix: "exprRateLmt-", client: memcached }),
+	});
+	//app.use(expressRateLimiter);
 
-    LOG.debug("Initalizing Speed Limiter middleware for Express.js.");
-    const expressSpeedLimiter = slowDown({
-        windowMs: 1000 * 60 * 15,
-        delayAfter: 30,
-        delayMs: (hits) => hits * 250,
-        identifier: "exprSpdLmt-",
-        store: new MemcachedStore({ prefix: "exprSpdLmt-", client: memcached }),
-    });
-    //app.use(expressSpeedLimiter);
+	LOG.debug("Initalizing Speed Limiter middleware for Express.js.");
+	const expressSpeedLimiter = slowDown({
+		windowMs: 1000 * 60 * 15,
+		delayAfter: 30,
+		delayMs: (hits) => hits * 250,
+		identifier: "exprSpdLmt-",
+		store: new MemcachedStore({ prefix: "exprSpdLmt-", client: memcached }),
+	});
+	//app.use(expressSpeedLimiter);
 
-    LOG.debug("Initializing Multer file upload storage.");
-    const multerCfg = multer({ limits: { files: 1, fileSize: 5242880 } });
+	LOG.debug("Initializing Multer file upload storage.");
+	const multerCfg = multer({ limits: { files: 1, fileSize: 5242880 } });
 
-    LOG.info("Registering API routes.");
-    app.use(urlencoded({ extended: true }));
-    RegisterRoutes(app, { multer: multerCfg });
+	LOG.info("Registering API routes.");
+	app.use(urlencoded({ extended: true }));
+	RegisterRoutes(app, { multer: multerCfg });
 
-    LOG.info("Startup finished.");
-    try {
-        const server = app.listen(config.app_port, () => {
-            LOG.info(`Server started at localhost:${config.app_port}!`);
-        });
+	LOG.info("Startup finished.");
+	try {
+		const server = app.listen(cfg.getConfig().app_port, () => {
+			LOG.info(`Server started at localhost:${cfg.getConfig().app_port}!`);
+		});
 
-        process.on("SIGTERM", () => {
-            server.close(() => { });
-        });
+		process.on("SIGTERM", () => {
+			server.close(() => {
+				abrtCtrl.abort("Received process termination signal.");
+			});
+		});
 
-        while (server.listening) {
-            await sleep(4);
-        }
-    } catch (e) {
-        LOG.fatal(e, "Application unexpectantly terminated.");
-    } finally {
-        memcached.end();
-    }
+		while (server.listening) {
+			await sleep(4);
+		}
+	} catch (e) {
+		LOG.fatal(e, "Application unexpectantly terminated.");
+	} finally {
+		memcached.end();
+	}
 
-    LOG.info("Application finished, shutting down.");
+	LOG.info("Application finished, shutting down.");
 
-    return ExitCode.SUCCESS;
+	return ExitCode.SUCCESS;
 }
 
 (async () => {
-    process.exit(await main());
+	process.exit(await main());
 })();
