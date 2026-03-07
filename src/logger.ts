@@ -1,4 +1,7 @@
 import pino, { Logger } from "pino";
+import pinoHttp, { HttpLogger } from "pino-http";
+import { IncomingMessage, ServerResponse } from "http";
+const { randomUUID } = require("node:crypto");
 
 const EXTLOGLEVELS = {
 	wtf: 80,
@@ -7,10 +10,22 @@ const EXTLOGLEVELS = {
 
 export class StdLogger {
 	logger: Logger;
+	httpLogger: HttpLogger;
 	dieOnAssert: boolean = true;
 
 	constructor(level: string, dieOnAssert: boolean = true) {
 		this.logger = pino({ level, customLevels: EXTLOGLEVELS });
+		this.httpLogger = pinoHttp({
+			logger: this.logger,
+			genReqId: (req: IncomingMessage, res: ServerResponse) => {
+				const existingID = req.id ?? req.headers["X-Trace-ID"];
+				if (existingID) return existingID;
+				const id = randomUUID();
+				res.setHeader("X-Trace-ID", id);
+				return id;
+			},
+			useLevel: "trace",
+		});
 		this.dieOnAssert = dieOnAssert;
 	}
 
@@ -43,8 +58,12 @@ export class StdLogger {
 		return this.logger.error(obj, msg, args);
 	}
 
-	warn(msg: string, ...args: Array<any>): void;
-	warn<T extends object>(obj: T, msg: string, ...args: Array<any>): void {
+	warn<S extends string>(msg: S, ...args: Array<any>): void;
+	warn<T extends object, S extends string>(
+		obj: T,
+		msg: S,
+		...args: Array<any>
+	): void {
 		return this.logger.warn(obj, msg, args);
 	}
 
@@ -62,4 +81,9 @@ export class StdLogger {
 	trace<T extends object>(obj: T, msg: string, ...args: Array<any>): void {
 		return this.logger.trace(obj, msg, args);
 	}
+
+	http(req: IncomingMessage, res: ServerResponse, next: VoidFunction): void {
+		this.httpLogger(req, res, next);
+	}
+}
 }
