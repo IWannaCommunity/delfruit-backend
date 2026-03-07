@@ -1,115 +1,149 @@
 import express from "express";
 import { Database } from "../database";
-import AuthModule from "../lib/auth";
 import datastore from "../datastore";
+import AuthModule from "../lib/auth";
 import moment = require("moment");
 import crypto from "crypto";
-import nodemailer from "nodemailer";
-import * as jwt from "jsonwebtoken";
 import util from "util";
 import axios from "axios";
-import Config from "../model/config";
-import { Body, Controller, Get, Header, Post, Response, Route, SuccessResponse, Tags } from "tsoa";
-import { APIError } from "../model/response/error";
-let config: Config = require("../config/config.json");
+import * as jwt from "jsonwebtoken";
+import nodemailer from "nodemailer";
+import {
+	Body,
+	Controller,
+	Get,
+	Header,
+	Post,
+	Produces,
+	Request,
+	Response,
+	Route,
+	SuccessResponse,
+	Tags,
+} from "tsoa";
+import type Config from "../model/config";
+import type { APIError } from "../model/response/error";
+import type { Problem } from "../model/response/problem";
+import type { Result } from "../model/response/result";
+import { RequestExt } from "../model/app/request";
+const config: Config = require("../config/config.json");
 
-const app = express.Router();
 const auth = new AuthModule();
-export default app;
 
 export interface AuthResponse {
-    /** @isInt @format int64 */
-    id: number;
-    name: string;
-    phash2: string; // TODO: REMOVE THIS!!!!
-    /** @isDate @format date */
-    dateCreated: string;
-    twitchLink?: string;
-    youtubeLink?: string;
-    nicoLink?: string;
-    twitterLink?: string;
-    bio?: string;
-    isAdmin: boolean;
-    email?: string;
-    banned: boolean;
-    /** @isInt @format int8 */
-    selected_badge?: number;
-    token: string;
+	/** @isInt @format int64 */
+	id: number;
+	name: string;
+	phash2: string; // TODO: REMOVE THIS!!!!
+	/** @isDate @format date */
+	dateCreated: string;
+	twitchLink?: string;
+	youtubeLink?: string;
+	nicoLink?: string;
+	twitterLink?: string;
+	bio?: string;
+	isAdmin: boolean;
+	email?: string;
+	banned: boolean;
+	/** @isInt @format int8 */
+	selected_badge?: number;
+	token: string;
 }
 
 interface UserCredentials {
-    username: string;
-    password: string;
+	username: string;
+	password: string;
 }
 
 interface ResetRequestParams {
-    username: string;
-    email: string;
+	username: string;
+	email: string;
 }
 
 interface FinalizePassResetParams {
-    username: string;
-    token: string;
-    password: string;
+	username: string;
+	token: string;
+	password: string;
 }
 
 @Route("auth")
 @Tags("Authentication")
 export class AuthController extends Controller {
-    /**
-     * Login
-     * @summary Login
-     */
-    @SuccessResponse(200, "Logged In")
-    @Response<APIError>(401, "Invalid Credentials")
-    @Response<APIError>(418, "Dishonorable or Low Reputation")
-    @Post("login")
-    public async postLogin(@Body() requestBody: UserCredentials): Promise<AuthResponse> {
-        const username = requestBody.username;
-        const password = requestBody.password;
+	/**
+	 * Login
+	 * @summary Login
+	 */
+	@SuccessResponse(200, "Logged In")
+	@Response<Problem>(
+		401,
+		"Invalid Credentials",
+		void 0,
+		"application/problem+json",
+	)
+	@Post("login")
+	public async postLogin(
+		@Request() req: RequestExt,
+		@Body() requestBody: UserCredentials,
+	): Promise<Result<AuthResponse, Problem>> {
+		const appCfg: Config = req.app.locals.appConfig.getConfig();
+		if (appCfg.loginsEnabled === false) {
+			this.setStatus(423);
+			return {
+				type: new URL("about:blank"),
+				title: "Logins are currently disabled.",
+				status: 423,
+				details: "Site administrators or webmaster has disabled user logins.",
+				instance: new URL("about:blank"),
+			};
+		}
 
-        const database = new Database();
-        try {
-            // TODO:stop grabbing phash2 or is_admin here
-            const users = await database.query("SELECT id,name,phash2,is_admin as isAdmin FROM User WHERE name = ?", [
-                username,
-            ]);
-            if (users.length == 0) {
-                this.setStatus(401);
-                return { error: "user does not exist" };
-            }
-            const user = users[0];
-            const verified = await auth.verifyPassword(user.phash2, password);
+		const username = requestBody.username;
+		const password = requestBody.password;
 
-            if (!verified) {
-                const u = await datastore.getUser(user.id);
-                await datastore.updateUser({
-                    id: user.id,
-                    unsuccessfulLogins: u.unsuccessfulLogins + 1,
-                });
-                this.setStatus(401);
-                return { error: "bad credentials" };
-            } else {
-                await datastore.updateUser({
-                    id: user.id,
-                    dateLastLogin: moment().format("YYYY-MM-DD HH:mm:ss"),
-                    lastIp: this.getHeaders()["x-forwarded-for"],
-                    unsuccessfulLogins: 0,
-                });
-                user.token = auth.getToken(user.name, user.id, user.isAdmin);
-                this.setHeader("token", user.token);
-                return user;
-            }
-        } finally {
-            database.close();
-        }
-    }
+		const database = new Database();
+		try {
+			// TODO:stop grabbing phash2 or is_admin here
+			const users = await database.query(
+				"SELECT id,name,phash2,is_admin as isAdmin FROM User WHERE name = ?",
+				[username],
+			);
+			if (users.length === 0) {
+				this.setStatus(401);
+				return { error: "user does not exist" };
+			}
+			const user = users[0];
+			const verified = await auth.verifyPassword(user.phash2, password);
 
-    /**
-     * Request Password Reset
-     * @summary Request Password Reset
-     */
-    @SuccessResponse(204, "Request Accepted")
+			// TODO: disable logins for user after a certain amount of unsuccessful attempts
+			if (!verified) {
+				const u = await datastore.getUser(user.id);
+				await datastore.updateUser({
+					id: user.id,
+					unsuccessfulLogins: u.unsuccessfulLogins + 1,
+				});
+				this.setStatus(401);
+				return { error: "bad credentials" };
+			} else {
+				await datastore.updateUser({
+					id: user.id,
+					dateLastLogin: moment().format("YYYY-MM-DD HH:mm:ss"),
+					lastIp: this.getHeaders()["x-forwarded-for"],
+					unsuccessfulLogins: 0,
+				});
+				user.token = auth.getToken(user.name, user.id, user.isAdmin);
+				this.setHeader("token", user.token);
+				return user;
+			}
+		} finally {
+			database.close();
+		}
+	}
+
+	/**
+	 * Request Password Reset
+	 * @summary Request Password Reset
+	 */
+	@SuccessResponse(204, "Request Accepted")
     @Response<APIError>(400, "Invalid Username")
     @Post("reset-request")
     public async postResetRequest(@Body() requestBody: ResetRequestParams): Promise<void> {
@@ -144,7 +178,7 @@ export class AuthController extends Controller {
                 [token, requestBody.username],
             );
 
-            let transporter = nodemailer.createTransport(config.smtp);
+            const transporter = nodemailer.createTransport(config.smtp);
             // TODO: no html email!!! email was designed for plaintext only!
             let html = `<html>
   <head>
@@ -189,7 +223,7 @@ export class AuthController extends Controller {
           <br><br>
           This link is valid for 2 hours since making the request.
           <br><br>
-          -The staff at Delicious-Fruit ❤️
+          -The staff at Delicious-Fruit ❤
       </div>
   </body>
 </html>`;
@@ -208,7 +242,7 @@ export class AuthController extends Controller {
 A password reset request was made on your behalf. If this wasn't you, you can safely ignore this message.\n
 To reset your password, visit this link: http://delicious-fruit.com/password_reset.php?name=${requestBody.username}&token=${token} \n
 This link is valid for 2 hours since making the request.\n
--The staff at Delicious-Fruit ❤️`,
+-The staff at Delicious-Fruit ❤`,
                 })
                 .then((mailResult) => {
                     console.log(mailResult);
@@ -223,11 +257,11 @@ This link is valid for 2 hours since making the request.\n
         }
     }
 
-    /**
-     * Should be called with the token the user received in their reset email. Generates a token after successful completion.
-     *     @summary Finalize Password Reset
-     * */
-    @SuccessResponse(200, "Password Reset")
+	/**
+	 * Should be called with the token the user received in their reset email. Generates a token after successful completion.
+	 *     @summary Finalize Password Reset
+	 * */
+	@SuccessResponse(200, "Password Reset")
     @Response<APIError>(401, "Bad Username/Token Pair")
     @Response<APIError>(422, "Unusable Token")
     @Post("reset")
@@ -304,11 +338,11 @@ This link is valid for 2 hours since making the request.\n
         }
     }
 
-    /**
-     * Allows a user with a valid token to request a fresh token with a new expiration date. This should be invoked whenever the 'useExp' timestamp in the token payload has been exceeded.
-     * @summary Refresh Token
-     * */
-    @SuccessResponse(200, "Latest user data with a fresh token")
+	/**
+	 * Allows a user with a valid token to request a fresh token with a new expiration date. This should be invoked whenever the 'useExp' timestamp in the token payload has been exceeded.
+	 * @summary Refresh Token
+	 * */
+	@SuccessResponse(200, "Latest user data with a fresh token")
     @Response(401, "Expired or Invalid Token")
     @Post("refresh")
     public async postRefresh(@Header("Authorization") authorization: string): Promise<AuthResponse> {
@@ -331,19 +365,23 @@ This link is valid for 2 hours since making the request.\n
 }
 
 function extractBearerJWT(header_token: string): string | object {
-    if (!header_token.includes("Bearer ")) {
-        throw new Error("missing prefix");
-    }
-    const unverified_token = header_token.split(" ")[1];
+	if (!header_token.includes("Bearer ")) {
+		throw new Error("missing prefix");
+	}
+	const unverified_token = header_token.split(" ")[1];
 
-    try {
-        return jwt.verify(unverified_token, config.app_jwt_secret);
-    } catch (e) {
-        throw new Error(`invalid token: ${e}`);
-    }
+	try {
+		return jwt.verify(unverified_token, config.app_jwt_secret);
+	} catch (e) {
+		throw new Error(`invalid token: ${e}`);
+	}
 }
 
-export async function recaptchaVerify(action: string, token: string, remoteIp?: string): Promise<boolean> {
+export async function recaptchaVerify(
+	action: string,
+	token: string,
+	remoteIp?: string,
+): Promise<boolean> {
 	if (!config.recaptcha_secret) {
 		//console.log('recaptcha secret missing, skipping validation');
 		return true;
@@ -354,14 +392,19 @@ export async function recaptchaVerify(action: string, token: string, remoteIp?: 
 	};
 	if (remoteIp) request.remoteip = remoteIp;
 	try {
-		const rsp = await axios.post("https://www.google.com/recaptcha/api/siteverify", request);
+		const rsp = await axios.post(
+			"https://www.google.com/recaptcha/api/siteverify",
+			request,
+		);
 		if (!rsp.data.success) {
 			console.log("reCaptcha: Invalid token!");
 			console.log(rsp.data);
 			return false;
 		}
 		if (rsp.data.action != action) {
-			console.log("reCaptcha: Action doesn't match expected action! expected: " + action);
+			console.log(
+				"reCaptcha: Action doesn't match expected action! expected: " + action,
+			);
 			console.log(rsp.data);
 			return false;
 		}
