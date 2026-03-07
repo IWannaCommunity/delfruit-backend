@@ -1,7 +1,7 @@
 import type * as Minio from "minio";
 import type mysql from "mysql2";
 
-export default interface Config {
+export type Config = {
 	db: mysql.ConnectionOptions;
 
 	app_port: number;
@@ -47,4 +47,4 @@ export default interface Config {
 	};
 	registrationsEnabled: boolean;
 	loginsEnabled: boolean;
-}
+};
