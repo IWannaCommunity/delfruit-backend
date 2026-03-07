@@ -86,4 +86,7 @@ export class StdLogger {
 		this.httpLogger(req, res, next);
 	}
 }
+
+export function getLoggerFromRequest(req: Express.Request) {
+	return req.app.locals.LOG;
 }
