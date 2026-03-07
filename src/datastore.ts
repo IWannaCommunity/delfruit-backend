@@ -30,8 +30,8 @@ export const memcached: Memcached = new Memcached(
 	config.memcache.options,
 );
 
-for (let host of config.memcache.hosts) {
 	memcached.connect(host, function (err: Error, conn: any) {
+for (const host of config.memcache.hosts) {
 		if (err) {
 			console.error(`memcached instance was unreachable: ${err}`);
 		}
@@ -92,7 +92,7 @@ VALUES ( ?, ?, ? )
 		updateList.add("selected_badge", user.selected_badge);
 
 		try {
-			let params = updateList.getParams();
+			const params = updateList.getParams();
 			params.push(user.id);
 			const rows = await database.execute(
 				` UPDATE User ${updateList.getSetClause()} WHERE id = ?`,
@@ -128,7 +128,7 @@ VALUES ( ?, ?, ? )
 		//updateList.add('owner_bio',game.ownerBio);
 
 		try {
-			let params = updateList.getParams();
+			const params = updateList.getParams();
 			params.push(game.id);
 			const rows = await database.execute(
 				` UPDATE Game ${updateList.getSetClause()} WHERE id = ?`,
@@ -261,7 +261,7 @@ LIMIT ?,?
 		if (!updateList.hasAny()) return true;
 
 		try {
-			let params = updateList.getParams();
+			const params = updateList.getParams();
 			params.push(report.id);
 			const rows = await database.execute(
 				` UPDATE Report ${updateList.getSetClause()} WHERE id = ?`,
@@ -316,7 +316,7 @@ LIMIT ?,?
 		if (!updateList.hasAny()) return true;
 
 		try {
-			let params = updateList.getParams();
+			const params = updateList.getParams();
 			params.push(article.id);
 			const rows = await database.execute(
 				` UPDATE News ${updateList.getSetClause()} WHERE id = ?`,
@@ -360,7 +360,7 @@ LIMIT ?,?
 	async getUserForLogin(params: UserLoginParams): Promise<any> {
 		const database = new Database();
 		let query = `SELECT id,name,phash2 FROM User WHERE`;
-		let qparams = [];
+		const qparams = [];
 		if (params.id != undefined) {
 			query += ` id = ? `;
 			qparams.push(params.id);
@@ -424,7 +424,7 @@ ${whereList.getClause()}
 				where.addDirect("g.owner_id is null or g.owner_id <> r.user_id");
 			}
 
-			let params = [];
+			const params = [];
 			if (options.page !== undefined) {
 				params.push(options.page * options.limit!);
 				params.push(options.limit);
@@ -534,7 +534,7 @@ ${options.page !== undefined ? " LIMIT ?,? " : ""}
 		if (!updateList.hasAny()) return true;
 
 		try {
-			let params = updateList.getParams();
+			const params = updateList.getParams();
 			params.push(review.id);
 			const rows = await database.execute(
 				` UPDATE Rating ${updateList.getSetClause()} WHERE id = ?`,
@@ -670,7 +670,7 @@ ${options.page !== undefined ? " LIMIT ?,? " : ""}
 		//TODO: single pattern
 		const database = new Database();
 		try {
-			let where = new WhereList();
+			const where = new WhereList();
 			where.add("l.id", id);
 
 			const lists = await database.query(
@@ -693,7 +693,7 @@ ${where.getClause()}
 	async getListGames(id: number): Promise<any[]> {
 		const database = new Database();
 		try {
-			let where = new WhereList();
+			const where = new WhereList();
 			where.add("lg.list_id", id);
 
 			return await database.query(
@@ -712,7 +712,7 @@ ${where.getClause()}
 	async addGameToList(listId: number, gameId: number): Promise<boolean> {
 		const database = new Database();
 		try {
-			let ins = new InsertList();
+			const ins = new InsertList();
 			ins.add("list_id", listId);
 			ins.add("game_id", gameId);
 
@@ -873,7 +873,7 @@ ORDER BY s.date_created DESC
 		if (!updateList.hasAny()) return true;
 
 		try {
-			let params = updateList.getParams();
+			const params = updateList.getParams();
 			params.push(ss.id);
 			const rows = await database.execute(
 				` UPDATE Screenshot ${updateList.getSetClause()} WHERE id = ?`,
@@ -993,7 +993,7 @@ ${whereList.getClause()}
 				[gameId, userId],
 			);
 
-			for (let tagId of tags) {
+			for (const tagId of tags) {
 				const insertList = new InsertList();
 				insertList.add("game_id", gameId);
 				insertList.add("user_id", userId);
@@ -1380,14 +1380,14 @@ LIMIT ?,?
 			const database = new Database();
 
 			try {
-				let whereList = new WhereList();
+				const whereList = new WhereList();
 				whereList.add("user_id", userid);
 				const permRows = await database.query(
 					`SELECT * FROM UserPermission ${whereList.getClause()}`,
 					whereList.getParams(),
 				);
 
-				let perms = permRows.reduce((o, v) => {
+				const perms = permRows.reduce((o, v) => {
 					o[v.permission_id] = v;
 					return o;
 				}, {} as any);
