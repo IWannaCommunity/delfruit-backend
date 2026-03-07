@@ -45,6 +45,9 @@ export class Database {
 		});
 	}
 
+	/**
+	 * @deprecated Use query instead.
+	 */
 	execute_p(stmt: PrepareStatementInfo, args?: any[]): Promise<Array<unknown>> {
 		return new Promise((resolve, reject) => {
 			stmt.execute(
