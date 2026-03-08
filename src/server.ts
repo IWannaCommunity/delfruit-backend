@@ -70,11 +70,8 @@ async function main(): Promise<number> {
 
 	LOG.info("Initiating Delicious Fruit NG 1.0.0-rc.0 server startup.");
 
-	// TODO: database initialization step, currently assumed database is already initialized
-
-	// HACK: but actually do db initialization, but only if we detect we're in CI
-	if (process.env.__DF_TEST_RUN) {
-		LOG.debug("Test run detected, executing alternative startup actions.");
+	if (cfg.getConfig().initDatabase || process.env.__DF_TEST_RUN) {
+		LOG.debug("Database initialization requested.");
 		await sleep(1000 * 45); // HACK: wait for mysql to startup
 		const cfg_ = { ...cfg.getConfig().db };
 		delete cfg_.database; // HACK: we don't want to set this
