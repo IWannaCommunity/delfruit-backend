@@ -21,6 +21,7 @@ import datastore, { memcached } from "./datastore";
 import { refreshToken } from "./lib/auth-check";
 import { StdLogger } from "./logger";
 import Config from "./repository/config";
+import { CFTurnstileVerifier } from "./utils/captcha";
 
 const fsAsync = fs.promises;
 
@@ -123,10 +124,15 @@ async function main(): Promise<number> {
 		LOG.debug(dbSetAdminRes, "Fallback CI account result.");
 	}
 
+	LOG.info("Creating a Cloudflare Turnstile Captcha verifier.");
+	const cfTurnstileVerifier = new CFTurnstileVerifier(
+		cfg.getConfig().captcha.cfTurnstileSecret,
+	);
+
 	LOG.info("Initializing Express.js.");
 
 	const app = express();
-	app.locals = { LOG };
+	app.locals = { LOG, appConfig: cfg, cfTurnstileVerifier };
 	app.use((req, res, next) => {
 		LOG.http(req, res, next);
 	});
