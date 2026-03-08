@@ -38,6 +38,7 @@ import type { Problem } from "../model/response/problem";
 import { Result } from "../model/response/result";
 import type { User, UserRegistrationResponse } from "../model/response/user";
 import { RequestExt } from "../model/app/request";
+import { CFTurnstileVerifier } from "../utils/captcha";
 const config: Config = require("../config/config.json");
 const auth = new AuthModule();
 
@@ -99,6 +100,7 @@ export class UserController extends Controller {
 	@Post()
 	public async postUser(
 		@Request() req: RequestExt,
+		@Header("CF-Turnstile-Proof") proof: string,
 		@Body() requestBody: UserRegistration,
 	): Promise<UserRegistrationResponse> {
 		const appCfg: Config = req.app.locals.appConfig.getConfig();
@@ -112,6 +114,13 @@ export class UserController extends Controller {
 					"Site administrators or webmaster has disabled user registrations.",
 				instance: new URL("about:blank"),
 			};
+		}
+
+		const cfTurnstileVerifier: CFTurnstileVerifier =
+			req.app.locals.cfTurnstileVerifier;
+		const humanAnalysis = await cfTurnstileVerifier.verifyWithReq(this, proof);
+		if (humanAnalysis !== undefined) {
+			return humanAnalysis;
 		}
 
 		const phash = await auth.hashPassword(requestBody.password);

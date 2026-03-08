@@ -43,6 +43,7 @@ import type { Review } from "../model/Review";
 import type { GetGamesParams, PostGameParams } from "../model/params/game";
 import type { APIError } from "../model/response/error";
 import { RequestExt } from "../model/app/request";
+import { CFTurnstileVerifier } from "../utils/captcha";
 function extractBearerJWT(header_token: string): string | object {
 	if (!header_token.includes("Bearer ")) {
 		throw new Error("missing prefix");
@@ -83,9 +84,18 @@ export class GameController extends Controller {
 	@Response<APIError>(403, "Insufficient Privileges")
 	@Post()
 	public async postGame(
+		@Request() req: RequestExt,
+		@Header("CF-Turnstile-Proof") proof: string,
 		@Header("Authorization") authorization: string,
 		@Body() requestBody: PostGameParams,
 	): Promise<Game> {
+		const cfTurnstileVerifier: CFTurnstileVerifier =
+			req.app.locals.cfTurnstileVerifier;
+		const humanAnalysis = await cfTurnstileVerifier.verifyWithReq(this, proof);
+		if (humanAnalysis !== undefined) {
+			return humanAnalysis;
+		}
+
 		const user = extractBearerJWT(authorization);
 
 		const uid = user.sub;
@@ -361,10 +371,18 @@ export class GameController extends Controller {
 	@Put("{id}/reviews")
 	public async putGameReview(
 		@Request() req: RequestExt,
+		@Header("CF-Turnstile-Proof") proof: string,
 		@Header("Authorization") authorization: string,
 		@Path() id: number,
 		@Body() requestBody: Review,
 	): Promise<Review> {
+		const cfTurnstileVerifier: CFTurnstileVerifier =
+			req.app.locals.cfTurnstileVerifier;
+		const humanAnalysis = await cfTurnstileVerifier.verifyWithReq(this, proof);
+		if (humanAnalysis !== undefined) {
+			return humanAnalysis;
+		}
+
 		if (isNaN(+id)) {
 			this.setStatus(400);
 			return { error: "id must be a number" };
@@ -457,11 +475,20 @@ export class GameController extends Controller {
 	@Response<APIError>(404, "Game Not Found")
 	@Post("{id}/screenshots")
 	public async postGameScreenshot(
+		@Request() req: RequestExt,
+		@Header("CF-Turnstile-Proof") proof: string,
 		@Header("Authorization") authorization: string,
 		@Path() id: number,
 		@FormField() description?: string = "",
 		@UploadedFile() screenshot: Express.Multer.File,
 	): Promise<Screenshot> {
+		const cfTurnstileVerifier: CFTurnstileVerifier =
+			req.app.locals.cfTurnstileVerifier;
+		const humanAnalysis = await cfTurnstileVerifier.verifyWithReq(this, proof);
+		if (humanAnalysis !== undefined) {
+			return humanAnalysis;
+		}
+
 		console.log(screenshot);
 		// NOTE: auth guard should make the error condition unreachable
 		const user = extractBearerJWT(authorization);

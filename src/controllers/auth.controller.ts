@@ -2,10 +2,11 @@ import express from "express";
 import { Database } from "../database";
 import datastore from "../datastore";
 import AuthModule from "../lib/auth";
+
 import moment = require("moment");
-import crypto from "crypto";
-import util from "util";
+
 import axios from "axios";
+import crypto from "crypto";
 import * as jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
 import {
@@ -21,11 +22,14 @@ import {
 	SuccessResponse,
 	Tags,
 } from "tsoa";
+import util from "util";
+import type { RequestExt } from "../model/app/request";
 import type Config from "../model/config";
 import type { APIError } from "../model/response/error";
 import type { Problem } from "../model/response/problem";
 import type { Result } from "../model/response/result";
-import { RequestExt } from "../model/app/request";
+import type { CFTurnstileVerifier } from "../utils/captcha";
+
 const config: Config = require("../config/config.json");
 
 const auth = new AuthModule();
@@ -83,6 +87,7 @@ export class AuthController extends Controller {
 	@Post("login")
 	public async postLogin(
 		@Request() req: RequestExt,
+		@Header("CF-Turnstile-Proof") proof: string,
 		@Body() requestBody: UserCredentials,
 	): Promise<Result<AuthResponse, Problem>> {
 		const appCfg: Config = req.app.locals.appConfig.getConfig();
@@ -90,11 +95,18 @@ export class AuthController extends Controller {
 			this.setStatus(423);
 			return {
 				type: new URL("about:blank"),
-				title: "Logins are currently disabled.",
+				title: "Logins Disabled",
 				status: 423,
 				details: "Site administrators or webmaster has disabled user logins.",
 				instance: new URL("about:blank"),
 			};
+		}
+
+		const cfTurnstileVerifier: CFTurnstileVerifier =
+			req.app.locals.cfTurnstileVerifier;
+		const humanAnalysis = await cfTurnstileVerifier.verifyWithReq(this, proof);
+		if (humanAnalysis !== undefined) {
+			return humanAnalysis;
 		}
 
 		const username = requestBody.username;
@@ -144,43 +156,56 @@ export class AuthController extends Controller {
 	 * @summary Request Password Reset
 	 */
 	@SuccessResponse(204, "Request Accepted")
-    @Response<APIError>(400, "Invalid Username")
-    @Post("reset-request")
-    public async postResetRequest(@Body() requestBody: ResetRequestParams): Promise<void> {
-        const token = crypto.randomBytes(126).toString("hex");
+	@Response<APIError>(400, "Invalid Username")
+	@Post("reset-request")
+	public async postResetRequest(
+		@Request() req: RequestExt,
+		@Header("CF-Turnstile-Proof") proof: string,
+		@Body() requestBody: ResetRequestParams,
+	): Promise<void> {
+		const cfTurnstileVerifier: CFTurnstileVerifier =
+			req.app.locals.cfTurnstileVerifier;
+		const humanAnalysis = await cfTurnstileVerifier.verifyWithReq(this, proof);
+		if (humanAnalysis !== undefined) {
+			return humanAnalysis;
+		}
 
-        const database = new Database();
-        try {
-            const results = await database.query("SELECT reset_token_set_time FROM User WHERE name = ? AND email = ?", [
-                requestBody.username,
-                requestBody.email,
-            ]);
+		const token = crypto.randomBytes(126).toString("hex");
 
-            // if no user by name, return OK anyway
-            if (results.length === 0) return this.setStatus(204);
-            const result = results[0];
+		const database = new Database();
+		try {
+			const results = await database.query(
+				"SELECT reset_token_set_time FROM User WHERE name = ? AND email = ?",
+				[requestBody.username, requestBody.email],
+			);
 
-            // because we sent a email on each request,
-            // this could be used to involentarily spam
-            // someone's inbox, which is usually frowned
-            // upon by email providers. so we only allow
-            // resets every hour.
-            const rsts = result.reset_token_set_time;
-            if (rsts && moment(rsts).isAfter(moment().subtract(1, "hours"))) {
-                console.log(`Attempt to reset password too quickly for ${requestBody.username}!`);
-                this.setStatus(425);
-                return { error: "too soon to reset, try later" };
-            }
+			// if no user by name, return OK anyway
+			if (results.length === 0) return this.setStatus(204);
+			const result = results[0];
 
-            await database.execute(
-                `UPDATE User SET reset_token = ?, reset_token_set_time = CURRENT_TIMESTAMP
+			// because we sent a email on each request,
+			// this could be used to involentarily spam
+			// someone's inbox, which is usually frowned
+			// upon by email providers. so we only allow
+			// resets every hour.
+			const rsts = result.reset_token_set_time;
+			if (rsts && moment(rsts).isAfter(moment().subtract(1, "hours"))) {
+				console.log(
+					`Attempt to reset password too quickly for ${requestBody.username}!`,
+				);
+				this.setStatus(425);
+				return { error: "too soon to reset, try later" };
+			}
+
+			await database.execute(
+				`UPDATE User SET reset_token = ?, reset_token_set_time = CURRENT_TIMESTAMP
       WHERE name = ?`,
-                [token, requestBody.username],
-            );
+				[token, requestBody.username],
+			);
 
-            const transporter = nodemailer.createTransport(config.smtp);
-            // TODO: no html email!!! email was designed for plaintext only!
-            let html = `<html>
+			const transporter = nodemailer.createTransport(config.smtp);
+			// TODO: no html email!!! email was designed for plaintext only!
+			let html = `<html>
   <head>
       <style>
           body {
@@ -227,35 +252,35 @@ export class AuthController extends Controller {
       </div>
   </body>
 </html>`;
-            html = util.format(html, requestBody.username, token);
+			html = util.format(html, requestBody.username, token);
 
-            //sendmail is being called non-synchronously here (without await) because it can take a second
-            //we're not telling the client anything different whether it succeeds or fails
-            //so just send the 204 at this point
-            transporter
-                .sendMail({
-                    from: "webmaster@delicious-fruit.com",
-                    to: requestBody.email,
-                    subject: `Delicious-Fruit Password Reset`,
-                    html,
-                    text: `Greetings from Delicious Fruit!\n
+			//sendmail is being called non-synchronously here (without await) because it can take a second
+			//we're not telling the client anything different whether it succeeds or fails
+			//so just send the 204 at this point
+			transporter
+				.sendMail({
+					from: "webmaster@delicious-fruit.com",
+					to: requestBody.email,
+					subject: `Delicious-Fruit Password Reset`,
+					html,
+					text: `Greetings from Delicious Fruit!\n
 A password reset request was made on your behalf. If this wasn't you, you can safely ignore this message.\n
 To reset your password, visit this link: http://delicious-fruit.com/password_reset.php?name=${requestBody.username}&token=${token} \n
 This link is valid for 2 hours since making the request.\n
 -The staff at Delicious-Fruit ❤`,
-                })
-                .then((mailResult) => {
-                    console.log(mailResult);
-                })
-                .catch((err) => {
-                    console.log("Error sending mail!");
-                    console.log(err);
-                });
-            return this.setStatus(204);
-        } finally {
-            database.close();
-        }
-    }
+				})
+				.then((mailResult) => {
+					console.log(mailResult);
+				})
+				.catch((err) => {
+					console.log("Error sending mail!");
+					console.log(err);
+				});
+			return this.setStatus(204);
+		} finally {
+			database.close();
+		}
+	}
 
 	/**
 	 * Should be called with the token the user received in their reset email. Generates a token after successful completion.

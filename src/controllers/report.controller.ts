@@ -9,6 +9,7 @@ import {
 	Post,
 	Queries,
 	Query,
+	Request,
 	Response,
 	Route,
 	Security,
@@ -28,6 +29,8 @@ import type Config from "../model/config";
 const config: Config = require("../config/config.json");
 
 import * as jwt from "jsonwebtoken";
+import { RequestExt } from "../model/app/request";
+import { CFTurnstileVerifier } from "../utils/captcha";
 function extractBearerJWT(header_token: string): string | object {
 	if (!header_token.includes("Bearer ")) {
 		throw new Error("missing prefix");
@@ -114,9 +117,18 @@ export class ReportController extends Controller {
 	@Response<void>(400, "Invalid Type")
 	@Post()
 	public async postReport(
+		@Request() req: RequestExt,
+		@Header("CF-Turnstile-Proof") proof: string,
 		@Header("Authorization") authorization: string,
 		@Body() requestBody: Report,
 	): Promise<Report> {
+		const cfTurnstileVerifier: CFTurnstileVerifier =
+			req.app.locals.cfTurnstileVerifier;
+		const humanAnalysis = await cfTurnstileVerifier.verifyWithReq(this, proof);
+		if (humanAnalysis !== undefined) {
+			return humanAnalysis;
+		}
+
 		// NOTE: auth guard should make the error condition unreachable
 		const user = extractBearerJWT(authorization);
 

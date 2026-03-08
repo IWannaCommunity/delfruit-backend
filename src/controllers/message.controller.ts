@@ -6,13 +6,27 @@ import { Message } from "../model/Message";
 import { MessageQueryParams } from "../model/MessageQueryParams";
 import handle from "../lib/express-async-catch";
 import { userCheck } from "../lib/auth-check";
-import { Body, Controller, Get, Header, Path, Post, Route, Security, SuccessResponse, Tags } from "tsoa";
+import {
+	Body,
+	Controller,
+	Get,
+	Header,
+	Path,
+	Post,
+	Request,
+	Route,
+	Security,
+	SuccessResponse,
+	Tags,
+} from "tsoa";
 
 const app = express.Router();
 export default app;
 
 import * as jwt from "jsonwebtoken";
 import Config from "../model/config";
+import { RequestExt } from "../model/app/request";
+import { CFTurnstileVerifier } from "../utils/captcha";
 let config: Config = require("../config/config.json");
 function extractBearerJWT(header_token: string): string | object {
 	if (!header_token.includes("Bearer ")) {
@@ -102,7 +116,11 @@ export class MessageController extends Controller {
 		const whereList = new WhereList();
 		whereList.add("thread_id", parms.threadId);
 		//don't allow viewing a thread if you're not one of the participants
-		whereList.addPhrase("user_to_id = ? OR user_from_id = ?", user.sub, user.sub);
+		whereList.addPhrase(
+			"user_to_id = ? OR user_from_id = ?",
+			user.sub,
+			user.sub,
+		);
 
 		const database = new Database();
 		try {
@@ -123,9 +141,18 @@ export class MessageController extends Controller {
 	@SuccessResponse(201, "Sent Message")
 	@Post()
 	public async postMessage(
+		@Request() req: RequestExt,
+		@Header("CF-Turnstile-Proof") proof: string,
 		@Header("Authorization") authorization: string,
 		@Body() requestBody: Message,
 	): Promise<void> {
+		const cfTurnstileVerifier: CFTurnstileVerifier =
+			req.app.locals.cfTurnstileVerifier;
+		const humanAnalysis = await cfTurnstileVerifier.verifyWithReq(this, proof);
+		if (humanAnalysis !== undefined) {
+			return humanAnalysis;
+		}
+
 		// NOTE: auth guard should make the error condition unreachable
 		const user = extractBearerJWT(authorization);
 
