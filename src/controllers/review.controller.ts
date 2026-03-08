@@ -144,6 +144,10 @@ export class ReviewController extends Controller {
 		}
 
 		await datastore.updateReview(review);
+		// TODO: I'M LAZY, THIS JUST NEEDS TO BE IN THE REPO OR UPDATEREVIEW
+		if (requestBody.tags) {
+			await datastore.setTags(id, Number(req.app_user.sub), requestBody.tags); // TODO: make this a async job
+		}
 		return this.setStatus(204);
 	}
 
