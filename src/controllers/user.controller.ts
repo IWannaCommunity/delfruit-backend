@@ -39,6 +39,8 @@ import { Result } from "../model/response/result";
 import type { User, UserRegistrationResponse } from "../model/response/user";
 import { RequestExt } from "../model/app/request";
 import { CFTurnstileVerifier } from "../utils/captcha";
+import { customAlphabet } from "nanoid";
+import { nodemailer } from "nodemailer";
 const config: Config = require("../config/config.json");
 const auth = new AuthModule();
 
@@ -88,6 +90,11 @@ type KeysToCamelCase<T> =
 
 type UserCan = KeysToCamelCase<UserCanQueryResult>;
 
+const REGKEYGEN = customAlphabet(
+	"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+	8,
+);
+
 @Tags("Users")
 @Route("users")
 export class UserController extends Controller {
@@ -102,7 +109,7 @@ export class UserController extends Controller {
 		@Request() req: RequestExt,
 		@Header("CF-Turnstile-Proof") proof: string,
 		@Body() requestBody: UserRegistration,
-	): Promise<UserRegistrationResponse> {
+	): Promise<{}> {
 		const appCfg: Config = req.app.locals.appConfig.getConfig();
 		if (appCfg.registrationsEnabled === false) {
 			this.setStatus(423);
@@ -124,10 +131,12 @@ export class UserController extends Controller {
 		}
 
 		const phash = await auth.hashPassword(requestBody.password);
+		const key = REGKEYGEN();
 		const user = await datastore.addUser(
 			requestBody.username,
 			phash,
 			requestBody.email,
+			key,
 		);
 		if (!user) {
 			this.setStatus(400);
@@ -148,7 +157,18 @@ export class UserController extends Controller {
 			user.id,
 		);
 
-		return { token: auth.getToken(user.name, user.id, user.isAdmin) };
+		const mailer = nodemailer.createTransport(appCfg.smtp);
+		const message = `Your registration key for your account is: ${key}
+
+Or you can just click here: https://delicious-fruit.com/register/finalize?key=${key}?id=${user.id}`;
+		await mailer.sendMail({
+			from: appCfg.smtp.auth.user,
+			to: requestBody.email,
+			subject: "Delicious-Fruit Account Registration",
+			text: message,
+		});
+
+		return {};
 	}
 
 	/**
