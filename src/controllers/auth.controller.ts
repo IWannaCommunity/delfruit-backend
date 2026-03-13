@@ -16,6 +16,7 @@ import {
 	Header,
 	Post,
 	Produces,
+	Query,
 	Request,
 	Response,
 	Route,
@@ -29,6 +30,8 @@ import type { APIError } from "../model/response/error";
 import type { Problem } from "../model/response/problem";
 import type { Result } from "../model/response/result";
 import type { CFTurnstileVerifier } from "../utils/captcha";
+import { User } from "../model/entity/user";
+import { UserRegistrationResponse } from "../model/response/user";
 
 const config: Config = require("../config/config.json");
 
@@ -114,6 +117,17 @@ export class AuthController extends Controller {
 
 		const database = new Database();
 		try {
+			// check if they finished registration
+			const verified: Array<Boolean> = await database.query(
+				"SELECT IF(ali_token IS NULL, TRUE, FALSE) FROM User",
+			);
+			if (verified.length === 0) {
+				this.setStatus(401);
+				return { error: "user may not be verified" };
+			} else if (verified[0] === false) {
+				this.setStatus(401);
+				return { error: "user is not verified" };
+			}
 			// TODO:stop grabbing phash2 or is_admin here
 			const users = await database.query(
 				"SELECT id,name,phash2,is_admin as isAdmin FROM User WHERE name = ?",
@@ -146,6 +160,46 @@ export class AuthController extends Controller {
 				this.setHeader("token", user.token);
 				return user;
 			}
+		} finally {
+			database.close();
+		}
+	}
+
+	@SuccessResponse(200, "User successfully verified.")
+	@Response(401, "Verification Error", void 0)
+	@Get("user-verify")
+	public async getUserVerify(
+		@Query() key: string,
+		@Query() id: number,
+	): Promise<UserRegistrationResponse> {
+		const database = new Database();
+		try {
+			// prevent other users from logging in as each other
+			const verified: Array<Boolean> = await database.query(
+				"SELECT IF(ali_token IS NULL, TRUE, FALSE) FROM User",
+			);
+			if (verified.length === 0) {
+				this.setStatus(401);
+				return { error: "user may already be verified" };
+			} else if (verified[0] === false) {
+				this.setStatus(401);
+				return { error: "user is already verified" };
+			}
+
+			const valid: Array<Boolean> = await database.query(
+				"SELECT IF (id = ? AND ali_token = ?, TRUE, FALSE) FROM User",
+				[id, key],
+			);
+			if (valid.length === 0) {
+				this.setStatus(401);
+				return { error: "user may already be verified" };
+			}
+
+			await database.execute("UPDATE User SET ali_token = NULL WHERE id = ?", [
+				id,
+			]);
+			const user: User = await datastore.getUser(id);
+			return { token: auth.getToken(user.name, user.id, user.isAdmin) };
 		} finally {
 			database.close();
 		}
