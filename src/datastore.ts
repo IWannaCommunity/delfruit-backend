@@ -47,6 +47,7 @@ export default {
 		username: string,
 		password: string,
 		email: string,
+		regkey: string | null | undefined = null,
 	): Promise<any> {
 		const database = new Database();
 		try {
@@ -58,10 +59,10 @@ export default {
 
 			const result = await database.execute(
 				`
-INSERT INTO User (name, phash2, email)
-VALUES ( ?, ?, ? )
+INSERT INTO User (name, phash2, email, ali_token)
+VALUES ( ?, ?, ?, ? )
 `,
-				[username, password, email],
+				[username, password, email, regkey],
 			);
 
 			return this.getUser(result.insertId as number);
