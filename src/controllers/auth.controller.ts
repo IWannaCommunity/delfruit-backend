@@ -118,13 +118,13 @@ export class AuthController extends Controller {
 		const database = new Database();
 		try {
 			// check if they finished registration
-			const verified: Array<Boolean> = await database.query(
+			const emailVerified: Array<Boolean> = await database.query(
 				"SELECT IF(ali_token IS NULL, TRUE, FALSE) FROM User",
 			);
-			if (verified.length === 0) {
+			if (emailVerified.length === 0) {
 				this.setStatus(401);
 				return { error: "user may not be verified" };
-			} else if (verified[0] === false) {
+			} else if (emailVerified[0] === false) {
 				this.setStatus(401);
 				return { error: "user is not verified" };
 			}
