@@ -181,7 +181,7 @@ export class AuthController extends Controller {
 			if (verified.length === 0) {
 				this.setStatus(401);
 				return { error: "user may already be verified" };
-			} else if (verified[0] === false) {
+			} else if (verified[0] === true) {
 				this.setStatus(401);
 				return { error: "user is already verified" };
 			}
