@@ -39,7 +39,7 @@ export class CFTurnstileVerifier {
 		const resp = await req;
 
 		const data: CFTurnstileResponse =
-			(await resp.json()) satisfies CFTurnstileResponse;
+			(await resp.json()); //satisfies CFTurnstileResponse;
 		return data.success;
 	}
 

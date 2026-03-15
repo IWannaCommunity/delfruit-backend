@@ -15,7 +15,7 @@ export default class Config {
 
 	private deserializeToTypedObject() {
 		try {
-			this.inner = JSON.parse(this.configFileContents) satisfies TConfig;
+			this.inner = JSON.parse(this.configFileContents); //satisfies TConfig;
 		} catch (e) {
 			//console.log(e);
 			throw e;
