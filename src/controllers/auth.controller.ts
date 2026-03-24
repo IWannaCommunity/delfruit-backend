@@ -26,12 +26,12 @@ import {
 import util from "util";
 import type { RequestExt } from "../model/app/request";
 import type Config from "../model/config";
+import type { User } from "../model/entity/user";
 import type { APIError } from "../model/response/error";
 import type { Problem } from "../model/response/problem";
 import type { Result } from "../model/response/result";
+import type { UserRegistrationResponse } from "../model/response/user";
 import type { CFTurnstileVerifier } from "../utils/captcha";
-import { User } from "../model/entity/user";
-import { UserRegistrationResponse } from "../model/response/user";
 
 const config: Config = require("../config/config.json");
 
@@ -68,7 +68,7 @@ interface ResetRequestParams {
 }
 
 interface FinalizePassResetParams {
-	username: string;
+	email: string;
 	token: string;
 	password: string;
 }
@@ -118,7 +118,7 @@ export class AuthController extends Controller {
 		const database = new Database();
 		try {
 			// check if they finished registration
-			const emailVerified: Array<Boolean> = await database.query(
+			const emailVerified: Array<boolean> = await database.query(
 				"SELECT IF(ali_token IS NULL, TRUE, FALSE) FROM User",
 			);
 			if (emailVerified.length === 0) {
@@ -175,7 +175,7 @@ export class AuthController extends Controller {
 		const database = new Database();
 		try {
 			// prevent other users from logging in as each other
-			const verified: Array<Boolean> = await database.query(
+			const verified: Array<boolean> = await database.query(
 				"SELECT IF(ali_token IS NULL, TRUE, FALSE) FROM User",
 			);
 			if (verified.length === 0) {
@@ -186,7 +186,7 @@ export class AuthController extends Controller {
 				return { error: "user is already verified" };
 			}
 
-			const valid: Array<Boolean> = await database.query(
+			const valid: Array<boolean> = await database.query(
 				"SELECT IF (id = ? AND ali_token = ?, TRUE, FALSE) FROM User",
 				[id, key],
 			);
@@ -217,6 +217,8 @@ export class AuthController extends Controller {
 		@Header("CF-Turnstile-Proof") proof: string,
 		@Body() requestBody: ResetRequestParams,
 	): Promise<void> {
+		const appCfg: Config = req.app.locals.appConfig.getConfig();
+
 		const cfTurnstileVerifier: CFTurnstileVerifier =
 			req.app.locals.cfTurnstileVerifier;
 		const humanAnalysis = await cfTurnstileVerifier.verifyWithReq(this, proof);
@@ -298,7 +300,7 @@ export class AuthController extends Controller {
           <br><br>
           A password reset request was made on your behalf. If this wasn't you, you can safely ignore this message.
           <br><br>
-          To reset your password, click here: <a href='http://delicious-fruit.com/password-reset?name=%s&token=%s'>Reset Password</a>
+          To reset your password, click here: <a href='https://delicious-fruit.com/login/password-reset?email=%s&token=%s'>Reset Password</a>
           <br><br>
           This link is valid for 2 hours since making the request.
           <br><br>
@@ -306,20 +308,20 @@ export class AuthController extends Controller {
       </div>
   </body>
 </html>`;
-			html = util.format(html, requestBody.username, token);
+			html = util.format(html, requestBody.email, token);
 
 			//sendmail is being called non-synchronously here (without await) because it can take a second
 			//we're not telling the client anything different whether it succeeds or fails
 			//so just send the 204 at this point
 			transporter
 				.sendMail({
-					from: "webmaster@delicious-fruit.com",
+					from: appCfg.smtp.auth.user,
 					to: requestBody.email,
 					subject: `Account Password Reset`,
 					html,
 					text: `Greetings from Delicious Fruit!\n
 A password reset request was made on your behalf. If this wasn't you, you can safely ignore this message.\n
-To reset your password, visit this link: http://delicious-fruit.com/password_reset.php?name=${requestBody.username}&token=${token} \n
+To reset your password, visit this link: https://delicious-fruit.com/login/password-reset?email=${requestBody.email}&token=${token} \n
 This link is valid for 2 hours since making the request.\n
 -The staff at Delicious-Fruit ❤`,
 				})
@@ -341,7 +343,7 @@ This link is valid for 2 hours since making the request.\n
 	 *     @summary Finalize Password Reset
 	 * */
 	@SuccessResponse(200, "Password Reset")
-    @Response<APIError>(401, "Bad Username/Token Pair")
+    @Response<APIError>(401, "Bad Email/Token Pair")
     @Response<APIError>(422, "Unusable Token")
     @Post("reset")
     public async postFinalizePassReset(@Body() requestBody?: FinalizePassResetParams): Promise<AuthResponse> {
@@ -350,8 +352,8 @@ This link is valid for 2 hours since making the request.\n
             const results = await database.query(
                 `
     SELECT id,reset_token_set_time,is_admin,reset_token_set_time FROM User 
-    WHERE name = ? AND reset_token = ?`,
-                [requestBody.username, requestBody.token],
+    WHERE email = ? AND reset_token = ?`,
+                [requestBody.email, requestBody.token],
             );
             if (results.length == 0) {
                 this.setStatus(401);
@@ -359,7 +361,7 @@ This link is valid for 2 hours since making the request.\n
             }
             if (results.length > 1) {
                 console.log(
-                    `retrieved multiple users! username:[${requestBody.username}] token:[${requestBody.token}]`,
+                    `retrieved multiple users! email:[${requestBody.email}] token:[${requestBody.token}]`,
                 );
                 this.setStatus(422);
                 return { error: "token is unusable, generate a new one" };
@@ -369,7 +371,7 @@ This link is valid for 2 hours since making the request.\n
                 results[0].reset_token_set_time &&
                 moment(results[0].reset_token_set_time).isBefore(moment().subtract(2, "hours"))
             ) {
-                console.log(`Attempted to use an old reset token for ${requestBody.username}`);
+                console.log(`Attempted to use an old reset token for ${requestBody.email}`);
                 this.setStatus(422);
                 return { error: "token was already used" };
             }
@@ -389,9 +391,9 @@ This link is valid for 2 hours since making the request.\n
             );
 
             //get user for login
-            // TODO: don't grab phash2 or isAdmin
-            const users = await database.query("SELECT id,name,phash2,is_admin as isAdmin FROM User WHERE name = ?", [
-                requestBody.username,
+            // TODO: don't grab isAdmin
+            const users = await database.query("SELECT id,name,is_admin as isAdmin FROM User WHERE email = ?", [
+                requestBody.email,
             ]);
             // QUEST: i think the predicate below has a 0% chance of ever happening, right?
             if (users.length == 0) {
