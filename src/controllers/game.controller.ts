@@ -383,7 +383,7 @@ export class GameController extends Controller {
 			return humanAnalysis;
 		}
 
-		if (isNaN(+id)) {
+		if (Number.isNaN(+id)) {
 			this.setStatus(400);
 			return { error: "id must be a number" };
 		}
