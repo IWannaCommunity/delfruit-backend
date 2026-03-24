@@ -19,14 +19,9 @@ import {
 import datastore from "../datastore";
 import { adminCheck, userCheck } from "../lib/auth-check";
 import handle from "../lib/express-async-catch";
+import type Config from "../model/config";
 import type { GetReportParams } from "../model/GetReportParams";
 import type { Report } from "../model/Report";
-
-type PostReportParams = {
-	"cf-turnstile-response": string;
-} & Report;
-
-import type Config from "../model/config";
 
 const config: Config = require("../config/config.json");
 
@@ -122,14 +117,12 @@ export class ReportController extends Controller {
 	public async postReport(
 		@Request() req: RequestExt,
 		@Header("Authorization") authorization: string,
-		@Body() requestBody: PostReportParams,
+		@Header("CF-Turnstile-Proof") proof: string,
+		@Body() requestBody: Report,
 	): Promise<Report> {
 		const cfTurnstileVerifier: CFTurnstileVerifier =
 			req.app.locals.cfTurnstileVerifier;
-		const humanAnalysis = await cfTurnstileVerifier.verifyWithReq(
-			this,
-			requestBody["cf-turnstile-response"],
-		);
+		const humanAnalysis = await cfTurnstileVerifier.verifyWithReq(this, proof);
 		if (humanAnalysis !== undefined) {
 			return humanAnalysis;
 		}
