@@ -290,7 +290,7 @@ export class AuthController extends Controller {
       <div class="header">
           <h1>
               <img alt="delfruit cherry logo" src="data:image/gif;base64,R0lGODlhFQAYALMIABwcHAwMDCEhIQsLC3UAAP9bWwUAAP8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH/C05FVFNDQVBFMi4wAwEAAAAh/wtYTVAgRGF0YVhNUDw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNiAoV2luZG93cykiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6NTUxOTAxMUFCMEJEMTFFNDk5NkJCOEEwREEzMENFNjEiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6NTUxOTAxMUJCMEJEMTFFNDk5NkJCOEEwREEzMENFNjEiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDo1NTE5MDExOEIwQkQxMUU0OTk2QkI4QTBEQTMwQ0U2MSIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDo1NTE5MDExOUIwQkQxMUU0OTk2QkI4QTBEQTMwQ0U2MSIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PgH//v38+/r5+Pf29fTz8vHw7+7t7Ovq6ejn5uXk4+Lh4N/e3dzb2tnY19bV1NPS0dDPzs3My8rJyMfGxcTDwsHAv769vLu6ubi3trW0s7KxsK+urayrqqmop6alpKOioaCfnp2cm5qZmJeWlZSTkpGQj46NjIuKiYiHhoWEg4KBgH9+fXx7enl4d3Z1dHNycXBvbm1sa2ppaGdmZWRjYmFgX15dXFtaWVhXVlVUU1JRUE9OTUxLSklIR0ZFRENCQUA/Pj08Ozo5ODc2NTQzMjEwLy4tLCsqKSgnJiUkIyIhIB8eHRwbGhkYFxYVFBMSERAPDg0MCwoJCAcGBQQDAgEAACH5BAkeAAgALAAAAAAVABgAAAR1EMlJKzLYaorz3p0BhgYRfuWhHkXRoSvbumUgWAChzi1WHAQTJaDbzTqtlQghKBp7viRQlFrxXDzlJSa7zrQGrvcL5navMarZa1abd++DOx6f07nC6n1FAEzCeysBHE53fTiBBBsDOW8mSxoAGIUeHxIkkBQRACH5BAUeAAgALAAAAAAVABgAAARyEMlJq71Ymm0u/xpIbcRhmsS3VUB5FnDBXYF7xDEZVIJ945vCgSCYGHw4WVCY0pxMwKXw0Dk+fzkcanPFJmEnbvcLDhu6Xq0ZDY11xew4Kc5unulvjQ/flLTwKAAVA3tdBDsWf3WCGHNPKR0ZISqSlRcRADs=" />
-              <span class="title">Delicious Fruit 2.0 - Password Reset</span>
+              <span class="title">Account Password Reset</span>
           </h1>
       </div>
       <div class="body">
@@ -315,7 +315,7 @@ export class AuthController extends Controller {
 				.sendMail({
 					from: "webmaster@delicious-fruit.com",
 					to: requestBody.email,
-					subject: `Delicious-Fruit Password Reset`,
+					subject: `Account Password Reset`,
 					html,
 					text: `Greetings from Delicious Fruit!\n
 A password reset request was made on your behalf. If this wasn't you, you can safely ignore this message.\n

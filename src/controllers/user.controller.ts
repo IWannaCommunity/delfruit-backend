@@ -164,7 +164,7 @@ Or you can just click here: https://delicious-fruit.com/register/finalize?key=${
 		await mailer.sendMail({
 			from: appCfg.smtp.auth.user,
 			to: requestBody.email,
-			subject: "Delicious-Fruit Account Registration",
+			subject: "Account Registration Key",
 			text: message,
 		});
 
