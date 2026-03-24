@@ -22,15 +22,18 @@ import handle from "../lib/express-async-catch";
 import type { GetReportParams } from "../model/GetReportParams";
 import type { Report } from "../model/Report";
 
-const app = express.Router();
-export default app;
+type PostReportParams = {
+	"cf-turnstile-response": string;
+} & Report;
 
 import type Config from "../model/config";
+
 const config: Config = require("../config/config.json");
 
 import * as jwt from "jsonwebtoken";
-import { RequestExt } from "../model/app/request";
-import { CFTurnstileVerifier } from "../utils/captcha";
+import type { RequestExt } from "../model/app/request";
+import type { CFTurnstileVerifier } from "../utils/captcha";
+
 function extractBearerJWT(header_token: string): string | object {
 	if (!header_token.includes("Bearer ")) {
 		throw new Error("missing prefix");
@@ -118,13 +121,15 @@ export class ReportController extends Controller {
 	@Post()
 	public async postReport(
 		@Request() req: RequestExt,
-		@Header("CF-Turnstile-Proof") proof: string,
 		@Header("Authorization") authorization: string,
-		@Body() requestBody: Report,
+		@Body() requestBody: PostReportParams,
 	): Promise<Report> {
 		const cfTurnstileVerifier: CFTurnstileVerifier =
 			req.app.locals.cfTurnstileVerifier;
-		const humanAnalysis = await cfTurnstileVerifier.verifyWithReq(this, proof);
+		const humanAnalysis = await cfTurnstileVerifier.verifyWithReq(
+			this,
+			requestBody["cf-turnstile-response"],
+		);
 		if (humanAnalysis !== undefined) {
 			return humanAnalysis;
 		}

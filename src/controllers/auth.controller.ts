@@ -65,6 +65,7 @@ interface UserCredentials {
 interface ResetRequestParams {
 	username: string;
 	email: string;
+	"cf-turnstile-response": string;
 }
 
 interface FinalizePassResetParams {
@@ -214,14 +215,16 @@ export class AuthController extends Controller {
 	@Post("reset-request")
 	public async postResetRequest(
 		@Request() req: RequestExt,
-		@Header("CF-Turnstile-Proof") proof: string,
 		@Body() requestBody: ResetRequestParams,
 	): Promise<void> {
 		const appCfg: Config = req.app.locals.appConfig.getConfig();
 
 		const cfTurnstileVerifier: CFTurnstileVerifier =
 			req.app.locals.cfTurnstileVerifier;
-		const humanAnalysis = await cfTurnstileVerifier.verifyWithReq(this, proof);
+		const humanAnalysis = await cfTurnstileVerifier.verifyWithReq(
+			this,
+			requestBody["cf-turnstile-response"],
+		);
 		if (humanAnalysis !== undefined) {
 			return humanAnalysis;
 		}
