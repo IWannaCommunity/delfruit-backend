@@ -433,7 +433,7 @@ export class GameController extends Controller {
 	): Promise<Screenshot[]> {
 		limit = Math.min(Math.max(limit, 1), 50);
 
-		const isAdmin = false;
+		let isAdmin = false;
 		if (authorization) {
 			try {
 				const user = extractBearerJWT(authorization);
