@@ -40,7 +40,7 @@ import type { User, UserRegistrationResponse } from "../model/response/user";
 import { RequestExt } from "../model/app/request";
 import { CFTurnstileVerifier } from "../utils/captcha";
 import { customAlphabet } from "nanoid";
-import { nodemailer } from "nodemailer";
+import nodemailer from "nodemailer";
 const config: Config = require("../config/config.json");
 const auth = new AuthModule();
 
@@ -158,9 +158,9 @@ export class UserController extends Controller {
 		);
 
 		const mailer = nodemailer.createTransport(appCfg.smtp);
-		const message = `Your registration key for your account is: ${key}
+		const message = `The registration key for your account is: "${key}", and the ID of your account is "${user.id}".
 
-Or you can just click here: https://delicious-fruit.com/register/finalize?key=${key}?id=${user.id}`;
+To finish registration, please enter the key on the register finalization page, or you can just click here: https://delicious-fruit.com/register/finalize?key=${key}&id=${user.id}`;
 		await mailer.sendMail({
 			from: appCfg.smtp.auth.user,
 			to: requestBody.email,
