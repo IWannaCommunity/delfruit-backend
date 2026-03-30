@@ -134,7 +134,14 @@ async function main(): Promise<number> {
 		LOG.http(req, res, next);
 	});
 
-	/*LOG.debug("Enabling CORS middleware for Express.js.");
+	LOG.debug("Enabling CORS header workaround.");
+	app.use((req, resp, next) => {
+		resp.set("Vary", ["Origin", "Access-Control-Request-Headers"]);
+		resp.set("Access-Control-Allow-Headers", ["DNT","X-CustomHeader","Keep-Alive","User-Agent","X-Requested-With","If-Modified-Since","Cache-Control","Content-Type","Authorization","CF-Turnstile-Proof"]);
+		return next();
+	});
+	
+	LOG.debug("Enabling CORS middleware for Express.js.");
 	app.use(
 		cors({
 			origin: ["*"],
@@ -145,13 +152,6 @@ async function main(): Promise<number> {
 				"DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization,CF-Turnstile-Proof",
 		}),
 	);
-
-	LOG.debug("Enabling CORS header workaround.");
-	app.use((req, resp, next) => {
-		resp.set("Vary", ["Origin", "Access-Control-Request-Headers"]);
-		resp.set("Access-Control-Allow-Headers", ["DNT","X-CustomHeader","Keep-Alive","User-Agent","X-Requested-With","If-Modified-Since","Cache-Control","Content-Type","Authorization","CF-Turnstile-Proof"]);
-		return next();
-	});*/
 
 	LOG.debug("Enabling JSON Body Parser middleware for Express.js.");
 	app.use(bodyParser.json({ type: "application/json" }));
