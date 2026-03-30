@@ -137,13 +137,20 @@ async function main(): Promise<number> {
 	LOG.debug("Enabling CORS middleware for Express.js.");
 	app.use(
 		cors({
-			origin: "*",
+			origin: ["*"],
 			methods: ["OPTIONS", "HEAD", "GET", "POST", "PUT", "PATCH", "DELETE"],
 			preflightContinue: false,
 			optionsSuccessStatus: 204,
-			allowedHeaders: "DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization,CF-Turnstile-Proof",
+			allowedHeaders:
+				"DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization,CF-Turnstile-Proof",
 		}),
 	);
+
+	LOG.debug("Enabling CORS header workaround.");
+	app.use((req, resp, next) => {
+		resp.set("Vary", ["Origin", "Access-Control-Request-Headers"]);
+		return next();
+	});
 
 	LOG.debug("Enabling JSON Body Parser middleware for Express.js.");
 	app.use(bodyParser.json({ type: "application/json" }));
