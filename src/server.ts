@@ -149,6 +149,7 @@ async function main(): Promise<number> {
 	LOG.debug("Enabling CORS header workaround.");
 	app.use((req, resp, next) => {
 		resp.set("Vary", ["Origin", "Access-Control-Request-Headers"]);
+		resp.set("Access-Control-Allow-Headers", ["DNT","X-CustomHeader","Keep-Alive","User-Agent","X-Requested-With","If-Modified-Since","Cache-Control","Content-Type","Authorization","CF-Turnstile-Proof"]);
 		return next();
 	});
 
