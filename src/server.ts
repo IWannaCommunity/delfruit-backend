@@ -135,7 +135,15 @@ async function main(): Promise<number> {
 	});
 
 	LOG.debug("Enabling CORS middleware for Express.js.");
-	app.use(cors());
+	app.use(
+		cors({
+			origin: "*",
+			methods: ["OPTIONS", "HEAD", "GET", "POST", "PUT", "PATCH", "DELETE"],
+			preflightContinue: false,
+			optionsSuccessStatus: 204,
+			allowedHeaders: "*",
+		}),
+	);
 
 	LOG.debug("Enabling JSON Body Parser middleware for Express.js.");
 	app.use(bodyParser.json({ type: "application/json" }));
