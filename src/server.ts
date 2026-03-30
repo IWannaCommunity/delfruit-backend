@@ -141,7 +141,7 @@ async function main(): Promise<number> {
 			methods: ["OPTIONS", "HEAD", "GET", "POST", "PUT", "PATCH", "DELETE"],
 			preflightContinue: false,
 			optionsSuccessStatus: 204,
-			allowedHeaders: "*",
+			allowedHeaders: "DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization,CF-Turnstile-Proof",
 		}),
 	);
 
