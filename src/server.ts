@@ -134,13 +134,6 @@ async function main(): Promise<number> {
 		LOG.http(req, res, next);
 	});
 
-	LOG.debug("Enabling CORS header workaround.");
-	app.use((req, resp, next) => {
-		resp.set("Vary", ["Origin", "Access-Control-Request-Headers"]);
-		resp.set("Access-Control-Allow-Headers", ["DNT","X-CustomHeader","Keep-Alive","User-Agent","X-Requested-With","If-Modified-Since","Cache-Control","Content-Type","Authorization","CF-Turnstile-Proof"]);
-		return next();
-	});
-	
 	LOG.debug("Enabling CORS middleware for Express.js.");
 	app.use(
 		cors({
@@ -148,8 +141,6 @@ async function main(): Promise<number> {
 			methods: ["OPTIONS", "HEAD", "GET", "POST", "PUT", "PATCH", "DELETE"],
 			preflightContinue: false,
 			optionsSuccessStatus: 204,
-			allowedHeaders:
-				"DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization,CF-Turnstile-Proof",
 		}),
 	);
 
@@ -363,3 +354,4 @@ async function main(): Promise<number> {
 (async () => {
 	process.exit(await main());
 })();
+
