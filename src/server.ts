@@ -134,6 +134,29 @@ async function main(): Promise<number> {
 		LOG.http(req, res, next);
 	});
 
+	LOG.debug("Initializing Rate Limiting middleware for Express.js.");
+	const expressRateLimiter = rateLimit({
+		windowMs: 1000 * 60 * 5,
+		max: 500, // TODO: remove this on a newer version of this library
+		limit: 500, // TODO: lower this on release
+		standardHeaders: "draft-8",
+		legacyHeaders: true,
+		ipv6Subnet: 48,
+		identifier: "exprRateLmt-",
+		store: new MemcachedStore({ prefix: "exprRateLmt-", client: memcached }),
+	});
+	app.use(expressRateLimiter);
+
+	LOG.debug("Initalizing Speed Limiter middleware for Express.js.");
+	const expressSpeedLimiter = slowDown({
+		windowMs: 1000 * 60 * 15,
+		delayAfter: 90,
+		delayMs: (hits) => hits * 250,
+		identifier: "exprSpdLmt-",
+		store: new MemcachedStore({ prefix: "exprSpdLmt-", client: memcached }),
+	});
+	app.use(expressSpeedLimiter);
+
 	LOG.debug("Enabling CORS middleware for Express.js.");
 	app.use(
 		cors({
@@ -294,29 +317,6 @@ async function main(): Promise<number> {
 			"bcrypt_rounds in config is less than 10. Lower values mean faster hash attempts for password crackers!",
 		);
 	}
-
-	LOG.debug("Initializing Rate Limiting middleware for Express.js.");
-	const expressRateLimiter = rateLimit({
-		windowMs: 1000 * 60 * 5,
-		max: 350, // TODO: remove this on a newer version of this library
-		limit: 350, // TODO: lower this on release
-		standardHeaders: "draft-8",
-		legacyHeaders: true,
-		ipv6Subnet: 48,
-		identifier: "exprRateLmt-",
-		store: new MemcachedStore({ prefix: "exprRateLmt-", client: memcached }),
-	});
-	//app.use(expressRateLimiter);
-
-	LOG.debug("Initalizing Speed Limiter middleware for Express.js.");
-	const expressSpeedLimiter = slowDown({
-		windowMs: 1000 * 60 * 15,
-		delayAfter: 30,
-		delayMs: (hits) => hits * 250,
-		identifier: "exprSpdLmt-",
-		store: new MemcachedStore({ prefix: "exprSpdLmt-", client: memcached }),
-	});
-	//app.use(expressSpeedLimiter);
 
 	LOG.debug("Initializing Multer file upload storage.");
 	const multerCfg = multer({ limits: { files: 1, fileSize: 5242880 } });
