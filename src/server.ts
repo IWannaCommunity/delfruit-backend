@@ -145,17 +145,17 @@ async function main(): Promise<number> {
 		identifier: "exprRateLmt-",
 		store: new MemcachedStore({ prefix: "exprRateLmt-", client: memcached }),
 	});
-	app.use(expressRateLimiter);
+	//app.use(expressRateLimiter);
 
 	LOG.debug("Initalizing Speed Limiter middleware for Express.js.");
 	const expressSpeedLimiter = slowDown({
 		windowMs: 1000 * 60 * 15,
-		delayAfter: 90,
-		delayMs: (hits) => (hits-90) * 1.2935,
+		delayAfter: 1000,
+		delayMs: (hits) => (hits-1000) * 1.2935,
 		identifier: "exprSpdLmt-",
 		store: new MemcachedStore({ prefix: "exprSpdLmt-", client: memcached }),
 	});
-	app.use(expressSpeedLimiter);
+	//app.use(expressSpeedLimiter);
 
 	LOG.debug("Enabling CORS middleware for Express.js.");
 	app.use(
