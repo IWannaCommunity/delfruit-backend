@@ -151,7 +151,7 @@ async function main(): Promise<number> {
 	const expressSpeedLimiter = slowDown({
 		windowMs: 1000 * 60 * 15,
 		delayAfter: 90,
-		delayMs: (hits) => hits * 250,
+		delayMs: (hits) => (hits-90) * 1.2935,
 		identifier: "exprSpdLmt-",
 		store: new MemcachedStore({ prefix: "exprSpdLmt-", client: memcached }),
 	});
@@ -354,4 +354,3 @@ async function main(): Promise<number> {
 (async () => {
 	process.exit(await main());
 })();
-
