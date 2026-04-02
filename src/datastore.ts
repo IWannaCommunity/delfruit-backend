@@ -419,7 +419,7 @@ ${whereList.getClause()}
 			where.add("r.user_id", options.user_id);
 			where.add("r.id", options.id);
 			where.add("r.removed", options.removed);
-			where.add("u.banned", options.removed);
+			where.add("u.banned", 0);
 			where.add("g.removed", options.removed);
 			if (options.includeOwnerReview === false) {
 				where.addDirect("g.owner_id is null or g.owner_id <> r.user_id");
