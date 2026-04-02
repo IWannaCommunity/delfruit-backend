@@ -113,7 +113,7 @@ export class CompositeController extends Controller {
                 includeOwnerReview: true,
             }),
             datastore.getTagSetsForGame(game.id),
-            datastore.getScreenshots({ gameId: game.id }),
+            datastore.getScreenshots({ gameId: game.id, approved: true, removed: false }),
         ]);
         game.ratings = ratings;
         game.reviews = reviews;
@@ -250,7 +250,7 @@ export class CompositeController extends Controller {
 		const users: AuthResponse[] | null = await datastore.getUsers(params);
 		if (users === null || users.length === 0) {
 			this.setStatus(404);
-			return { error: "not found" } satisfies APIError;
+			return { error: "not found" } //satisfies APIError;
 		}
 		const user: UserExt = (() => {
 			const user = users[0];
