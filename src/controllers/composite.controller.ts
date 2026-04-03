@@ -111,6 +111,7 @@ export class CompositeController extends Controller {
                 limit: 5, // just enough to hydrate a page
                 textReviewsFirst: true,
                 includeOwnerReview: false,
+				removed: false,
             }),
             datastore.getTagSetsForGame(game.id),
             datastore.getScreenshots({ gameId: game.id, approved: true, removed: false }),
