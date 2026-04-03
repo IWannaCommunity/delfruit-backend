@@ -215,8 +215,11 @@ To finish registration, please enter the key on the register finalization page, 
 			//return { error: "unauthenticated users cannot view the user list" };
 		}
 
-		if (!user || !user.isAdmin) params.banned = false;
-		else params.banned = banned;
+		if (user && user?.isAdmin) {
+			params.banned = banned;
+		} else {
+			params.banned = false;
+		}
 		if (following && user && user.sub) params.followerUserId = user.sub;
 		if (name) params.name = name;
 		//TODO: order by
