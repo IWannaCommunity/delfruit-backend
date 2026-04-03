@@ -1342,7 +1342,7 @@ WHERE
 			whereList.addPhrase("u.name LIKE ?", "%" + params.name + "%");
 		}
 
-		const orderCol = whitelist(params.orderCol, ["id", "date_created"], "id");
+		const orderCol = whitelist(params.orderCol, ["id", "date_created", "name"], "id");
 		const orderDir = whitelist(params.orderDir, ["ASC", "DESC"], "DESC");
 
 		const query = `
