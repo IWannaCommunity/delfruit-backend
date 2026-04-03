@@ -1342,7 +1342,11 @@ WHERE
 			whereList.addPhrase("u.name LIKE ?", "%" + params.name + "%");
 		}
 
-		const orderCol = whitelist(params.orderCol, ["id", "date_created", "name"], "id");
+		const orderCol = whitelist(
+			params.orderCol,
+			["id", "date_created", "name"],
+			"id",
+		);
 		const orderDir = whitelist(params.orderDir, ["ASC", "DESC"], "DESC");
 
 		const query = `
@@ -1481,6 +1485,62 @@ LIMIT ?,?
 				)[0].difficulty_avg,
 			);
 			return { rating, difficulty };
+		} finally {
+			db.close();
+		}
+	},
+
+	async getUserFavorites(uid: number): Promise<
+		[
+			{
+				gameId: number;
+				gameName: string;
+				difficulty: number;
+				rating: difficulty;
+			},
+		]
+	> {
+		const db = new Database();
+
+		try {
+			const resultSet = await db.execute("SELECT g.`id` AS `game_id`, g.`name`, COALESCE(r.`difficulty`, -1) AS `difficulty`, COALESCE(r.`rating` / 10, -1) AS `rating` FROM `Favorite` f, `Game` g JOIN `Rating` r ON r.`game_id` = g.`id` AND r.`user_id` = ? WHERE g.`id` = f.`game_id` AND f.`user_id` = ?", [uid, uid]);
+
+			return resultSet.map((elem) => {
+				return {
+					gameId: elem["game_id"],
+					gameName: elem["name"],
+					difficulty: elem["difficulty"],
+					rating: elem["rating"],
+				};
+			});
+		} finally {
+			db.close();
+		}
+	},
+	
+	async getUserClears(uid: number): Promise<
+		[
+			{
+				gameId: number;
+				gameName: string;
+				difficulty: number;
+				rating: difficulty;
+			},
+		]
+	> {
+		const db = new Database();
+
+		try {
+			const resultSet = await db.execute("SELECT g.`id` AS `game_id`, g.`name`, COALESCE(r.`difficulty`, -1) AS `difficulty`, COALESCE(r.`rating` / 10, -1) AS `rating` FROM `Clear` c, `Game` g JOIN `Rating` r ON r.`game_id` = g.`id` AND r.`user_id` = ? WHERE g.`id` = c.`game_id` AND c.`user_id` = ?", [uid, uid]);
+
+			return resultSet.map((elem) => {
+				return {
+					gameId: elem["game_id"],
+					gameName: elem["name"],
+					difficulty: elem["difficulty"],
+					rating: elem["rating"],
+				};
+			});
 		} finally {
 			db.close();
 		}
