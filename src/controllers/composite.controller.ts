@@ -315,7 +315,7 @@ export class CompositeController extends Controller {
 	): Promise<Array<Omit<UserExt, "ratingsCount" | "screenshotCount">>> {
 		limit = Math.min(Math.max(limit, 1), 50);
 
-		const params: GetUsersParms = { page, limit, orderCol, orderDir };
+		const params: GetUsersParms = { page, limit, orderCol, orderDir, banned: false };
 		if (name) params.name = name;
 
 		const [users, reviewCounts] = await (async () => {
