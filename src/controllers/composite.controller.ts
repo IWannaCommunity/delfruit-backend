@@ -251,7 +251,7 @@ export class CompositeController extends Controller {
 		const users: AuthResponse[] | null = await datastore.getUsers(params);
 		if (users === null || users.length === 0) {
 			this.setStatus(404);
-			return { error: "not found" } //satisfies APIError;
+			return { error: "not found" }; //satisfies APIError;
 		}
 		const user: UserExt = (() => {
 			const user = users[0];
@@ -315,12 +315,24 @@ export class CompositeController extends Controller {
 	): Promise<Array<Omit<UserExt, "ratingsCount" | "screenshotCount">>> {
 		limit = Math.min(Math.max(limit, 1), 50);
 
-		const params: GetUsersParms = { page, limit, orderCol, orderDir, banned: false };
+		const params: GetUsersParms = {
+			page,
+			limit,
+			orderCol,
+			orderDir,
+			banned: false,
+		};
 		if (name) params.name = name;
 
 		const [users, reviewCounts] = await (async () => {
-			const users: ReadonlyArray<AuthResponse> =
-				await datastore.getUsers(params);
+			// HACK: prefilter the array because banned users keep
+			// showing up in my result set even though they shouldn't
+			const users: ReadonlyArray<AuthResponse> = await (async () => {
+				const prefiltered = await datastore.getUsers(params);
+				return prefiltered.filter((el) => {
+					return !el.banned;
+				});
+			})();
 			const dbQueries: Array<Promise<number>> = new Array(users.length);
 
 			let idx = 0;
