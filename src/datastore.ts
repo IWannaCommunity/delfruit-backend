@@ -1471,7 +1471,7 @@ LIMIT ?,?
 			const rating: number = Number.parseFloat(
 				(
 					await db.execute(
-						"SELECT COALESCE((SELECT AVG(r.`rating`) FROM `Rating` r LEFT OUTER JOIN `User` u ON u.`id` = r.`user_id` WHERE r.`game_id` AND r.`removed` = FALSE AND u.`banned` = FALSE IN (?)), -1) AS rating_avg",
+						"SELECT COALESCE((SELECT AVG(r.`rating`) FROM `Rating` r RIGHT OUTER JOIN `User` u ON u.`id` = r.`user_id` WHERE r.`removed` = FALSE AND u.`banned` = FALSE AND r.`game_id` IN (?)), -1) AS rating_avg",
 						[gameId],
 					)
 				)[0].rating_avg,
@@ -1479,7 +1479,7 @@ LIMIT ?,?
 			const difficulty: number = Number.parseFloat(
 				(
 					await db.execute(
-						"SELECT COALESCE((SELECT AVG(r.`difficulty`) FROM `Rating` r RIGHT OUTER JOIN `User` u ON u.`id` = r.`user_id` WHERE r.`game_id` AND r.`removed` = FALSE AND u.`banned` = FALSE IN (?)), -1) AS difficulty_avg",
+						"SELECT COALESCE((SELECT AVG(r.`difficulty`) FROM `Rating` r RIGHT OUTER JOIN `User` u ON u.`id` = r.`user_id` WHERE r.`removed` = FALSE AND u.`banned` = FALSE AND r.`game_id` IN (?)), -1) AS difficulty_avg",
 						[gameId],
 					)
 				)[0].difficulty_avg,
