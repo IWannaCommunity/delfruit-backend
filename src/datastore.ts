@@ -746,8 +746,8 @@ SELECT g.*
 , g.date_created as dateCreated
 , g.owner_id as ownerId
 , g.author as author_raw
-, AVG(r.rating) AS rating
-, AVG(r.difficulty) AS difficulty
+, SELECT COALESCE((SELECT AVG(r.rating) FROM Rating r RIGHT OUTER JOIN User u ON u.id = r.user_id WHERE r.removed = FALSE AND u.banned = FALSE AND r.game_id IN (?)), -1) AS rating_avg
+, SELECT COALESCE((SELECT AVG(r.difficulty) FROM Rating r RIGHT OUTER JOIN User u ON u.id = r.user_id WHERE r.removed = FALSE AND u.banned = FALSE AND r.game_id IN (?)), -1) AS difficulty_avg
 FROM Game g
 LEFT JOIN Rating r ON r.game_id = g.id AND r.removed = 0
 WHERE g.id = ?
@@ -1192,8 +1192,8 @@ SELECT ` +
 			(countOnly
 				? `COUNT(1) AS total_count`
 				: `g.*,
-AVG(r.rating) AS rating,
-AVG(r.difficulty) AS difficulty,
+SELECT COALESCE((SELECT AVG(r.rating) FROM Rating r RIGHT OUTER JOIN User u ON u.id = r.user_id WHERE r.removed = FALSE AND u.banned = FALSE AND r.game_id IN (?)), -1) AS rating_avg,
+SELECT COALESCE((SELECT AVG(r.difficulty) FROM Rating r RIGHT OUTER JOIN User u ON u.id = r.user_id WHERE r.removed = FALSE AND u.banned = FALSE AND r.game_id IN (?)), -1) AS difficulty_avg,
 g.date_created AS dateCreated,
 COUNT(r.id) AS rating_count
 `) +
@@ -1503,7 +1503,7 @@ LIMIT ?,?
 		const db = new Database();
 
 		try {
-			const resultSet = await db.execute("SELECT g.`id` AS `game_id`, g.`name`, COALESCE(r.`difficulty`, -1) AS `difficulty`, COALESCE(r.`rating` / 10, -1) AS `rating` FROM `Favorite` f, `Game` g JOIN `Rating` r ON r.`game_id` = g.`id` AND r.`user_id` = ? WHERE g.`id` = f.`game_id` AND f.`user_id` = ?", [uid, uid]);
+			const resultSet = await db.execute("SELECT g.`id` AS `game_id`, g.`name`, COALESCE(r.`difficulty`, -1) AS `difficulty`, COALESCE(r.`rating`, -1) AS `rating` FROM `Favorite` f, `Game` g JOIN `Rating` r ON r.`game_id` = g.`id` AND r.`user_id` = ? WHERE g.`id` = f.`game_id` AND f.`user_id` = ?", [uid, uid]);
 
 			return resultSet.map((elem) => {
 				return {
@@ -1531,7 +1531,7 @@ LIMIT ?,?
 		const db = new Database();
 
 		try {
-			const resultSet = await db.execute("SELECT g.`id` AS `game_id`, g.`name`, COALESCE(r.`difficulty`, -1) AS `difficulty`, COALESCE(r.`rating` / 10, -1) AS `rating` FROM `Clear` c, `Game` g JOIN `Rating` r ON r.`game_id` = g.`id` AND r.`user_id` = ? WHERE g.`id` = c.`game_id` AND c.`user_id` = ?", [uid, uid]);
+			const resultSet = await db.execute("SELECT g.`id` AS `game_id`, g.`name`, COALESCE(r.`difficulty`, -1) AS `difficulty`, COALESCE(r.`rating`, -1) AS `rating` FROM `Clear` c, `Game` g JOIN `Rating` r ON r.`game_id` = g.`id` AND r.`user_id` = ? WHERE g.`id` = c.`game_id` AND c.`user_id` = ?", [uid, uid]);
 
 			return resultSet.map((elem) => {
 				return {
