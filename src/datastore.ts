@@ -753,7 +753,7 @@ LEFT JOIN Rating r ON r.game_id = g.id AND r.removed = 0
 WHERE g.id = ?
 `;
 			try {
-				const res = await db.query_unsafe(query, [id]);
+				const res = await db.query_unsafe(query, [id, id, id]);
 				if (!res || res.length == 0) return null;
 
 				const game = res[0];
@@ -1192,8 +1192,8 @@ SELECT ` +
 			(countOnly
 				? `COUNT(1) AS total_count`
 				: `g.*,
-COALESCE((SELECT AVG(r.rating) FROM Rating r RIGHT OUTER JOIN User u ON u.id = r.user_id WHERE r.removed = FALSE AND u.banned = FALSE AND r.game_id IN (?)), -1) AS rating_avg,
-COALESCE((SELECT AVG(r.difficulty) FROM Rating r RIGHT OUTER JOIN User u ON u.id = r.user_id WHERE r.removed = FALSE AND u.banned = FALSE AND r.game_id IN (?)), -1) AS difficulty_avg,
+COALESCE((SELECT AVG(r.rating) FROM Rating r RIGHT OUTER JOIN User u ON u.id = r.user_id WHERE r.removed = FALSE AND u.banned = FALSE AND r.game_id IN (g.id)), -1) AS rating_avg,
+COALESCE((SELECT AVG(r.difficulty) FROM Rating r RIGHT OUTER JOIN User u ON u.id = r.user_id WHERE r.removed = FALSE AND u.banned = FALSE AND r.game_id IN (g.id)), -1) AS difficulty_avg,
 g.date_created AS dateCreated,
 COUNT(r.id) AS rating_count
 `) +
