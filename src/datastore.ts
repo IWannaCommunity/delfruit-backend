@@ -746,8 +746,8 @@ SELECT g.*
 , g.date_created as dateCreated
 , g.owner_id as ownerId
 , g.author as author_raw
-, SELECT COALESCE((SELECT AVG(r.rating) FROM Rating r RIGHT OUTER JOIN User u ON u.id = r.user_id WHERE r.removed = FALSE AND u.banned = FALSE AND r.game_id IN (?)), -1) AS rating_avg
-, SELECT COALESCE((SELECT AVG(r.difficulty) FROM Rating r RIGHT OUTER JOIN User u ON u.id = r.user_id WHERE r.removed = FALSE AND u.banned = FALSE AND r.game_id IN (?)), -1) AS difficulty_avg
+, COALESCE((SELECT AVG(r.rating) FROM Rating r RIGHT OUTER JOIN User u ON u.id = r.user_id WHERE r.removed = FALSE AND u.banned = FALSE AND r.game_id IN (?)), -1) AS rating_avg
+, COALESCE((SELECT AVG(r.difficulty) FROM Rating r RIGHT OUTER JOIN User u ON u.id = r.user_id WHERE r.removed = FALSE AND u.banned = FALSE AND r.game_id IN (?)), -1) AS difficulty_avg
 FROM Game g
 LEFT JOIN Rating r ON r.game_id = g.id AND r.removed = 0
 WHERE g.id = ?
@@ -1192,8 +1192,8 @@ SELECT ` +
 			(countOnly
 				? `COUNT(1) AS total_count`
 				: `g.*,
-SELECT COALESCE((SELECT AVG(r.rating) FROM Rating r RIGHT OUTER JOIN User u ON u.id = r.user_id WHERE r.removed = FALSE AND u.banned = FALSE AND r.game_id IN (?)), -1) AS rating_avg,
-SELECT COALESCE((SELECT AVG(r.difficulty) FROM Rating r RIGHT OUTER JOIN User u ON u.id = r.user_id WHERE r.removed = FALSE AND u.banned = FALSE AND r.game_id IN (?)), -1) AS difficulty_avg,
+COALESCE((SELECT AVG(r.rating) FROM Rating r RIGHT OUTER JOIN User u ON u.id = r.user_id WHERE r.removed = FALSE AND u.banned = FALSE AND r.game_id IN (?)), -1) AS rating_avg,
+COALESCE((SELECT AVG(r.difficulty) FROM Rating r RIGHT OUTER JOIN User u ON u.id = r.user_id WHERE r.removed = FALSE AND u.banned = FALSE AND r.game_id IN (?)), -1) AS difficulty_avg,
 g.date_created AS dateCreated,
 COUNT(r.id) AS rating_count
 `) +
