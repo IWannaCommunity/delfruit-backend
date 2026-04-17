@@ -1545,6 +1545,41 @@ LIMIT ?,?
 			db.close();
 		}
 	},
+
+	async getGamesByOwner(
+		ownerId: number,
+	): Promise<
+		Array<Game & { rating: number; difficulty: number; rating_count: number }>
+	> {
+		const db = new Database();
+		try {
+			const games = await db.execute(
+				`SELECT
+	g.*,
+	AVG(CASE WHEN u.\`banned\` IS TRUE THEN NULL ELSE r.\`rating\` END) AS rating,
+	AVG(CASE WHEN u.\`banned\` IS TRUE THEN NULL ELSE r.\`difficulty\` END) AS difficulty,
+	COUNT(CASE WHEN u.\`banned\` IS FALSE THEN g.\`id\` END) as rating_count
+FROM
+	\`Game\` g
+LEFT JOIN \`Rating\` r ON
+	r.\`game_id\` = g.\`id\`
+	AND r.\`removed\` IS FALSE
+RIGHT JOIN \`User\` u ON
+	u.\`id\` = r.\`user_id\`
+WHERE
+	g.\`removed\` IS FALSE
+	AND g.\`owner_id\` = ?
+GROUP BY
+	g.\`id\`
+ORDER BY
+	g.\`sortname\``,
+				[ownerId],
+			);
+			return games;
+		} finally {
+			db.close();
+		}
+	},
 };
 
 async function cache<T>(key: string, supplier: () => Promise<T>): Promise<T> {
