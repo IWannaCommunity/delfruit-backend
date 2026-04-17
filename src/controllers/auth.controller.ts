@@ -157,6 +157,7 @@ export class AuthController extends Controller {
 					unsuccessful_logins: 0,
 				});
 				user.token = auth.getToken(user.name, user.id, user.isAdmin);
+				delete user.phash2; // HACK: need a proper user model badly
 				this.setHeader("token", user.token);
 				return user;
 			}
