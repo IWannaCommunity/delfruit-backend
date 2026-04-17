@@ -130,7 +130,7 @@ export class AuthController extends Controller {
 			}
 			// TODO:stop grabbing phash2 or is_admin here
 			const users = await database.query(
-				"SELECT id,name,phash2,is_admin as isAdmin FROM User WHERE name = ?",
+				"SELECT id,name,phash2,is_admin,unsuccessful_logins as isAdmin FROM User WHERE name = ?",
 				[username],
 			);
 			if (users.length === 0) {
@@ -145,7 +145,7 @@ export class AuthController extends Controller {
 				const u = await datastore.getUser(user.id);
 				await datastore.updateUser({
 					id: user.id,
-					unsuccessfulLogins: u.unsuccessfulLogins + 1,
+					unsuccessful_logins: u.unsuccessful_logins + 1,
 				});
 				this.setStatus(401);
 				return { error: "bad credentials" };
@@ -154,7 +154,7 @@ export class AuthController extends Controller {
 					id: user.id,
 					dateLastLogin: moment().format("YYYY-MM-DD HH:mm:ss"),
 					lastIp: this.getHeaders()["x-forwarded-for"],
-					unsuccessfulLogins: 0,
+					unsuccessful_logins: 0,
 				});
 				user.token = auth.getToken(user.name, user.id, user.isAdmin);
 				this.setHeader("token", user.token);
