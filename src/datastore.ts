@@ -1586,6 +1586,14 @@ ORDER BY
 			db.close();
 		}
 	},
+
+	async countReports() {
+		const db = new Database();
+		const qry = "SELECT COUNT(*) AS `cnt` FROM `Report` r";
+		const res: [{ cnt: number }] = await db.query(qry);
+		await db.close();
+		return res[0].cnt;
+	},
 };
 
 async function cache<T>(key: string, supplier: () => Promise<T>): Promise<T> {

@@ -138,4 +138,11 @@ export class ReportController extends Controller {
 
 		return await datastore.addReport(report, uid);
 	}
+
+	@Security("bearerAuth", ["admin"])
+	@SuccessResponse(200, "Total amount of Reports")
+	@Get("/totalcount")
+	public async getReportCount(): Promise<{ totalCount: number }> {
+		return { totalCount: await datastore.countReports() };
+	}
 }
