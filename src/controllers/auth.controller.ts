@@ -130,7 +130,7 @@ export class AuthController extends Controller {
 			}
 			// TODO:stop grabbing phash2 or is_admin here
 			const users = await database.query(
-				"SELECT id,name,phash2,is_admin,unsuccessful_logins as isAdmin FROM User WHERE name = ?",
+				"SELECT id,name,phash2,is_admin as isAdmin,unsuccessful_logins as unsuccessfulLogins FROM User WHERE name = ?",
 				[username],
 			);
 			if (users.length === 0) {
