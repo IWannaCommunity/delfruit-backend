@@ -1150,7 +1150,7 @@ ${whereList.getClause()}
 SELECT /*+ MAX_EXECUTION_TIME(2500) */ game_id
 FROM GameTag gt
 JOIN Tag t ON t.id=gt.tag_id
-WHERE t.id IN (${params.tags.map((s) => `${s}`).join(",")})
+WHERE t.id IN (${params.tags.split(" ").map((s) => `${s}`).join(",")})
 )`);
 		}
 
