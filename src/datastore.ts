@@ -976,6 +976,10 @@ GROUP BY gt.game_id, gt.tag_id
 SELECT t.name, t.id
 FROM Tag t
 ${whereList.getClause()}
+ORDER BY
+(t.name = '?') DESC,
+(t.name LIKE '?%') DESC,
+CHAR_LENGTH('?') ASC
 `;
 
 		const database = new Database();
