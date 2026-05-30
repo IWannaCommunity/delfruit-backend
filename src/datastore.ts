@@ -1151,7 +1151,7 @@ CHAR_LENGTH('?') ASC
 		// that it won't happen. If it becomes a issue I have alternatives.
 		if (params.tags !== undefined) {
 			console.log(params);
-			console.log(tags);
+			console.log(params.tags);
 			whereList.addDirect(`g.id IN (
 SELECT /*+ MAX_EXECUTION_TIME(2500) */ game_id
 FROM GameTag gt
