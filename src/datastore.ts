@@ -1146,11 +1146,13 @@ ${whereList.getClause()}
 		// I'm hoping by hinting to limit execution time to around 2.5 seconds
 		// that it won't happen. If it becomes a issue I have alternatives.
 		if (params.tags !== undefined) {
+			console.log(params);
+			console.log(tags);
 			whereList.addDirect(`g.id IN (
 SELECT /*+ MAX_EXECUTION_TIME(2500) */ game_id
 FROM GameTag gt
 JOIN Tag t ON t.id=gt.tag_id
-WHERE t.id IN (${params.tags.split(" ").map((s) => `${s}`).join(",")})
+WHERE t.id IN (${params.tags.map((s) => `${s}`).join(",")})
 )`);
 		}
 

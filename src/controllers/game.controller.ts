@@ -194,8 +194,14 @@ export class GameController extends Controller {
 					}
 				});
 			} catch (e) {
+				console.log(e);
 				this.setStatus(400);
 				return { error: "tags must be an array of numbers" };
+			}
+			// TODO: it probably makes more sense to return with
+			// 0 results, since their tags aren't even found anyway...
+			if (params.tags.length === 0) {
+				params.tags = undefined;
 			}
 		}
 		params.author = author;
