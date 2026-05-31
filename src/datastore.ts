@@ -968,11 +968,7 @@ GROUP BY gt.game_id, gt.tag_id
 		const whereList = new WhereList();
 		whereList.add("t.id", tagId);
 		if (q !== undefined) {
-			whereList.add2("t.name LIKE ? ORDER BY (t.name = '?') DESC, (t.name LIKE '?%') DESC, CHAR_LENGTH('?') ASC", "%" + q + "%");
-			// HACK: is this a dumb way to add parameters? yes.
-			whereList.add2("", q);
-			whereList.add2("", q);
-			whereList.add2("", q);
+			whereList.add2("t.name LIKE ? ORDER BY (t.name = ?) DESC, (t.name LIKE ?) DESC, CHAR_LENGTH(?) ASC", "%" + q + "%");
 		}
 		whereList.add("t.name", name);
 
@@ -985,7 +981,8 @@ ${whereList.getClause()}
 		const database = new Database();
 		try {
 			// HACK: drop superfluous AND statement (slice)
-			return await database.query(query.slice(0, -4), whereList.getParams());
+			console.log(query.slice(0, -3).replace("WHERE (", "WHERE "))
+			return await database.query(query.slice(0, -3).replace("WHERE (", "WHERE "), [...whereList.getParams(), q, q + "%", q]);
 		} finally {
 			database.close();
 		}
