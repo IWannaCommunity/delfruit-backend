@@ -1153,10 +1153,12 @@ CHAR_LENGTH('?') ASC
 			console.log(params);
 			console.log(params.tags);
 			whereList.addDirect(`g.id IN (
-SELECT /*+ MAX_EXECUTION_TIME(2500) */ game_id
+SELECT game_id
 FROM GameTag gt
 JOIN Tag t ON t.id=gt.tag_id
 WHERE t.id IN (${params.tags.map((s) => `${s}`).join(",")})
+GROUP BY gt.game_id
+HAVING COUNT(DISTINCT t.id) = ${params.tags.length}
 )`);
 		}
 
@@ -1194,7 +1196,7 @@ WHERE t.id IN (${params.tags.map((s) => `${s}`).join(",")})
 
 		const query =
 			`
-SELECT ` +
+SELECT /*+ MAX_EXECUTION_TIME(9001) */` +
 			(countOnly
 				? `COUNT(1) AS total_count`
 				: `g.*,
