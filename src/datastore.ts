@@ -980,11 +980,12 @@ GROUP BY gt.game_id, gt.tag_id
 SELECT t.name, t.id
 FROM Tag t
 ${whereList.getClause()}
-`.slice(0, -4); // HACK: drop superfluous AND statement
+`;
 
 		const database = new Database();
 		try {
-			return await database.query(query, whereList.getParams());
+			// HACK: drop superfluous AND statement (slice)
+			return await database.query(query.slice(0, -4), whereList.getParams());
 		} finally {
 			database.close();
 		}
