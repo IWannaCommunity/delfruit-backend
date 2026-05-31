@@ -968,10 +968,7 @@ GROUP BY gt.game_id, gt.tag_id
 		const whereList = new WhereList();
 		whereList.add("t.id", tagId);
 		if (q !== undefined) {
-			whereList.add2("t.name LIKE ? ORDER BY
-(t.name = '?') DESC,
-(t.name LIKE '?%') DESC,
-CHAR_LENGTH('?') ASC", "%" + q + "%");
+			whereList.add2("t.name LIKE ? ORDER BY (t.name = '?') DESC, (t.name LIKE '?%') DESC, CHAR_LENGTH('?') ASC", "%" + q + "%");
 			// HACK: is this a dumb way to add parameters? yes.
 			whereList.add2("", q);
 			whereList.add2("", q);
