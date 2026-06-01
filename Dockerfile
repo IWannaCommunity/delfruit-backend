@@ -1,6 +1,6 @@
 FROM node:18.17.0-bookworm
 
-ENV NODE_ENV=production
+#ENV NODE_ENV=production
 
 RUN mkdir -p /home/node/app/node_modules && chown -R node:node /home/node/app
 
