@@ -1,17 +1,16 @@
 import express from "express";
+import * as Minio from "minio";
+import multer from "multer";
 import datastore from "../datastore";
+import { adminCheck, userCheck } from "../lib/auth-check";
+import handle from "../lib/express-async-catch";
 import whitelist from "../lib/whitelist";
+import type Config from "../model/config";
 import type { Game } from "../model/Game";
 import type { GetGamesParms } from "../model/GetGamesParms";
 import type { GetScreenshotParms } from "../model/GetScreenshotParms";
 import type { Screenshot } from "../model/Screenshot";
 
-import * as Minio from "minio";
-
-import multer from "multer";
-import { adminCheck, userCheck } from "../lib/auth-check";
-import handle from "../lib/express-async-catch";
-import type Config from "../model/config";
 const config: Config = require("../config/config.json");
 
 import {
@@ -34,16 +33,17 @@ import {
 	Tags,
 	UploadedFile,
 } from "tsoa";
-import { Permission, hasPermission } from "../model/Permission";
+import { hasPermission, Permission } from "../model/Permission";
 
 const minioClient = new Minio.Client(config.s3);
 
 import * as jwt from "jsonwebtoken";
-import type { Review } from "../model/Review";
+import type { RequestExt } from "../model/app/request";
 import type { GetGamesParams, PostGameParams } from "../model/params/game";
+import type { Review } from "../model/Review";
 import type { APIError } from "../model/response/error";
-import { RequestExt } from "../model/app/request";
-import { CFTurnstileVerifier } from "../utils/captcha";
+import type { CFTurnstileVerifier } from "../utils/captcha";
+
 function extractBearerJWT(header_token: string): string | object {
 	if (!header_token.includes("Bearer ")) {
 		throw new Error("missing prefix");
@@ -387,6 +387,20 @@ export class GameController extends Controller {
 		const humanAnalysis = await cfTurnstileVerifier.verifyWithReq(this, proof);
 		if (humanAnalysis !== undefined) {
 			return humanAnalysis;
+		}
+
+		const hasPreviousReview =
+			(
+				await datastore.getReviews({
+					game_id: id,
+					user_id: Number(req.app_user.sub),
+				})
+			).length >= 1;
+		if (hasPreviousReview) {
+			this.setStatus(401);
+			return {
+				error: "cannot publish a new review when the previous one was removed.",
+			} as APIError;
 		}
 
 		if (Number.isNaN(+id)) {
