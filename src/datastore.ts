@@ -1629,7 +1629,7 @@ SELECT  m.id,
 FROM Message AS m
 INNER JOIN User AS u ON u.id = m.user_from_id
 INNER JOIN User AS u2 ON u2.id = m.user_to_id
-WHERE m.user_to_id = ? AND m.deleted = 0
+WHERE m.user_to_id = ? AND m.deleted = 0 AND m.reply_to_id IS NULL AND m.thread_id IS NULL
 ORDER BY m.date_created DESC
 `;
         const res = await db.query(qry, [forUserId]);
