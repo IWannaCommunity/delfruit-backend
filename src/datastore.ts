@@ -25,200 +25,201 @@ const config: Config = require("./config/config.json");
 
 import Memcached = require("memcached");
 import type { GetGameParams } from "./model/params/game";
+import { Message } from "./model/Message";
 export const memcached: Memcached = new Memcached(
-	config.memcache.hosts,
-	config.memcache.options,
+    config.memcache.hosts,
+    config.memcache.options,
 );
 
 for (const host of config.memcache.hosts) {
-	memcached.connect(host, (err: Error, conn: any) => {
-		if (err) {
-			console.error(`memcached instance was unreachable: ${err}`);
-		}
-		console.log("memcached instance:", conn.server);
-	});
+    memcached.connect(host, (err: Error, conn: any) => {
+        if (err) {
+            console.error(`memcached instance was unreachable: ${err}`);
+        }
+        console.log("memcached instance:", conn.server);
+    });
 }
 
 export default {
-	/**
-	 * return user if user was created
-	 */
-	async addUser(
-		username: string,
-		password: string,
-		email: string,
-		regkey: string | null | undefined = null,
-	): Promise<any> {
-		const database = new Database();
-		try {
-			const userExists = await database.query(
-				`SELECT 1 FROM User WHERE name = ?`,
-				[username],
-			);
-			if (userExists.length > 0) return false;
+    /**
+     * return user if user was created
+     */
+    async addUser(
+        username: string,
+        password: string,
+        email: string,
+        regkey: string | null | undefined = null,
+    ): Promise<any> {
+        const database = new Database();
+        try {
+            const userExists = await database.query(
+                `SELECT 1 FROM User WHERE name = ?`,
+                [username],
+            );
+            if (userExists.length > 0) return false;
 
-			const result = await database.execute(
-				`
+            const result = await database.execute(
+                `
 INSERT INTO User (name, phash2, email, ali_token)
 VALUES ( ?, ?, ?, ? )
 `,
-				[username, password, email, regkey],
-			);
+                [username, password, email, regkey],
+            );
 
-			return this.getUser(result.insertId as number);
-		} finally {
-			database.close();
-		}
-	},
+            return this.getUser(result.insertId as number);
+        } finally {
+            database.close();
+        }
+    },
 
-	async updateUser(user: any): Promise<boolean> {
-		const database = new Database();
+    async updateUser(user: any): Promise<boolean> {
+        const database = new Database();
 
-		const updateList = new UpdateList();
+        const updateList = new UpdateList();
 
-		updateList.add("phash2", user.phash2);
-		updateList.add("email", user.email);
+        updateList.add("phash2", user.phash2);
+        updateList.add("email", user.email);
 
-		updateList.add("banned", user.banned);
+        updateList.add("banned", user.banned);
 
-		updateList.add("twitch_link", user.twitchLink);
-		updateList.add("nico_link", user.nicoLink);
-		updateList.add("youtube_link", user.youtubeLink);
-		updateList.add("twitter_link", user.twitterLink);
-		updateList.add("bio", user.bio);
-		updateList.add("locale", user.locale);
-		updateList.add("unsuccessful_logins", user.unsuccessfulLogins);
-		updateList.add("last_ip", user.lastIp);
-		updateList.add("date_last_login", user.dateLastLogin);
-		updateList.add("selected_badge", user.selected_badge);
+        updateList.add("twitch_link", user.twitchLink);
+        updateList.add("nico_link", user.nicoLink);
+        updateList.add("youtube_link", user.youtubeLink);
+        updateList.add("twitter_link", user.twitterLink);
+        updateList.add("bio", user.bio);
+        updateList.add("locale", user.locale);
+        updateList.add("unsuccessful_logins", user.unsuccessfulLogins);
+        updateList.add("last_ip", user.lastIp);
+        updateList.add("date_last_login", user.dateLastLogin);
+        updateList.add("selected_badge", user.selected_badge);
 
-		try {
-			const params = updateList.getParams();
-			params.push(user.id);
-			const rows = await database.execute(
-				` UPDATE User ${updateList.getSetClause()} WHERE id = ?`,
-				params,
-			);
-			return rows.affectedRows == 1;
-		} finally {
-			database.close();
-		}
-	},
+        try {
+            const params = updateList.getParams();
+            params.push(user.id);
+            const rows = await database.execute(
+                ` UPDATE User ${updateList.getSetClause()} WHERE id = ?`,
+                params,
+            );
+            return rows.affectedRows == 1;
+        } finally {
+            database.close();
+        }
+    },
 
-	async updateGame(game: Game, isAdmin: boolean): Promise<boolean> {
-		const database = new Database();
+    async updateGame(game: Game, isAdmin: boolean): Promise<boolean> {
+        const database = new Database();
 
-		const updateList = new UpdateList();
+        const updateList = new UpdateList();
 
-		updateList.addIf(
-			"removed",
-			game.removed ? 1 : 0,
-			game.removed !== undefined,
-		);
-		updateList.add("name", game.name);
-		updateList.add("url", game.url);
-		updateList.add("url_spdrn", game.urlSpdrn);
-		if (game.author) {
-			updateList.add("author", game.author.join(" "));
-		}
-		if (game.dateCreated) {
-			const newdate = moment(game.dateCreated).format("YYYY-MM-DD 00:00:00");
-			updateList.add("date_created", newdate);
-		}
-		updateList.add("owner_id", game.ownerId);
-		//updateList.add('owner_bio',game.ownerBio);
+        updateList.addIf(
+            "removed",
+            game.removed ? 1 : 0,
+            game.removed !== undefined,
+        );
+        updateList.add("name", game.name);
+        updateList.add("url", game.url);
+        updateList.add("url_spdrn", game.urlSpdrn);
+        if (game.author) {
+            updateList.add("author", game.author.join(" "));
+        }
+        if (game.dateCreated) {
+            const newdate = moment(game.dateCreated).format("YYYY-MM-DD 00:00:00");
+            updateList.add("date_created", newdate);
+        }
+        updateList.add("owner_id", game.ownerId);
+        //updateList.add('owner_bio',game.ownerBio);
 
-		try {
-			const params = updateList.getParams();
-			params.push(game.id);
-			const rows = await database.execute(
-				` UPDATE Game ${updateList.getSetClause()} WHERE id = ?`,
-				params,
-			);
-			uncache(`game-exists-${game.id}`);
-			uncache(`game-${game.id}`);
-			return rows.affectedRows == 1;
-		} finally {
-			database.close();
-		}
-	},
+        try {
+            const params = updateList.getParams();
+            params.push(game.id);
+            const rows = await database.execute(
+                ` UPDATE Game ${updateList.getSetClause()} WHERE id = ?`,
+                params,
+            );
+            uncache(`game-exists-${game.id}`);
+            uncache(`game-${game.id}`);
+            return rows.affectedRows == 1;
+        } finally {
+            database.close();
+        }
+    },
 
-	async addGame(game: Game, adderId: number): Promise<Game> {
-		const database = new Database();
-		try {
-			//const userExists = await database.query(`SELECT 1 FROM User WHERE name = ?`,[username]);
-			//if (userExists.length > 0) return false;
+    async addGame(game: Game, adderId: number): Promise<Game> {
+        const database = new Database();
+        try {
+            //const userExists = await database.query(`SELECT 1 FROM User WHERE name = ?`,[username]);
+            //if (userExists.length > 0) return false;
 
-			const insertList = new InsertList();
-			insertList.add("name", game.name);
-			let sortname = game.name || "";
-			sortname = sortname.replace("i wanna be the ", "");
-			sortname = sortname.replace("i wanna ", "");
-			insertList.add("sortname", sortname);
-			insertList.add("url", game.url);
-			insertList.add("url_spdrn", game.urlSpdrn);
-			insertList.add("author", game.author.join(" "));
-			insertList.add("collab", game.collab ? 1 : 0);
-			//insertList.add('date_created',);
-			insertList.add("adder_id", adderId);
-			insertList.add("removed", 0);
-			insertList.add("owner_id", game.ownerId);
-			insertList.add("owner_bio", game.ownerBio);
+            const insertList = new InsertList();
+            insertList.add("name", game.name);
+            let sortname = game.name || "";
+            sortname = sortname.replace("i wanna be the ", "");
+            sortname = sortname.replace("i wanna ", "");
+            insertList.add("sortname", sortname);
+            insertList.add("url", game.url);
+            insertList.add("url_spdrn", game.urlSpdrn);
+            insertList.add("author", game.author.join(" "));
+            insertList.add("collab", game.collab ? 1 : 0);
+            //insertList.add('date_created',);
+            insertList.add("adder_id", adderId);
+            insertList.add("removed", 0);
+            insertList.add("owner_id", game.ownerId);
+            insertList.add("owner_bio", game.ownerBio);
 
-			const result = await database.execute(
-				`INSERT INTO Game ${insertList.getClause()}`,
-				insertList.getParams(),
-			);
+            const result = await database.execute(
+                `INSERT INTO Game ${insertList.getClause()}`,
+                insertList.getParams(),
+            );
 
-			const g = await this.getGame(result.insertId as number, database);
+            const g = await this.getGame(result.insertId as number, database);
 
-			if (!g) throw "game failed to be created";
-			return g;
-		} finally {
-			database.close();
-		}
-	},
+            if (!g) throw "game failed to be created";
+            return g;
+        } finally {
+            database.close();
+        }
+    },
 
-	async addReport(rpt: Report, adderId: number): Promise<Game> {
-		const database = new Database();
-		try {
-			const insertList = new InsertList();
-			insertList.add("type", rpt.type);
-			insertList.add("target_id", rpt.targetId);
-			insertList.add("report", rpt.report);
-			insertList.add("reporter_id", adderId);
-			insertList.add("answered_by_id", rpt.answeredById);
-			insertList.add("date_answered", rpt.dateAnswered);
+    async addReport(rpt: Report, adderId: number): Promise<Game> {
+        const database = new Database();
+        try {
+            const insertList = new InsertList();
+            insertList.add("type", rpt.type);
+            insertList.add("target_id", rpt.targetId);
+            insertList.add("report", rpt.report);
+            insertList.add("reporter_id", adderId);
+            insertList.add("answered_by_id", rpt.answeredById);
+            insertList.add("date_answered", rpt.dateAnswered);
 
-			const result = await database.execute(
-				`INSERT INTO Report ${insertList.getClause()}`,
-				insertList.getParams(),
-			);
+            const result = await database.execute(
+                `INSERT INTO Report ${insertList.getClause()}`,
+                insertList.getParams(),
+            );
 
-			const n = await this.getReport(result.insertId as number);
-			if (!n) throw "report failed to be created";
-			return n;
-		} finally {
-			database.close();
-		}
-	},
+            const n = await this.getReport(result.insertId as number);
+            if (!n) throw "report failed to be created";
+            return n;
+        } finally {
+            database.close();
+        }
+    },
 
-	async getReports(params: GetReportParams): Promise<Report[]> {
-		const database = new Database();
+    async getReports(params: GetReportParams): Promise<Report[]> {
+        const database = new Database();
 
-		const whereList = new WhereList();
-		whereList.add("r.id", params.id);
-		if (params.answered !== undefined) {
-			if (params.answered) whereList.addDirect("r.answered_By_id IS NOT NULL");
-			else whereList.addDirect("r.answered_By_id IS NULL");
-		}
+        const whereList = new WhereList();
+        whereList.add("r.id", params.id);
+        if (params.answered !== undefined) {
+            if (params.answered) whereList.addDirect("r.answered_By_id IS NOT NULL");
+            else whereList.addDirect("r.answered_By_id IS NULL");
+        }
 
-		whereList.add("r.type", params.type);
+        whereList.add("r.type", params.type);
 
-		const orderCol = whitelist(params.orderCol, ["id", "date_created"], "id");
-		const orderDir = whitelist(params.orderDir, ["ASC", "DESC"], "DESC");
+        const orderCol = whitelist(params.orderCol, ["id", "date_created"], "id");
+        const orderDir = whitelist(params.orderDir, ["ASC", "DESC"], "DESC");
 
-		var query = `
+        var query = `
 SELECT r.*
 , r.target_id as targetId
 , r.reporter_id as reporterId
@@ -235,203 +236,203 @@ ${whereList.getClause()}
 ORDER BY ${orderCol} ${orderDir}
 LIMIT ?,?
 `;
-		try {
-			return await database.execute(
-				query,
-				whereList.getParams().concat(params.page * params.limit, params.limit),
-			);
-		} finally {
-			database.close();
-		}
-	},
+        try {
+            return await database.execute(
+                query,
+                whereList.getParams().concat(params.page * params.limit, params.limit),
+            );
+        } finally {
+            database.close();
+        }
+    },
 
-	async getReport(id: number): Promise<Report | null> {
-		const reports = await this.getReports({ id, page: 0, limit: 1 });
-		if (!reports || reports.length == 0) return null;
-		return reports[0];
-	},
+    async getReport(id: number): Promise<Report | null> {
+        const reports = await this.getReports({ id, page: 0, limit: 1 });
+        if (!reports || reports.length == 0) return null;
+        return reports[0];
+    },
 
-	async updateReport(report: Report): Promise<boolean> {
-		const database = new Database();
+    async updateReport(report: Report): Promise<boolean> {
+        const database = new Database();
 
-		const updateList = new UpdateList();
+        const updateList = new UpdateList();
 
-		updateList.add("answered_by_id", report.answeredById);
-		updateList.add("date_answered", report.dateAnswered);
+        updateList.add("answered_by_id", report.answeredById);
+        updateList.add("date_answered", report.dateAnswered);
 
-		if (!updateList.hasAny()) return true;
+        if (!updateList.hasAny()) return true;
 
-		try {
-			const params = updateList.getParams();
-			params.push(report.id);
-			const rows = await database.execute(
-				` UPDATE Report ${updateList.getSetClause()} WHERE id = ?`,
-				params,
-			);
-			return rows.affectedRows == 1;
-		} finally {
-			database.close();
-		}
-	},
+        try {
+            const params = updateList.getParams();
+            params.push(report.id);
+            const rows = await database.execute(
+                ` UPDATE Report ${updateList.getSetClause()} WHERE id = ?`,
+                params,
+            );
+            return rows.affectedRows == 1;
+        } finally {
+            database.close();
+        }
+    },
 
-	async addNews(article: News, adderId: number): Promise<Game> {
-		const database = new Database();
-		try {
-			const insertList = new InsertList();
-			insertList.add("poster_id", adderId);
-			insertList.add("title", article.title);
-			insertList.add("short", article.short);
-			insertList.add("news", article.news);
-			insertList.add("date_created", article.dateCreated);
+    async addNews(article: News, adderId: number): Promise<Game> {
+        const database = new Database();
+        try {
+            const insertList = new InsertList();
+            insertList.add("poster_id", adderId);
+            insertList.add("title", article.title);
+            insertList.add("short", article.short);
+            insertList.add("news", article.news);
+            insertList.add("date_created", article.dateCreated);
 
-			const result = await database.execute(
-				`INSERT INTO News ${insertList.getClause()}`,
-				insertList.getParams(),
-			);
+            const result = await database.execute(
+                `INSERT INTO News ${insertList.getClause()}`,
+                insertList.getParams(),
+            );
 
-			const n = await this.getNewses({
-				id: result.insertId as number,
-				page: 0,
-				limit: 1,
-			});
+            const n = await this.getNewses({
+                id: result.insertId as number,
+                page: 0,
+                limit: 1,
+            });
 
-			if (!n || n.length == 0) throw "news failed to be created";
-			return n[0];
-		} finally {
-			database.close();
-		}
-	},
+            if (!n || n.length == 0) throw "news failed to be created";
+            return n[0];
+        } finally {
+            database.close();
+        }
+    },
 
-	async updateNews(article: News): Promise<boolean> {
-		const database = new Database();
+    async updateNews(article: News): Promise<boolean> {
+        const database = new Database();
 
-		const updateList = new UpdateList();
+        const updateList = new UpdateList();
 
-		updateList.add("title", article.title);
-		updateList.add("short", article.short);
-		updateList.add("news", article.news);
-		if (article.removed !== undefined) {
-			updateList.add("removed", article.removed ? 1 : 0);
-		}
+        updateList.add("title", article.title);
+        updateList.add("short", article.short);
+        updateList.add("news", article.news);
+        if (article.removed !== undefined) {
+            updateList.add("removed", article.removed ? 1 : 0);
+        }
 
-		if (!updateList.hasAny()) return true;
+        if (!updateList.hasAny()) return true;
 
-		try {
-			const params = updateList.getParams();
-			params.push(article.id);
-			const rows = await database.execute(
-				` UPDATE News ${updateList.getSetClause()} WHERE id = ?`,
-				params,
-			);
-			return rows.affectedRows == 1;
-		} finally {
-			database.close();
-		}
-	},
+        try {
+            const params = updateList.getParams();
+            params.push(article.id);
+            const rows = await database.execute(
+                ` UPDATE News ${updateList.getSetClause()} WHERE id = ?`,
+                params,
+            );
+            return rows.affectedRows == 1;
+        } finally {
+            database.close();
+        }
+    },
 
-	async getNewses(params: GetNewsParms): Promise<News[]> {
-		const database = new Database();
+    async getNewses(params: GetNewsParms): Promise<News[]> {
+        const database = new Database();
 
-		const whereList = new WhereList();
-		whereList.add("n.id", params.id);
-		if (params.removed !== undefined) {
-			whereList.add("n.removed", params.removed ? 1 : 0);
-		}
+        const whereList = new WhereList();
+        whereList.add("n.id", params.id);
+        if (params.removed !== undefined) {
+            whereList.add("n.removed", params.removed ? 1 : 0);
+        }
 
-		const orderCol = whitelist(params.orderCol, ["id", "date_created"], "id");
-		const orderDir = whitelist(params.orderDir, ["ASC", "DESC"], "DESC");
+        const orderCol = whitelist(params.orderCol, ["id", "date_created"], "id");
+        const orderDir = whitelist(params.orderDir, ["ASC", "DESC"], "DESC");
 
-		var query = `
+        var query = `
 SELECT n.*, n.poster_id as posterId, n.date_created as dateCreated
 FROM News n
 ${whereList.getClause()}
 ORDER BY ${orderCol} ${orderDir}
 LIMIT ?,?
 `;
-		try {
-			return await database.execute(
-				query,
-				whereList.getParams().concat(params.page * params.limit, params.limit),
-			);
-		} finally {
-			database.close();
-		}
-	},
+        try {
+            return await database.execute(
+                query,
+                whereList.getParams().concat(params.page * params.limit, params.limit),
+            );
+        } finally {
+            database.close();
+        }
+    },
 
-	async getUserForLogin(params: UserLoginParams): Promise<any> {
-		const database = new Database();
-		let query = `SELECT id,name,phash2 FROM User WHERE`;
-		const qparams = [];
-		if (params.id != undefined) {
-			query += ` id = ? `;
-			qparams.push(params.id);
-		}
-		if (params.name != undefined) {
-			query += ` name = ? `;
-			qparams.push(params.name);
-		}
-		const users = await database.query(query, qparams);
-		if (users.length == 0) {
-			return null;
-		}
-		return users[0];
-	},
+    async getUserForLogin(params: UserLoginParams): Promise<any> {
+        const database = new Database();
+        let query = `SELECT id,name,phash2 FROM User WHERE`;
+        const qparams = [];
+        if (params.id != undefined) {
+            query += ` id = ? `;
+            qparams.push(params.id);
+        }
+        if (params.name != undefined) {
+            query += ` name = ? `;
+            qparams.push(params.name);
+        }
+        const users = await database.query(query, qparams);
+        if (users.length == 0) {
+            return null;
+        }
+        return users[0];
+    },
 
-	async getLists(params: GetListsParms): Promise<any[]> {
-		const database = new Database();
+    async getLists(params: GetListsParms): Promise<any[]> {
+        const database = new Database();
 
-		const whereList = new WhereList();
-		whereList.add("l.user_id", params.userId);
-		whereList.add("l.game_id", params.gameId);
+        const whereList = new WhereList();
+        whereList.add("l.user_id", params.userId);
+        whereList.add("l.game_id", params.gameId);
 
-		var query = `
+        var query = `
 SELECT *
 FROM List l
 JOIN ListGame g on g.list_id = l.id
 ${whereList.getClause()}
 `;
-		try {
-			return await database.execute(query, whereList.getParams());
-		} finally {
-			database.close();
-		}
-	},
+        try {
+            return await database.execute(query, whereList.getParams());
+        } finally {
+            database.close();
+        }
+    },
 
-	async getBadges(options: any): Promise<any[]> {
-		const database = new Database();
-		try {
-			const where = new WhereList();
-			where.add("ub.user_id", options.userId);
-			var query = `SELECT ub.user_id,ub.badge_id,ub.date_created FROM UserBadge ub ${where.getClause()}`;
-			return await database.query(query, where.getParams());
-		} finally {
-			database.close();
-		}
-	},
+    async getBadges(options: any): Promise<any[]> {
+        const database = new Database();
+        try {
+            const where = new WhereList();
+            where.add("ub.user_id", options.userId);
+            var query = `SELECT ub.user_id,ub.badge_id,ub.date_created FROM UserBadge ub ${where.getClause()}`;
+            return await database.query(query, where.getParams());
+        } finally {
+            database.close();
+        }
+    },
 
-	async getReviews(options: GetReviewOptions): Promise<any[]> {
-		console.log("getting reviews");
-		const database = new Database();
-		console.log("database setup");
-		try {
-			const where = new WhereList();
-			where.add("r.game_id", options.game_id);
-			where.add("r.user_id", options.user_id);
-			where.add("r.id", options.id);
-			where.add("r.removed", options.removed);
-			where.add("u.banned", 0);
-			where.add("g.removed", options.removed);
-			if (options.includeOwnerReview === false) {
-				where.addDirect("g.owner_id is null or g.owner_id <> r.user_id");
-			}
+    async getReviews(options: GetReviewOptions): Promise<any[]> {
+        console.log("getting reviews");
+        const database = new Database();
+        console.log("database setup");
+        try {
+            const where = new WhereList();
+            where.add("r.game_id", options.game_id);
+            where.add("r.user_id", options.user_id);
+            where.add("r.id", options.id);
+            where.add("r.removed", options.removed);
+            where.add("u.banned", 0);
+            where.add("g.removed", options.removed);
+            if (options.includeOwnerReview === false) {
+                where.addDirect("g.owner_id is null or g.owner_id <> r.user_id");
+            }
 
-			const params = [];
-			if (options.page !== undefined) {
-				params.push(options.page * options.limit!);
-				params.push(options.limit);
-			}
-			console.log("assembling the query");
-			var query = `
+            const params = [];
+            if (options.page !== undefined) {
+                params.push(options.page * options.limit!);
+                params.push(options.limit);
+            }
+            console.log("assembling the query");
+            var query = `
 SELECT r.*,
 u.name user_name,
 u.selected_badge,
@@ -446,302 +447,301 @@ JOIN Game g on r.game_id=g.id
 LEFT JOIN LikeReview AS l ON l.rating_id = r.id
 ${where.getClause()}
 GROUP BY r.id
-${
-	options.textReviewsFirst
-		? `ORDER BY CASE WHEN (r.comment IS NULL OR r.comment='') THEN 0 ELSE 1 END DESC,
+${options.textReviewsFirst
+                    ? `ORDER BY CASE WHEN (r.comment IS NULL OR r.comment='') THEN 0 ELSE 1 END DESC,
 COUNT(l.id) DESC,
 r.date_created DESC`
-		: options.orderCol
-			? `ORDER BY ${options.orderCol} ${options.orderDir ?? "DESC"}`
-			: `ORDER BY r.date_created ${options.orderDir ?? "DESC"}`
-}
+                    : options.orderCol
+                        ? `ORDER BY ${options.orderCol} ${options.orderDir ?? "DESC"}`
+                        : `ORDER BY r.date_created ${options.orderDir ?? "DESC"}`
+                }
 ${options.page !== undefined ? " LIMIT ?,? " : ""}
 `;
 
-			console.log(query);
-			console.log("running");
-			const results = await database.query_unsafe(
-				query,
-				where.getParams().concat(params),
-			);
-			console.log("results1");
-			console.log(results);
+            console.log(query);
+            console.log("running");
+            const results = await database.query_unsafe(
+                query,
+                where.getParams().concat(params),
+            );
+            console.log("results1");
+            console.log(results);
 
-			//the following data is cached, so it's not as bad as it seems at first glance :)
-			console.log("getting tags");
-			await Promise.all(
-				results.map(async (r) => {
-					r.tags = await this.getTagsForGame(r.game_id, r.user_id);
-				}),
-			);
+            //the following data is cached, so it's not as bad as it seems at first glance :)
+            console.log("getting tags");
+            await Promise.all(
+                results.map(async (r) => {
+                    r.tags = await this.getTagsForGame(r.game_id, r.user_id);
+                }),
+            );
 
-			console.log("results2");
-			console.log(results);
-			return results;
-		} finally {
-			database.close();
-		}
-	},
+            console.log("results2");
+            console.log(results);
+            return results;
+        } finally {
+            database.close();
+        }
+    },
 
-	logQuery(query: string, params: any[]) {
-		console.log("==QUERY DEBUGGER==");
-		console.log(query);
-		console.log(params);
-	},
+    logQuery(query: string, params: any[]) {
+        console.log("==QUERY DEBUGGER==");
+        console.log(query);
+        console.log(params);
+    },
 
-	async addReview(
-		review: Review,
-		gameId: number,
-		userId: number,
-	): Promise<Review> {
-		const database = new Database();
-		try {
-			await database.execute(
-				`DELETE FROM Rating WHERE game_id=? AND user_id=?`,
-				[gameId, userId],
-			);
+    async addReview(
+        review: Review,
+        gameId: number,
+        userId: number,
+    ): Promise<Review> {
+        const database = new Database();
+        try {
+            await database.execute(
+                `DELETE FROM Rating WHERE game_id=? AND user_id=?`,
+                [gameId, userId],
+            );
 
-			const insertList = new InsertList();
-			insertList.add("game_id", gameId);
-			insertList.add("user_id", userId);
-			insertList.add("rating", review.rating);
-			insertList.add("difficulty", review.difficulty);
-			insertList.add("comment", review.comment);
+            const insertList = new InsertList();
+            insertList.add("game_id", gameId);
+            insertList.add("user_id", userId);
+            insertList.add("rating", review.rating);
+            insertList.add("difficulty", review.difficulty);
+            insertList.add("comment", review.comment);
 
-			const result = await database.execute(
-				`INSERT INTO Rating ${insertList.getClause()}`,
-				insertList.getParams(),
-			);
+            const result = await database.execute(
+                `INSERT INTO Rating ${insertList.getClause()}`,
+                insertList.getParams(),
+            );
 
-			const r = await this.getReview(result.insertId as number);
+            const r = await this.getReview(result.insertId as number);
 
-			if (!r) throw "rating failed to be created";
-			return r;
-		} finally {
-			database.close();
-		}
-	},
+            if (!r) throw "rating failed to be created";
+            return r;
+        } finally {
+            database.close();
+        }
+    },
 
-	async updateReview(review: any): Promise<boolean> {
-		const database = new Database();
+    async updateReview(review: any): Promise<boolean> {
+        const database = new Database();
 
-		const updateList = new UpdateList();
+        const updateList = new UpdateList();
 
-		updateList.add("removed", review.removed ? 1 : 0);
-		updateList.add("rating", review.rating);
-		updateList.add("difficulty", review.difficulty);
-		updateList.add("comment", review.comment);
+        updateList.add("removed", review.removed ? 1 : 0);
+        updateList.add("rating", review.rating);
+        updateList.add("difficulty", review.difficulty);
+        updateList.add("comment", review.comment);
 
-		if (!updateList.hasAny()) return true;
+        if (!updateList.hasAny()) return true;
 
-		try {
-			const params = updateList.getParams();
-			params.push(review.id);
-			const rows = await database.execute(
-				` UPDATE Rating ${updateList.getSetClause()} WHERE id = ?`,
-				params,
-			);
-			return rows.affectedRows == 1;
-		} finally {
-			database.close();
-		}
-	},
+        try {
+            const params = updateList.getParams();
+            params.push(review.id);
+            const rows = await database.execute(
+                ` UPDATE Rating ${updateList.getSetClause()} WHERE id = ?`,
+                params,
+            );
+            return rows.affectedRows == 1;
+        } finally {
+            database.close();
+        }
+    },
 
-	async addLikeToReview(reviewId: number, userId: number): Promise<boolean> {
-		const database = new Database();
+    async addLikeToReview(reviewId: number, userId: number): Promise<boolean> {
+        const database = new Database();
 
-		try {
-			await database.execute(
-				` INSERT IGNORE INTO LikeReview (rating_id, user_id) VALUES (?,?)`,
-				[reviewId, userId],
-			);
-			uncache(`review-likes-${reviewId}`);
-			return true;
-		} finally {
-			database.close();
-		}
-	},
+        try {
+            await database.execute(
+                ` INSERT IGNORE INTO LikeReview (rating_id, user_id) VALUES (?,?)`,
+                [reviewId, userId],
+            );
+            uncache(`review-likes-${reviewId}`);
+            return true;
+        } finally {
+            database.close();
+        }
+    },
 
-	async removeLikeFromReview(
-		reviewId: number,
-		userId: number,
-	): Promise<boolean> {
-		const database = new Database();
+    async removeLikeFromReview(
+        reviewId: number,
+        userId: number,
+    ): Promise<boolean> {
+        const database = new Database();
 
-		try {
-			await database.execute(
-				` DELETE FROM LikeReview WHERE rating_id = ? AND user_id = ?`,
-				[reviewId, userId],
-			);
-			uncache(`review-likes-${reviewId}`);
-			return true;
-		} finally {
-			database.close();
-		}
-	},
+        try {
+            await database.execute(
+                ` DELETE FROM LikeReview WHERE rating_id = ? AND user_id = ?`,
+                [reviewId, userId],
+            );
+            uncache(`review-likes-${reviewId}`);
+            return true;
+        } finally {
+            database.close();
+        }
+    },
 
-	async countReviews(): Promise<number> {
-		const db = new Database();
-		const qry: [{ cnt: number }] = await db.query(
-			"SELECT COUNT(*) AS cnt FROM `Rating` AS `r` INNER JOIN `Game` AS `g` ON `g`.`id` = `r`.`game_id` AND `g`.`removed` = 0 RIGHT OUTER JOIN `User` AS `u` ON `u`.`id` = `r`.`user_id` AND `u`.`banned` = 0 WHERE `r`.`removed` = 0",
-		);
-		await db.close();
-		return qry[0].cnt;
-	},
+    async countReviews(): Promise<number> {
+        const db = new Database();
+        const qry: [{ cnt: number }] = await db.query(
+            "SELECT COUNT(*) AS cnt FROM `Rating` AS `r` INNER JOIN `Game` AS `g` ON `g`.`id` = `r`.`game_id` AND `g`.`removed` = 0 RIGHT OUTER JOIN `User` AS `u` ON `u`.`id` = `r`.`user_id` AND `u`.`banned` = 0 WHERE `r`.`removed` = 0",
+        );
+        await db.close();
+        return qry[0].cnt;
+    },
 
-	async isLiked(reviewId: number, userId: number): Promise<boolean> {
-		const users = await cache(`review-likes-${reviewId}`, async () => {
-			const database = new Database();
+    async isLiked(reviewId: number, userId: number): Promise<boolean> {
+        const users = await cache(`review-likes-${reviewId}`, async () => {
+            const database = new Database();
 
-			try {
-				const results = await database.execute(
-					` SELECT user_id FROM LikeReview WHERE rating_id = ? AND user_id = ?`,
-					[reviewId, userId],
-				);
-				return results.map((r: any) => r.user_id);
-			} finally {
-				database.close();
-			}
-		});
-		return users.includes(userId);
-	},
+            try {
+                const results = await database.execute(
+                    ` SELECT user_id FROM LikeReview WHERE rating_id = ? AND user_id = ?`,
+                    [reviewId, userId],
+                );
+                return results.map((r: any) => r.user_id);
+            } finally {
+                database.close();
+            }
+        });
+        return users.includes(userId);
+    },
 
-	async addFollowToUser(
-		targetUserId: number,
-		userId: number,
-	): Promise<boolean> {
-		const database = new Database();
+    async addFollowToUser(
+        targetUserId: number,
+        userId: number,
+    ): Promise<boolean> {
+        const database = new Database();
 
-		try {
-			await database.execute(
-				` INSERT IGNORE INTO UserFollow (user_id, user_follow_id) VALUES (?,?)`,
-				[targetUserId, userId],
-			);
-			return true;
-		} finally {
-			database.close();
-		}
-	},
+        try {
+            await database.execute(
+                ` INSERT IGNORE INTO UserFollow (user_id, user_follow_id) VALUES (?,?)`,
+                [targetUserId, userId],
+            );
+            return true;
+        } finally {
+            database.close();
+        }
+    },
 
-	async removeFollowFromUser(
-		targetUserId: number,
-		userId: number,
-	): Promise<boolean> {
-		const database = new Database();
+    async removeFollowFromUser(
+        targetUserId: number,
+        userId: number,
+    ): Promise<boolean> {
+        const database = new Database();
 
-		try {
-			await database.execute(
-				` DELETE FROM UserFollow WHERE user_id = ? AND user_follow_id = ?`,
-				[targetUserId, userId],
-			);
-			return true;
-		} finally {
-			database.close();
-		}
-	},
+        try {
+            await database.execute(
+                ` DELETE FROM UserFollow WHERE user_id = ? AND user_follow_id = ?`,
+                [targetUserId, userId],
+            );
+            return true;
+        } finally {
+            database.close();
+        }
+    },
 
-	async addList(list: List, userId: number): Promise<List> {
-		const database = new Database();
-		try {
-			const insertList = new InsertList();
-			insertList.add("name", list.name);
-			insertList.add("user_id", userId);
-			insertList.add("description", list.description);
-			insertList.addIf(
-				"private",
-				list.private ? 1 : 0,
-				list.private !== undefined,
-			);
+    async addList(list: List, userId: number): Promise<List> {
+        const database = new Database();
+        try {
+            const insertList = new InsertList();
+            insertList.add("name", list.name);
+            insertList.add("user_id", userId);
+            insertList.add("description", list.description);
+            insertList.addIf(
+                "private",
+                list.private ? 1 : 0,
+                list.private !== undefined,
+            );
 
-			const result = await database.execute(
-				`INSERT INTO List ${insertList.getClause()}`,
-				insertList.getParams(),
-			);
+            const result = await database.execute(
+                `INSERT INTO List ${insertList.getClause()}`,
+                insertList.getParams(),
+            );
 
-			const l = await this.getList(result.insertId as number);
+            const l = await this.getList(result.insertId as number);
 
-			if (!l) throw "list failed to be created";
-			return l;
-		} finally {
-			database.close();
-		}
-	},
+            if (!l) throw "list failed to be created";
+            return l;
+        } finally {
+            database.close();
+        }
+    },
 
-	async getList(id: number): Promise<List | null> {
-		//TODO: single pattern
-		const database = new Database();
-		try {
-			const where = new WhereList();
-			where.add("l.id", id);
+    async getList(id: number): Promise<List | null> {
+        //TODO: single pattern
+        const database = new Database();
+        try {
+            const where = new WhereList();
+            where.add("l.id", id);
 
-			const lists = await database.query(
-				`
+            const lists = await database.query(
+                `
 SELECT *, l.user_id as userId
 FROM List l
 ${where.getClause()}
 `,
-				where.getParams(),
-			);
-			if (!lists || lists.length == 0) return null;
-			const list = lists[0] as List;
+                where.getParams(),
+            );
+            if (!lists || lists.length == 0) return null;
+            const list = lists[0] as List;
 
-			return list;
-		} finally {
-			database.close();
-		}
-	},
+            return list;
+        } finally {
+            database.close();
+        }
+    },
 
-	async getListGames(id: number): Promise<any[]> {
-		const database = new Database();
-		try {
-			const where = new WhereList();
-			where.add("lg.list_id", id);
+    async getListGames(id: number): Promise<any[]> {
+        const database = new Database();
+        try {
+            const where = new WhereList();
+            where.add("lg.list_id", id);
 
-			return await database.query(
-				`
+            return await database.query(
+                `
 SELECT lg.game_id
 FROM ListGame lg
 ${where.getClause()}
 `,
-				where.getParams(),
-			);
-		} finally {
-			database.close();
-		}
-	},
+                where.getParams(),
+            );
+        } finally {
+            database.close();
+        }
+    },
 
-	async addGameToList(listId: number, gameId: number): Promise<boolean> {
-		const database = new Database();
-		try {
-			const ins = new InsertList();
-			ins.add("list_id", listId);
-			ins.add("game_id", gameId);
+    async addGameToList(listId: number, gameId: number): Promise<boolean> {
+        const database = new Database();
+        try {
+            const ins = new InsertList();
+            ins.add("list_id", listId);
+            ins.add("game_id", gameId);
 
-			await database.execute(
-				`INSERT INTO ListGame ${ins.getClause()}`,
-				ins.getParams(),
-			);
-			return true;
-		} finally {
-			database.close();
-		}
-	},
+            await database.execute(
+                `INSERT INTO ListGame ${ins.getClause()}`,
+                ins.getParams(),
+            );
+            return true;
+        } finally {
+            database.close();
+        }
+    },
 
-	async getReview(reviewId: number, removed?: boolean): Promise<Review | null> {
-		const rows = await this.getReviews({
-			id: reviewId,
-			includeOwnerReview: true,
-			removed,
-		});
-		if (!rows || rows.length == 0) return null;
-		return rows[0];
-	},
+    async getReview(reviewId: number, removed?: boolean): Promise<Review | null> {
+        const rows = await this.getReviews({
+            id: reviewId,
+            includeOwnerReview: true,
+            removed,
+        });
+        if (!rows || rows.length == 0) return null;
+        return rows[0];
+    },
 
-	async getGame(id: number, database?: Database): Promise<Game | null> {
-		return await cache(`game-${id}`, async () => {
-			const doClose = !database;
-			const db = database || new Database();
-			const query = `
+    async getGame(id: number, database?: Database): Promise<Game | null> {
+        return await cache(`game-${id}`, async () => {
+            const doClose = !database;
+            const db = database || new Database();
+            const query = `
 SELECT g.*
 , g.date_created as dateCreated
 , g.owner_id as ownerId
@@ -752,85 +752,85 @@ FROM Game g
 LEFT JOIN Rating r ON r.game_id = g.id AND r.removed = 0
 WHERE g.id = ?
 `;
-			try {
-				const res = await db.query_unsafe(query, [id]);
-				if (!res || res.length == 0) return null;
+            try {
+                const res = await db.query_unsafe(query, [id]);
+                if (!res || res.length == 0) return null;
 
-				const game = res[0];
-				//if zero date, we don't have it, so null it out
-				if (!moment(game.dateCreated).isValid()) game.dateCreated = undefined;
-				if (game.collab && game.author_raw)
-					game.author = game.author_raw.split(" ");
-				else game.author = game.author_raw ? [game.author_raw] : [];
-				delete game.author_raw;
+                const game = res[0];
+                //if zero date, we don't have it, so null it out
+                if (!moment(game.dateCreated).isValid()) game.dateCreated = undefined;
+                if (game.collab && game.author_raw)
+                    game.author = game.author_raw.split(" ");
+                else game.author = game.author_raw ? [game.author_raw] : [];
+                delete game.author_raw;
 
-				game.urlSpdrn = game.url_spdrn;
-				delete game.url_spdrn;
+                game.urlSpdrn = game.url_spdrn;
+                delete game.url_spdrn;
 
-				delete game.date_created; //dateCreated
+                delete game.date_created; //dateCreated
 
-				return game;
-			} finally {
-				if (doClose) db.close();
-			}
-		});
-	},
+                return game;
+            } finally {
+                if (doClose) db.close();
+            }
+        });
+    },
 
-	async gameExists(id: number): Promise<boolean> {
-		return await cache(`game-exists-${id}`, async () => {
-			const db = new Database();
-			try {
-				const res = await db.query(
-					"SELECT 1 FROM Game g WHERE g.id = ? AND g.removed = 0",
-					[id],
-				);
-				return res && res.length == 1;
-			} finally {
-				db.close();
-			}
-		});
-	},
+    async gameExists(id: number): Promise<boolean> {
+        return await cache(`game-exists-${id}`, async () => {
+            const db = new Database();
+            try {
+                const res = await db.query(
+                    "SELECT 1 FROM Game g WHERE g.id = ? AND g.removed = 0",
+                    [id],
+                );
+                return res && res.length == 1;
+            } finally {
+                db.close();
+            }
+        });
+    },
 
-	async getRandomGame() {
-		const database = new Database();
-		try {
-			const query = `
+    async getRandomGame() {
+        const database = new Database();
+        try {
+            const query = `
 SELECT COUNT(*) AS cnt FROM Game
 WHERE removed=0 AND url != '' AND url IS NOT NULL
 `;
-			const query2 = `
+            const query2 = `
 SELECT id FROM Game
 WHERE removed=0 AND url != '' AND url IS NOT NULL
 LIMIT 1 OFFSET ?
 `;
-			const rows = await database.query(query);
-			const rows2 = await database.query(query2, [
-				Math.floor(+rows[0].cnt * Math.random()),
-			]);
-			const res = await this.getGame(rows2[0].id, database);
-			return res;
-		} finally {
-			database.close();
-		}
-	},
+            const rows = await database.query(query);
+            const rows2 = await database.query(query2, [
+                Math.floor(+rows[0].cnt * Math.random()),
+            ]);
+            const res = await this.getGame(rows2[0].id, database);
+            return res;
+        } finally {
+            database.close();
+        }
+    },
 
-	async getScreenshots(params: GetScreenshotParms): Promise<Screenshot[]> {
-		const whereList = new WhereList();
-		whereList.add("s.id", params.id);
-		whereList.add("s.game_id", params.gameId);
-		whereList.addIf(
-			"s.approved",
-			params.approved ? 1 : 0,
-			params.approved !== undefined,
-		);
-		whereList.addIf(
-			"s.removed",
-			params.removed ? 1 : 0,
-			params.removed !== undefined,
-		);
-		whereList.add("s.added_by_id", params.addedById);
+    async getScreenshots(params: GetScreenshotParms): Promise<Screenshot[]> {
+        const whereList = new WhereList();
+        whereList.add("s.id", params.id);
+        whereList.add("s.game_id", params.gameId);
+        whereList.addIf(
+            "s.approved",
+            params.approved ? 1 : 0,
+            params.approved !== undefined,
+        );
+        whereList.addIf(
+            "s.removed",
+            params.removed ? 1 : 0,
+            params.removed !== undefined,
+        );
+        whereList.add("s.added_by_id", params.addedById);
 
-		var query = `
+        var query = `
 SELECT s.*, u.name user_name, g.name game_name, u.selected_badge
 , s.game_id as gameId
 , s.added_by_id as addedById
@@ -840,92 +840,92 @@ JOIN Game g on s.game_id=g.id
 ${whereList.getClause()}
 ORDER BY s.date_created DESC
 `;
-		const database = new Database();
-		try {
-			const rows = await database.query(query, whereList.getParams());
-			rows.forEach((r) => {
-				if (r.approved !== null) r.approved = r.approved == 1;
-				if (r.removed !== null) r.removed = r.removed == 1;
-			});
-			return rows;
-		} finally {
-			database.close();
-		}
-	},
+        const database = new Database();
+        try {
+            const rows = await database.query(query, whereList.getParams());
+            rows.forEach((r) => {
+                if (r.approved !== null) r.approved = r.approved == 1;
+                if (r.removed !== null) r.removed = r.removed == 1;
+            });
+            return rows;
+        } finally {
+            database.close();
+        }
+    },
 
-	async getScreenshot(id: number): Promise<Screenshot | null> {
-		const screenshots = await this.getScreenshots({ id, page: 0, limit: 1 });
-		if (!screenshots || screenshots.length == 0) return null;
-		return screenshots[0];
-	},
+    async getScreenshot(id: number): Promise<Screenshot | null> {
+        const screenshots = await this.getScreenshots({ id, page: 0, limit: 1 });
+        if (!screenshots || screenshots.length == 0) return null;
+        return screenshots[0];
+    },
 
-	async updateScreenshot(ss: Screenshot, isAdmin: boolean): Promise<boolean> {
-		const database = new Database();
+    async updateScreenshot(ss: Screenshot, isAdmin: boolean): Promise<boolean> {
+        const database = new Database();
 
-		const updateList = new UpdateList();
+        const updateList = new UpdateList();
 
-		updateList.addIf("removed", ss.removed ? 1 : 0, ss.removed !== undefined);
-		updateList.addIf(
-			"approved",
-			ss.approved ? 1 : 0,
-			ss.approved !== undefined,
-		);
+        updateList.addIf("removed", ss.removed ? 1 : 0, ss.removed !== undefined);
+        updateList.addIf(
+            "approved",
+            ss.approved ? 1 : 0,
+            ss.approved !== undefined,
+        );
 
-		if (!updateList.hasAny()) return true;
+        if (!updateList.hasAny()) return true;
 
-		try {
-			const params = updateList.getParams();
-			params.push(ss.id);
-			const rows = await database.execute(
-				` UPDATE Screenshot ${updateList.getSetClause()} WHERE id = ?`,
-				params,
-			);
-			return rows.affectedRows == 1;
-		} finally {
-			database.close();
-		}
-	},
+        try {
+            const params = updateList.getParams();
+            params.push(ss.id);
+            const rows = await database.execute(
+                ` UPDATE Screenshot ${updateList.getSetClause()} WHERE id = ?`,
+                params,
+            );
+            return rows.affectedRows == 1;
+        } finally {
+            database.close();
+        }
+    },
 
-	async addScreenshot(
-		ss: Screenshot,
-		adderId: number,
-		autoApprove: boolean,
-	): Promise<Screenshot> {
-		const database = new Database();
-		try {
-			//const userExists = await database.query(`SELECT 1 FROM User WHERE name = ?`,[username]);
-			//if (userExists.length > 0) return false;
+    async addScreenshot(
+        ss: Screenshot,
+        adderId: number,
+        autoApprove: boolean,
+    ): Promise<Screenshot> {
+        const database = new Database();
+        try {
+            //const userExists = await database.query(`SELECT 1 FROM User WHERE name = ?`,[username]);
+            //if (userExists.length > 0) return false;
 
-			const insertList = new InsertList();
-			insertList.add("game_id", ss.gameId);
-			insertList.add("added_by_id", adderId);
-			insertList.addDirect("description", ss.description); //blank description is falsy
-			if (autoApprove) {
-				insertList.addDirect("approved_by_id", 0);
-				insertList.addDirect("approved", 1);
-			}
+            const insertList = new InsertList();
+            insertList.add("game_id", ss.gameId);
+            insertList.add("added_by_id", adderId);
+            insertList.addDirect("description", ss.description); //blank description is falsy
+            if (autoApprove) {
+                insertList.addDirect("approved_by_id", 0);
+                insertList.addDirect("approved", 1);
+            }
 
-			const result = await database.execute(
-				`INSERT INTO Screenshot ${insertList.getClause()}`,
-				insertList.getParams(),
-			);
+            const result = await database.execute(
+                `INSERT INTO Screenshot ${insertList.getClause()}`,
+                insertList.getParams(),
+            );
 
-			const g = await this.getScreenshot(result.insertId as number);
+            const g = await this.getScreenshot(result.insertId as number);
 
-			if (!g) throw "screenshot failed to be created";
-			return g;
-		} finally {
-			database.close();
-		}
-	},
+            if (!g) throw "screenshot failed to be created";
+            return g;
+        } finally {
+            database.close();
+        }
+    },
 
-	async getTagsForGame(gameId: number, userId?: number) {
-		return await cache(`game-tag-${gameId}-${userId}`, async () => {
-			const whereList = new WhereList();
-			whereList.add("gt.game_id", gameId);
-			whereList.add("gt.user_id", userId);
+    async getTagsForGame(gameId: number, userId?: number) {
+        return await cache(`game-tag-${gameId}-${userId}`, async () => {
+            const whereList = new WhereList();
+            whereList.add("gt.game_id", gameId);
+            whereList.add("gt.user_id", userId);
 
-			var query = `
+            var query = `
 SELECT t.name, t.id
 FROM GameTag gt
 JOIN Game g on g.id = gt.game_id AND g.removed = 0
@@ -933,21 +933,21 @@ JOIN Tag t on t.id = gt.tag_id
 ${whereList.getClause()}
 `;
 
-			const database = new Database();
-			try {
-				return await database.query(query, whereList.getParams());
-			} finally {
-				database.close();
-			}
-		});
-	},
+            const database = new Database();
+            try {
+                return await database.query(query, whereList.getParams());
+            } finally {
+                database.close();
+            }
+        });
+    },
 
-	async getTagSetsForGame(gameId: number) {
-		return await cache(`game-tag-sets-${gameId}`, async () => {
-			const whereList = new WhereList();
-			whereList.add("gt.game_id", gameId);
+    async getTagSetsForGame(gameId: number) {
+        return await cache(`game-tag-sets-${gameId}`, async () => {
+            const whereList = new WhereList();
+            whereList.add("gt.game_id", gameId);
 
-			var query = `
+            var query = `
 SELECT t.name, gt.tag_id as "id", COUNT(*) AS "count"
 FROM GameTag AS gt
 RIGHT JOIN Tag AS t ON t.id = gt.tag_id
@@ -955,202 +955,208 @@ WHERE gt.game_id IN (${gameId})
 GROUP BY gt.game_id, gt.tag_id
 `;
 
-			const database = new Database();
-			try {
-				return await database.query_unsafe(query, whereList.getParams());
-			} finally {
-				database.close();
-			}
-		});
-	},
+            const database = new Database();
+            try {
+                return await database.query_unsafe(query, whereList.getParams());
+            } finally {
+                database.close();
+            }
+        });
+    },
 
-	async getTags(tagId?: number, q?: string, name?: string) {
-		const whereList = new WhereList();
-		whereList.add("t.id", tagId);
-		if (q !== undefined) {
-			whereList.add2("t.name LIKE ? ORDER BY (t.name = ?) DESC, (t.name LIKE ?) DESC, CHAR_LENGTH(?) ASC", "%" + q + "%");
-		}
-		whereList.add("t.name", name);
+    async getTags(tagId?: number, q?: string, name?: string) {
+        const whereList = new WhereList();
+        whereList.add("t.id", tagId);
+        if (q !== undefined) {
+            whereList.add2(
+                "t.name LIKE ? ORDER BY (t.name = ?) DESC, (t.name LIKE ?) DESC, CHAR_LENGTH(?) ASC",
+                "%" + q + "%",
+            );
+        }
+        whereList.add("t.name", name);
 
-		var query = `
+        var query = `
 SELECT t.name, t.id
 FROM Tag t
 ${whereList.getClause()}
 `;
 
-		const database = new Database();
-		try {
-			// HACK: drop superfluous AND statement (slice)
-			console.log(query.slice(0, -3).replace("WHERE (", "WHERE "))
-			return await database.query(query.slice(0, -3).replace("WHERE (", "WHERE "), [...whereList.getParams(), q, q + "%", q]);
-		} finally {
-			database.close();
-		}
-	},
+        const database = new Database();
+        try {
+            // HACK: drop superfluous AND statement (slice)
+            console.log(query.slice(0, -3).replace("WHERE (", "WHERE "));
+            return await database.query(
+                query.slice(0, -3).replace("WHERE (", "WHERE "),
+                [...whereList.getParams(), q, q + "%", q],
+            );
+        } finally {
+            database.close();
+        }
+    },
 
-	async setTags(gameId: number, userId: number, tags: number[]) {
-		const database = new Database();
-		try {
-			await database.execute(
-				`DELETE FROM GameTag WHERE game_id=? AND user_id=?`,
-				[gameId, userId],
-			);
+    async setTags(gameId: number, userId: number, tags: number[]) {
+        const database = new Database();
+        try {
+            await database.execute(
+                `DELETE FROM GameTag WHERE game_id=? AND user_id=?`,
+                [gameId, userId],
+            );
 
-			for (const tagId of tags) {
-				const insertList = new InsertList();
-				insertList.add("game_id", gameId);
-				insertList.add("user_id", userId);
-				insertList.add("tag_id", tagId);
+            for (const tagId of tags) {
+                const insertList = new InsertList();
+                insertList.add("game_id", gameId);
+                insertList.add("user_id", userId);
+                insertList.add("tag_id", tagId);
 
-				await database.execute(
-					`INSERT INTO GameTag ${insertList.getClause()}`,
-					insertList.getParams(),
-				);
-			}
-			uncache(`game-tag-${gameId}-${userId}`);
-		} finally {
-			database.close();
-		}
-	},
+                await database.execute(
+                    `INSERT INTO GameTag ${insertList.getClause()}`,
+                    insertList.getParams(),
+                );
+            }
+            uncache(`game-tag-${gameId}-${userId}`);
+        } finally {
+            database.close();
+        }
+    },
 
-	async tagsExist(tagIds: number[]) {
-		const database = new Database();
-		try {
-			const qs = tagIds.map((_) => "?").join(",");
-			const res = await database.execute(
-				`SELECT COUNT(1) as cnt FROM Tag WHERE id in (${qs})`,
-				tagIds,
-			);
-			return res.length >= 1 && res[0].cnt == tagIds.length;
-		} finally {
-			database.close();
-		}
-		return false;
-	},
+    async tagsExist(tagIds: number[]) {
+        const database = new Database();
+        try {
+            const qs = tagIds.map((_) => "?").join(",");
+            const res = await database.execute(
+                `SELECT COUNT(1) as cnt FROM Tag WHERE id in (${qs})`,
+                tagIds,
+            );
+            return res.length >= 1 && res[0].cnt == tagIds.length;
+        } finally {
+            database.close();
+        }
+        return false;
+    },
 
-	async tagNamesExist(tagNames: string[]) {
-		const database = new Database();
-		try {
-			const qs = tagNames.map((_) => "?").join(",");
-			const res = await database.execute(
-				`SELECT COUNT(1) as cnt FROM Tag WHERE name in (${qs})`,
-				tagNames,
-			);
-			return res.length >= 1 && res[0].cnt == tagNames.length;
-		} finally {
-			database.close();
-		}
-		return false;
-	},
+    async tagNamesExist(tagNames: string[]) {
+        const database = new Database();
+        try {
+            const qs = tagNames.map((_) => "?").join(",");
+            const res = await database.execute(
+                `SELECT COUNT(1) as cnt FROM Tag WHERE name in (${qs})`,
+                tagNames,
+            );
+            return res.length >= 1 && res[0].cnt == tagNames.length;
+        } finally {
+            database.close();
+        }
+        return false;
+    },
 
-	async getTagsByName(
-		tagNames: string[],
-	): Promise<Array<{ id: number; name: string; date: Date }>> {
-		const database = new Database();
-		try {
-			const qs = tagNames.map((_) => "?").join(",");
-			const res = await database.query(
-				`SELECT * FROM Tag WHERE name in (${qs})`,
-				tagNames,
-			);
-			return res;
-		} finally {
-			database.close();
-		}
-		return false;
-	},
+    async getTagsByName(
+        tagNames: string[],
+    ): Promise<Array<{ id: number; name: string; date: Date }>> {
+        const database = new Database();
+        try {
+            const qs = tagNames.map((_) => "?").join(",");
+            const res = await database.query(
+                `SELECT * FROM Tag WHERE name in (${qs})`,
+                tagNames,
+            );
+            return res;
+        } finally {
+            database.close();
+        }
+        return false;
+    },
 
-	async createTag(name: string) {
-		const database = new Database();
-		try {
-			const insertList = new InsertList();
-			insertList.add("name", name);
+    async createTag(name: string) {
+        const database = new Database();
+        try {
+            const insertList = new InsertList();
+            insertList.add("name", name);
 
-			const result = await database.execute(
-				`INSERT INTO Tag ${insertList.getClause()}`,
-				insertList.getParams(),
-			);
+            const result = await database.execute(
+                `INSERT INTO Tag ${insertList.getClause()}`,
+                insertList.getParams(),
+            );
 
-			return { id: result.insertId, name };
-		} finally {
-			database.close();
-		}
-	},
+            return { id: result.insertId, name };
+        } finally {
+            database.close();
+        }
+    },
 
-	async countGames() {
-		const db = new Database();
-		const qry =
-			"SELECT COUNT(*) AS `cnt` FROM `Game` AS `g` WHERE `g`.removed = 0";
-		const res: [{ cnt: number }] = await db.query(qry);
-		await db.close();
-		return res[0].cnt;
-	},
+    async countGames() {
+        const db = new Database();
+        const qry =
+            "SELECT COUNT(*) AS `cnt` FROM `Game` AS `g` WHERE `g`.removed = 0";
+        const res: [{ cnt: number }] = await db.query(qry);
+        await db.close();
+        return res[0].cnt;
+    },
 
-	async getGames(params: GetGameParams, countOnly?: boolean) {
-		const database = new Database();
+    async getGames(params: GetGameParams, countOnly?: boolean) {
+        const database = new Database();
 
-		const whereList = new WhereList();
-		whereList.add("g.id", params.id);
-		whereList.addIf(
-			"g.removed",
-			params.removed ? 1 : 0,
-			params.removed !== undefined,
-		);
+        const whereList = new WhereList();
+        whereList.add("g.id", params.id);
+        whereList.addIf(
+            "g.removed",
+            params.removed ? 1 : 0,
+            params.removed !== undefined,
+        );
 
-		if (params.q !== undefined) {
-			whereList.addPhrase(
-				"g.name LIKE ? OR g.author LIKE ?",
-				"%" + params.q + "%",
-				"%" + params.q + "%",
-			);
-		}
+        if (params.q !== undefined) {
+            whereList.addPhrase(
+                "g.name LIKE ? OR g.author LIKE ?",
+                "%" + params.q + "%",
+                "%" + params.q + "%",
+            );
+        }
 
-		if (params.name !== undefined) {
-			whereList.add2("g.name LIKE ?", "%" + params.name + "%");
-		}
+        if (params.name !== undefined) {
+            whereList.add2("g.name LIKE ?", "%" + params.name + "%");
+        }
 
-		whereList.add("g.owner_id", params.ownerUserId);
+        whereList.add("g.owner_id", params.ownerUserId);
 
-		if (params.author !== undefined) {
-			whereList.add2("g.author LIKE ?", "%" + params.author + "%");
-		}
+        if (params.author !== undefined) {
+            whereList.add2("g.author LIKE ?", "%" + params.author + "%");
+        }
 
-		if (params.hasDownload !== undefined) {
-			if (params.hasDownload)
-				whereList.addDirect("g.url is not null AND g.url != ''");
-			else whereList.addDirect("g.url is null OR g.url != ''");
-		}
+        if (params.hasDownload !== undefined) {
+            if (params.hasDownload)
+                whereList.addDirect("g.url is not null AND g.url != ''");
+            else whereList.addDirect("g.url is null OR g.url != ''");
+        }
 
-		whereList.add2(
-			"g.date_created >= ?",
-			new Date(params.createdFrom ?? new Date(0)),
-		);
-		// HACK: did this mostly for tests, but occasionally a new game might be unsearchable for a few hours.
-		// because of this, I've decided to use a default initialized value that represents 48 hours from now,
-		// just to be safe. unsure if this has any real consequences, other than setting a game's date created
-		// value to 2 days in the future would no longer hide it from being searchable until that date. easily
-		// worked around by just adding 2 days on top of when you'd actually want it to be searchable.
-		whereList.add2(
-			"g.date_created <= ?",
-			new Date(params.createdTo ?? Date.now() + 48 * 60 * 60 * 1000), // use provided value or 48 hours from now
-		);
+        whereList.add2(
+            "g.date_created >= ?",
+            new Date(params.createdFrom ?? new Date(0)),
+        );
+        // HACK: did this mostly for tests, but occasionally a new game might be unsearchable for a few hours.
+        // because of this, I've decided to use a default initialized value that represents 48 hours from now,
+        // just to be safe. unsure if this has any real consequences, other than setting a game's date created
+        // value to 2 days in the future would no longer hide it from being searchable until that date. easily
+        // worked around by just adding 2 days on top of when you'd actually want it to be searchable.
+        whereList.add2(
+            "g.date_created <= ?",
+            new Date(params.createdTo ?? Date.now() + 48 * 60 * 60 * 1000), // use provided value or 48 hours from now
+        );
 
-		if (params.reviewedByUserId !== undefined) {
-			whereList.add2(
-				"g.id IN (SELECT game_id FROM Rating WHERE removed = 0 AND user_id = ?)",
-				params.reviewedByUserId,
-			);
-		}
-		//TODO: cleared
+        if (params.reviewedByUserId !== undefined) {
+            whereList.add2(
+                "g.id IN (SELECT game_id FROM Rating WHERE removed = 0 AND user_id = ?)",
+                params.reviewedByUserId,
+            );
+        }
+        //TODO: cleared
 
-		//whereList.addIn("gt.name", params.tags);
-		// DANGER: A bit worried that this might result in DoS attacks, but
-		// I'm hoping by hinting to limit execution time to around 2.5 seconds
-		// that it won't happen. If it becomes a issue I have alternatives.
-		if (params.tags !== undefined) {
-			console.log(params);
-			console.log(params.tags);
-			whereList.addDirect(`g.id IN (
+        //whereList.addIn("gt.name", params.tags);
+        // DANGER: A bit worried that this might result in DoS attacks, but
+        // I'm hoping by hinting to limit execution time to around 2.5 seconds
+        // that it won't happen. If it becomes a issue I have alternatives.
+        if (params.tags !== undefined) {
+            console.log(params);
+            console.log(params.tags);
+            whereList.addDirect(`g.id IN (
 SELECT game_id
 FROM GameTag gt
 JOIN Tag t ON t.id=gt.tag_id
@@ -1158,105 +1164,105 @@ WHERE t.id IN (${params.tags.map((s) => `${s}`).join(",")})
 GROUP BY gt.game_id
 HAVING COUNT(DISTINCT t.id) = ${params.tags.length}
 )`);
-		}
+        }
 
-		if (params.nameStartsWith !== undefined) {
-			const letter = params.nameStartsWith.charAt(0).toUpperCase();
-			if (/^[A-Z]$/.test(letter)) {
-				whereList.add2("g.sortname LIKE ?", `${letter}%`);
-			}
-		}
+        if (params.nameStartsWith !== undefined) {
+            const letter = params.nameStartsWith.charAt(0).toUpperCase();
+            if (/^[A-Z]$/.test(letter)) {
+                whereList.add2("g.sortname LIKE ?", `${letter}%`);
+            }
+        }
 
-		if (params.nameExp !== undefined) {
-			whereList.add2("g.name REGEXP ?", `${params.nameExp}%`);
-		}
+        if (params.nameExp !== undefined) {
+            whereList.add2("g.name REGEXP ?", `${params.nameExp}%`);
+        }
 
-		const havingList = new WhereList("HAVING");
-		if (params.ratingFrom !== undefined)
-			havingList.add2("AVG(r.rating) >= ?", params.ratingFrom);
-		if (params.ratingTo !== undefined)
-			havingList.add2("AVG(r.rating) <= ?", params.ratingTo);
-		if (params.difficultyFrom !== undefined)
-			havingList.add2("AVG(r.difficulty) >= ?", params.difficultyFrom);
-		if (params.difficultyTo !== undefined)
-			havingList.add2("AVG(r.difficulty) <= ?", params.difficultyTo);
+        const havingList = new WhereList("HAVING");
+        if (params.ratingFrom !== undefined)
+            havingList.add2("AVG(r.rating) >= ?", params.ratingFrom);
+        if (params.ratingTo !== undefined)
+            havingList.add2("AVG(r.rating) <= ?", params.ratingTo);
+        if (params.difficultyFrom !== undefined)
+            havingList.add2("AVG(r.difficulty) >= ?", params.difficultyFrom);
+        if (params.difficultyTo !== undefined)
+            havingList.add2("AVG(r.difficulty) <= ?", params.difficultyTo);
 
-		let orderCol = "date_created";
-		if (params.orderCol) {
-			const sortWhitelist: { [id: string]: string } = {
-				name: "g.sortname",
-				date_created: "g.date_created",
-				rating: "AVG(r.rating)",
-				difficulty: "AVG(r.difficulty)",
-			};
-			orderCol = sortWhitelist[params.orderCol] || "date_created";
-		}
+        let orderCol = "date_created";
+        if (params.orderCol) {
+            const sortWhitelist: { [id: string]: string } = {
+                name: "g.sortname",
+                date_created: "g.date_created",
+                rating: "AVG(r.rating)",
+                difficulty: "AVG(r.difficulty)",
+            };
+            orderCol = sortWhitelist[params.orderCol] || "date_created";
+        }
 
-		const query =
-			`
+        const query =
+            `
 SELECT /*+ MAX_EXECUTION_TIME(9001) */` +
-			(countOnly
-				? `COUNT(1) AS total_count`
-				: `g.*,
+            (countOnly
+                ? `COUNT(1) AS total_count`
+                : `g.*,
 COALESCE((SELECT AVG(r.rating) FROM Rating r RIGHT OUTER JOIN User u ON u.id = r.user_id WHERE r.removed = FALSE AND u.banned = FALSE AND r.game_id IN (g.id)), NULL) AS rating,
 COALESCE((SELECT AVG(r.difficulty) FROM Rating r RIGHT OUTER JOIN User u ON u.id = r.user_id WHERE r.removed = FALSE AND u.banned = FALSE AND r.game_id IN (g.id)), NULL) AS difficulty,
 g.date_created AS dateCreated,
 COUNT(r.id) AS rating_count
 `) +
-			`
+            `
 FROM Game g
 LEFT JOIN Rating r ON r.removed=0 AND r.game_id=g.id
 LEFT JOIN User AS u ON u.id = r.user_id AND u.banned = 0
 ${whereList.getClause()}` +
-			(countOnly
-				? ``
-				: `GROUP BY g.id
+            (countOnly
+                ? ``
+                : `GROUP BY g.id
 `) +
-			`
+            `
 ${havingList.getClause()}` +
-			(countOnly
-				? ``
-				: `
+            (countOnly
+                ? ``
+                : `
 ORDER BY ${orderCol} ${params.orderDir || "ASC"}
 LIMIT ?,?
 `);
-		console.log(`query: ${query}`);
+        console.log(`query: ${query}`);
 
-		let queryparms = whereList.getParams().concat(havingList.getParams());
-		if (!countOnly)
-			queryparms = queryparms.concat([
-				params.page * params.limit,
-				params.limit,
-			]);
-		console.log(`queryparms: ${queryparms}`);
-		try {
-			const rows = await database.query(query, queryparms);
-			console.log(`rows: ${rows}`);
+        let queryparms = whereList.getParams().concat(havingList.getParams());
+        if (!countOnly)
+            queryparms = queryparms.concat([
+                params.page * params.limit,
+                params.limit,
+            ]);
+        console.log(`queryparms: ${queryparms}`);
+        try {
+            const rows = await database.query(query, queryparms);
+            console.log(`rows: ${rows}`);
 
-			if (!countOnly) {
-				rows.forEach((game) => {
-					if (!moment(game.date_created).isValid()) game.date_created = null;
-					if (game.collab == 1) game.author = game.author.split(" ");
-					else game.author = [game.author];
-				});
-			}
-			return rows;
-		} finally {
-			database.close();
-		}
-	},
+            if (!countOnly) {
+                rows.forEach((game) => {
+                    if (!moment(game.date_created).isValid()) game.date_created = null;
+                    if (game.collab == 1) game.author = game.author.split(" ");
+                    else game.author = [game.author];
+                });
+            }
+            return rows;
+        } finally {
+            database.close();
+        }
+    },
 
-	async getUser(id: number): Promise<any> {
-		const users = await this.getUsers({ id, page: 0, limit: 1 });
-		if (!users || users.length == 0) return null;
-		const user = users[0];
-		return user;
-	},
+    async getUser(id: number): Promise<any> {
+        const users = await this.getUsers({ id, page: 0, limit: 1 });
+        if (!users || users.length == 0) return null;
+        const user = users[0];
+        return user;
+    },
 
-	async getUserReviewCount(uid: number): Promise<number> {
-		const database = new Database();
-		const res = await database.execute(
-			`SELECT
+    async getUserReviewCount(uid: number): Promise<number> {
+        const database = new Database();
+        const res = await database.execute(
+            `SELECT
 	count(*) AS cnt
 FROM
 	Rating AS r
@@ -1266,22 +1272,22 @@ WHERE
 	r.user_id = ?
 	AND r.removed = 0
 	AND g.removed = 0`,
-			[uid],
-		);
+            [uid],
+        );
 
-		database.close();
+        database.close();
 
-		if (res.length >= 1) {
-			return res[0].cnt as number;
-		} else {
-			return -1;
-		}
-	},
+        if (res.length >= 1) {
+            return res[0].cnt as number;
+        } else {
+            return -1;
+        }
+    },
 
-	async getUserRatingCount(uid: number): Promise<number> {
-		const database = new Database();
-		const res = await database.execute(
-			`SELECT
+    async getUserRatingCount(uid: number): Promise<number> {
+        const database = new Database();
+        const res = await database.execute(
+            `SELECT
 		count(*) AS cnt
 	FROM
 		Rating AS r
@@ -1292,22 +1298,22 @@ WHERE
 		AND r.comment = ''
 		AND r.removed = 0
 		AND g.removed = 0`,
-			[uid],
-		);
+            [uid],
+        );
 
-		database.close();
+        database.close();
 
-		if (res.length >= 1) {
-			return res[0].cnt as number;
-		} else {
-			return -1;
-		}
-	},
+        if (res.length >= 1) {
+            return res[0].cnt as number;
+        } else {
+            return -1;
+        }
+    },
 
-	async getUserScreenshotCount(uid: number): Promise<number> {
-		const database = new Database();
-		const res = await database.execute(
-			`SELECT
+    async getUserScreenshotCount(uid: number): Promise<number> {
+        const database = new Database();
+        const res = await database.execute(
+            `SELECT
 	count(*) AS cnt
 FROM
 	Screenshot AS s
@@ -1317,45 +1323,45 @@ WHERE
 	s.added_by_id = ?
 	AND s.removed = 0
 	AND g.removed = 0`,
-			[uid],
-		);
+            [uid],
+        );
 
-		database.close();
+        database.close();
 
-		if (res.length >= 1) {
-			return res[0].cnt as number;
-		} else {
-			return -1;
-		}
-	},
+        if (res.length >= 1) {
+            return res[0].cnt as number;
+        } else {
+            return -1;
+        }
+    },
 
-	async getUsers(params: GetUsersParms): Promise<any[]> {
-		const database = new Database();
+    async getUsers(params: GetUsersParms): Promise<any[]> {
+        const database = new Database();
 
-		const whereList = new WhereList();
-		whereList.add("u.id", params.id);
-		if (params.followerUserId !== undefined) {
-			whereList.add2(
-				"u.id IN (SELECT user_follow_id FROM UserFollow WHERE user_id = ?)",
-				params.followerUserId,
-			);
-		}
-		if (params.banned !== undefined) {
-			if (!params.banned) whereList.add("u.banned", 0);
-			else whereList.add("u.banned", 1);
-		}
-		if (params.name !== undefined) {
-			whereList.addPhrase("u.name LIKE ?", "%" + params.name + "%");
-		}
+        const whereList = new WhereList();
+        whereList.add("u.id", params.id);
+        if (params.followerUserId !== undefined) {
+            whereList.add2(
+                "u.id IN (SELECT user_follow_id FROM UserFollow WHERE user_id = ?)",
+                params.followerUserId,
+            );
+        }
+        if (params.banned !== undefined) {
+            if (!params.banned) whereList.add("u.banned", 0);
+            else whereList.add("u.banned", 1);
+        }
+        if (params.name !== undefined) {
+            whereList.addPhrase("u.name LIKE ?", "%" + params.name + "%");
+        }
 
-		const orderCol = whitelist(
-			params.orderCol,
-			["id", "date_created", "name"],
-			"id",
-		);
-		const orderDir = whitelist(params.orderDir, ["ASC", "DESC"], "DESC");
+        const orderCol = whitelist(
+            params.orderCol,
+            ["id", "date_created", "name"],
+            "id",
+        );
+        const orderDir = whitelist(params.orderDir, ["ASC", "DESC"], "DESC");
 
-		const query = `
+        const query = `
 SELECT u.id, u.name, u.date_created as dateCreated
 , u.twitch_link as twitchLink, u.youtube_link as youtubeLink
 , u.nico_link as nicoLink, u.twitter_link as twitterLink
@@ -1370,203 +1376,203 @@ ${whereList.getClause()}
 ORDER BY ${orderCol} ${orderDir}
 LIMIT ?,?
 `;
-		try {
-			const rows = await database.query(
-				query,
-				whereList
-					.getParams()
-					.concat([params.page * params.limit, params.limit]),
-			);
-			rows.forEach((u) => {
-				u.isAdmin = u.isAdmin === 1;
-			});
-			return rows;
-		} finally {
-			database.close();
-		}
-	},
+        try {
+            const rows = await database.query(
+                query,
+                whereList
+                    .getParams()
+                    .concat([params.page * params.limit, params.limit]),
+            );
+            rows.forEach((u) => {
+                u.isAdmin = u.isAdmin === 1;
+            });
+            return rows;
+        } finally {
+            database.close();
+        }
+    },
 
-	async getPermissions(userid: number): Promise<any> {
-		return await cache("user-perm-" + userid, async () => {
-			const database = new Database();
+    async getPermissions(userid: number): Promise<any> {
+        return await cache("user-perm-" + userid, async () => {
+            const database = new Database();
 
-			try {
-				const whereList = new WhereList();
-				whereList.add("user_id", userid);
-				const permRows = await database.query(
-					`SELECT * FROM UserPermission ${whereList.getClause()}`,
-					whereList.getParams(),
-				);
+            try {
+                const whereList = new WhereList();
+                whereList.add("user_id", userid);
+                const permRows = await database.query(
+                    `SELECT * FROM UserPermission ${whereList.getClause()}`,
+                    whereList.getParams(),
+                );
 
-				const perms = permRows.reduce((o, v) => {
-					o[v.permission_id] = v;
-					return o;
-				}, {} as any);
+                const perms = permRows.reduce((o, v) => {
+                    o[v.permission_id] = v;
+                    return o;
+                }, {} as any);
 
-				//add any perms not in the DB
-				DEFAULT_PERMISSIONS.filter((p) => !perms[p]).forEach((p) => {
-					perms[p] = { permission_id: p };
-				});
-				return perms;
-			} finally {
-				database.close();
-			}
-		});
-	},
+                //add any perms not in the DB
+                DEFAULT_PERMISSIONS.filter((p) => !perms[p]).forEach((p) => {
+                    perms[p] = { permission_id: p };
+                });
+                return perms;
+            } finally {
+                database.close();
+            }
+        });
+    },
 
-	async grantPermission(user_id: number, permission: Permission): Promise<any> {
-		const database = new Database();
+    async grantPermission(user_id: number, permission: Permission): Promise<any> {
+        const database = new Database();
 
-		try {
-			await database.execute(
-				`INSERT IGNORE INTO UserPermission (user_id,permission_id) VALUES (?,?)`,
-				[user_id, permission],
-			);
+        try {
+            await database.execute(
+                `INSERT IGNORE INTO UserPermission (user_id,permission_id) VALUES (?,?)`,
+                [user_id, permission],
+            );
 
-			uncache("user-perm-" + user_id);
-		} finally {
-			database.close();
-		}
-	},
+            uncache("user-perm-" + user_id);
+        } finally {
+            database.close();
+        }
+    },
 
-	async updatePermission(
-		user_id: number,
-		permission: Permission,
-		revokedUntil: string,
-	): Promise<any> {
-		const database = new Database();
+    async updatePermission(
+        user_id: number,
+        permission: Permission,
+        revokedUntil: string,
+    ): Promise<any> {
+        const database = new Database();
 
-		try {
-			await database.execute(
-				`INSERT INTO UserPermission (user_id,permission_id,revoked_until)
+        try {
+            await database.execute(
+                `INSERT INTO UserPermission (user_id,permission_id,revoked_until)
 VALUES (?,?,?)
 ON DUPLICATE KEY UPDATE
 revoked_until = ?`,
-				[user_id, permission, revokedUntil, revokedUntil],
-			);
+                [user_id, permission, revokedUntil, revokedUntil],
+            );
 
-			uncache("user-perm-" + user_id);
-		} finally {
-			database.close();
-		}
-	},
+            uncache("user-perm-" + user_id);
+        } finally {
+            database.close();
+        }
+    },
 
-	async getApiUsers(params: any): Promise<any[]> {
-		const database = new Database();
+    async getApiUsers(params: any): Promise<any[]> {
+        const database = new Database();
 
-		const query = `
+        const query = `
 SELECT *
 
 FROM ApiUser u
 LIMIT ?,?
 `;
-		try {
-			const rows = await database.query(query, [
-				params.page * params.limit,
-				params.limit,
-			]);
-			return rows;
-		} finally {
-			database.close();
-		}
-	},
+        try {
+            const rows = await database.query(query, [
+                params.page * params.limit,
+                params.limit,
+            ]);
+            return rows;
+        } finally {
+            database.close();
+        }
+    },
 
-	async getRatings(gameId: number): Promise<Rating> {
-		const db = new Database();
-		try {
-			const rating: number = Number.parseFloat(
-				(
-					await db.execute(
-						"SELECT COALESCE((SELECT AVG(r.`rating`) FROM `Rating` r RIGHT OUTER JOIN `User` u ON u.`id` = r.`user_id` WHERE r.`removed` = FALSE AND u.`banned` = FALSE AND r.`game_id` IN (?)), NULL) AS rating_avg",
-						[gameId],
-					)
-				)[0].rating_avg,
-			);
-			const difficulty: number = Number.parseFloat(
-				(
-					await db.execute(
-						"SELECT COALESCE((SELECT AVG(r.`difficulty`) FROM `Rating` r RIGHT OUTER JOIN `User` u ON u.`id` = r.`user_id` WHERE r.`removed` = FALSE AND u.`banned` = FALSE AND r.`game_id` IN (?)), NULL) AS difficulty_avg",
-						[gameId],
-					)
-				)[0].difficulty_avg,
-			);
-			return { rating, difficulty };
-		} finally {
-			db.close();
-		}
-	},
+    async getRatings(gameId: number): Promise<Rating> {
+        const db = new Database();
+        try {
+            const rating: number = Number.parseFloat(
+                (
+                    await db.execute(
+                        "SELECT COALESCE((SELECT AVG(r.`rating`) FROM `Rating` r RIGHT OUTER JOIN `User` u ON u.`id` = r.`user_id` WHERE r.`removed` = FALSE AND u.`banned` = FALSE AND r.`game_id` IN (?)), NULL) AS rating_avg",
+                        [gameId],
+                    )
+                )[0].rating_avg,
+            );
+            const difficulty: number = Number.parseFloat(
+                (
+                    await db.execute(
+                        "SELECT COALESCE((SELECT AVG(r.`difficulty`) FROM `Rating` r RIGHT OUTER JOIN `User` u ON u.`id` = r.`user_id` WHERE r.`removed` = FALSE AND u.`banned` = FALSE AND r.`game_id` IN (?)), NULL) AS difficulty_avg",
+                        [gameId],
+                    )
+                )[0].difficulty_avg,
+            );
+            return { rating, difficulty };
+        } finally {
+            db.close();
+        }
+    },
 
-	async getUserFavorites(uid: number): Promise<
-		[
-			{
-				gameId: number;
-				gameName: string;
-				difficulty: number;
-				rating: difficulty;
-			},
-		]
-	> {
-		const db = new Database();
+    async getUserFavorites(uid: number): Promise<
+        [
+            {
+                gameId: number;
+                gameName: string;
+                difficulty: number;
+                rating: difficulty;
+            },
+        ]
+    > {
+        const db = new Database();
 
-		try {
-			const resultSet = await db.execute(
-				"SELECT g.`id` AS `game_id`, g.`name`, COALESCE(r.`difficulty`, NULL) AS `difficulty`, COALESCE(r.`rating`, NULL) AS `rating` FROM `Favorite` f, `Game` g JOIN `Rating` r ON r.`game_id` = g.`id` AND r.`user_id` = ? WHERE g.`id` = f.`game_id` AND f.`user_id` = ?",
-				[uid, uid],
-			);
+        try {
+            const resultSet = await db.execute(
+                "SELECT g.`id` AS `game_id`, g.`name`, COALESCE(r.`difficulty`, NULL) AS `difficulty`, COALESCE(r.`rating`, NULL) AS `rating` FROM `Favorite` f, `Game` g JOIN `Rating` r ON r.`game_id` = g.`id` AND r.`user_id` = ? WHERE g.`id` = f.`game_id` AND f.`user_id` = ?",
+                [uid, uid],
+            );
 
-			return resultSet.map((elem) => {
-				return {
-					gameId: elem["game_id"],
-					gameName: elem["name"],
-					difficulty: elem["difficulty"],
-					rating: elem["rating"],
-				};
-			});
-		} finally {
-			db.close();
-		}
-	},
+            return resultSet.map((elem) => {
+                return {
+                    gameId: elem["game_id"],
+                    gameName: elem["name"],
+                    difficulty: elem["difficulty"],
+                    rating: elem["rating"],
+                };
+            });
+        } finally {
+            db.close();
+        }
+    },
 
-	async getUserClears(uid: number): Promise<
-		[
-			{
-				gameId: number;
-				gameName: string;
-				difficulty: number;
-				rating: difficulty;
-			},
-		]
-	> {
-		const db = new Database();
+    async getUserClears(uid: number): Promise<
+        [
+            {
+                gameId: number;
+                gameName: string;
+                difficulty: number;
+                rating: difficulty;
+            },
+        ]
+    > {
+        const db = new Database();
 
-		try {
-			const resultSet = await db.execute(
-				"SELECT g.`id` AS `game_id`, g.`name`, COALESCE(r.`difficulty`, NULL) AS `difficulty`, COALESCE(r.`rating`, NULL) AS `rating` FROM `Clear` c, `Game` g JOIN `Rating` r ON r.`game_id` = g.`id` AND r.`user_id` = ? WHERE g.`id` = c.`game_id` AND c.`user_id` = ?",
-				[uid, uid],
-			);
+        try {
+            const resultSet = await db.execute(
+                "SELECT g.`id` AS `game_id`, g.`name`, COALESCE(r.`difficulty`, NULL) AS `difficulty`, COALESCE(r.`rating`, NULL) AS `rating` FROM `Clear` c, `Game` g JOIN `Rating` r ON r.`game_id` = g.`id` AND r.`user_id` = ? WHERE g.`id` = c.`game_id` AND c.`user_id` = ?",
+                [uid, uid],
+            );
 
-			return resultSet.map((elem) => {
-				return {
-					gameId: elem["game_id"],
-					gameName: elem["name"],
-					difficulty: elem["difficulty"],
-					rating: elem["rating"],
-				};
-			});
-		} finally {
-			db.close();
-		}
-	},
+            return resultSet.map((elem) => {
+                return {
+                    gameId: elem["game_id"],
+                    gameName: elem["name"],
+                    difficulty: elem["difficulty"],
+                    rating: elem["rating"],
+                };
+            });
+        } finally {
+            db.close();
+        }
+    },
 
-	async getGamesByOwner(
-		ownerId: number,
-	): Promise<
-		Array<Game & { rating: number; difficulty: number; rating_count: number }>
-	> {
-		const db = new Database();
-		try {
-			const games = await db.execute(
-				`SELECT
+    async getGamesByOwner(
+        ownerId: number,
+    ): Promise<
+        Array<Game & { rating: number; difficulty: number; rating_count: number }>
+    > {
+        const db = new Database();
+        try {
+            const games = await db.execute(
+                `SELECT
 	g.*,
 	AVG(CASE WHEN u.\`banned\` IS TRUE THEN NULL ELSE r.\`rating\` END) AS rating,
 	AVG(CASE WHEN u.\`banned\` IS TRUE THEN NULL ELSE r.\`difficulty\` END) AS difficulty,
@@ -1585,42 +1591,72 @@ GROUP BY
 	g.\`id\`
 ORDER BY
 	g.\`sortname\``,
-				[ownerId],
-			);
-			return games;
-		} finally {
-			db.close();
-		}
-	},
+                [ownerId],
+            );
+            return games;
+        } finally {
+            db.close();
+        }
+    },
 
-	async countReports() {
-		const db = new Database();
-		const qry = "SELECT COUNT(*) AS `cnt` FROM `Report` r";
-		const res: [{ cnt: number }] = await db.query(qry);
-		await db.close();
-		return res[0].cnt;
-	},
+    async countReports() {
+        const db = new Database();
+        const qry = "SELECT COUNT(*) AS `cnt` FROM `Report` r";
+        const res: [{ cnt: number }] = await db.query(qry);
+        await db.close();
+        return res[0].cnt;
+    },
+
+    async getMessagesOldFormat(
+        forUserId: number,
+    ): Promise<
+        Array<Omit<
+            Message & { user_from_name: string; user_to_name: string },
+            "reply_to_id" | "thread_id"
+        >>
+    > {
+        const db = new Database();
+        const qry = `
+SELECT  m.id,
+		m.is_read,
+		m.user_from_id,
+		m.user_to_id,
+		m.subject,
+		m.body,
+		m.date_created,
+		u.name AS user_from_name,
+		u2.name AS user_to_name
+FROM Message AS m
+INNER JOIN User AS u ON u.id = m.user_from_id
+INNER JOIN User AS u2 ON u2.id = m.user_to_id
+WHERE m.user_to_id = ? AND m.deleted = 0
+ORDER BY m.date_created DESC
+`;
+        const res = await db.query(qry, [forUserId]);
+        await db.close();
+        return res;
+    },
 };
 
 async function cache<T>(key: string, supplier: () => Promise<T>): Promise<T> {
-	try {
-		const cached = await new Promise<T>((r, j) => {
-			memcached.get(key, (err: any, data: any) => {
-				if (err) j(err);
-				else r(data?.data);
-			});
-		});
-		if (cached) return cached;
-	} catch (err) {
-		console.log("Error occurred retrieving " + key + " from memcache!");
-		console.log(err);
-	}
+    try {
+        const cached = await new Promise<T>((r, j) => {
+            memcached.get(key, (err: any, data: any) => {
+                if (err) j(err);
+                else r(data?.data);
+            });
+        });
+        if (cached) return cached;
+    } catch (err) {
+        console.log("Error occurred retrieving " + key + " from memcache!");
+        console.log(err);
+    }
 
-	const result = await supplier();
-	memcached.set(key, { data: result });
-	return result;
+    const result = await supplier();
+    memcached.set(key, { data: result });
+    return result;
 }
 
 function uncache(key: string) {
-	memcached.del(key);
+    memcached.del(key);
 }

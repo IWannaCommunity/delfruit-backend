@@ -14,6 +14,7 @@ import {
 	Tags,
 } from "tsoa";
 import { Database } from "../database";
+import datastore from "../datastore";
 import { userCheck } from "../lib/auth-check";
 import handle from "../lib/express-async-catch";
 import InsertList from "../lib/insert-list";
@@ -196,5 +197,17 @@ export class MessageController extends Controller {
 		} finally {
 			database.close();
 		}
+	}
+
+	@Security("bearerAuth", ["user"])
+	@SuccessResponse(200, "List of Messages from the old format")
+	@Get("/inbox/legacy")
+	public async getMessagesOldFormat(
+		@Request() req: RequestExt,
+		@Header("Authorization") authorization: string,
+	): Promise<Message[]> {
+		// NOTE: auth guard should make the error condition unreachable
+		const user = extractBearerJWT(authorization);
+		return await datastore.getMessagesOldFormat(Number(req.app_user.sub));
 	}
 }
