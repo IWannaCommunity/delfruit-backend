@@ -54,6 +54,7 @@ export class MessageController extends Controller {
 
         const whereList = new WhereList();
         whereList.add("user_to_id", parms.userToId);
+		whereList.add2("thread_id IS NOT ", null);
 
         const database = new Database();
         try {
