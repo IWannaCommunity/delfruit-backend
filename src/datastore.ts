@@ -2,9 +2,12 @@ import { Database } from "./database";
 import InsertList from "./lib/insert-list";
 import UpdateList from "./lib/update-list";
 import WhereList from "./lib/where-list";
+
 import moment = require("moment");
+
 import type { Rating } from "./game-router";
 import whitelist from "./lib/whitelist";
+import type Config from "./model/config";
 import type { Game } from "./model/Game";
 import { GetGamesParms } from "./model/GetGamesParms";
 import type { GetListsParms } from "./model/GetListsParms";
@@ -20,12 +23,13 @@ import type { Report } from "./model/Report";
 import type { Review } from "./model/Review";
 import type { Screenshot } from "./model/Screenshot";
 import type { UserLoginParams } from "./model/UserLoginParams";
-import type Config from "./model/config";
+
 const config: Config = require("./config/config.json");
 
 import Memcached = require("memcached");
+
+import type { Message } from "./model/Message";
 import type { GetGameParams } from "./model/params/game";
-import { Message } from "./model/Message";
 export const memcached: Memcached = new Memcached(
 	config.memcache.hosts,
 	config.memcache.options,
@@ -1509,7 +1513,7 @@ LIMIT ?,?
 				gameId: number;
 				gameName: string;
 				difficulty: number;
-				rating: difficulty;
+				rating: number;
 			},
 		]
 	> {
@@ -1540,7 +1544,7 @@ LIMIT ?,?
 				gameId: number;
 				gameName: string;
 				difficulty: number;
-				rating: difficulty;
+				rating: number;
 			},
 		]
 	> {
@@ -1559,6 +1563,49 @@ LIMIT ?,?
 					difficulty: elem["difficulty"],
 					rating: elem["rating"],
 				};
+			});
+		} finally {
+			db.close();
+		}
+	},
+
+	async getUserBookmarks(
+		uid: number,
+	): Promise<
+		[{ gameId: number; gameName: string; difficulty: number; rating: number }]
+	> {
+		const db = new Database();
+
+		try {
+			const resSet = await db.execute(
+				"SELECT g.`id` AS `game_id`, g.`name`, COALESCE(r.`difficulty`, NULL) AS `difficulty`, COALESCE(r.`rating`, NULL) AS `rating` FROM `Bookmark` b, `Game` g JOIN `Rating` r ON r.`game_id` = g.`id` AND r.`user_id` = ? WHERE g.`id` = b.`game_id` AND b.`user_id` = ? AND g.`removed` IS FALSE",
+				[uid, uid],
+			);
+			return resSet.map((elem) => {
+				return {
+					gameId: elem["game_id"],
+					gameName: elem["name"],
+					difficulty: elem["difficulty"],
+					rating: elem["rating"],
+				};
+			});
+		} finally {
+			db.close();
+		}
+	},
+
+	async getUserFollowing(
+		uid: number,
+	): Promise<[{ userId: number; name: string }]> {
+		const db = new Database();
+
+		try {
+			const resSet = await db.execute(
+				"SELECT u.`id` AS `userId`, u.`name` FROM `UserFollow` f, `User` u WHERE u.`id` = f.`user_follow_id` AND f.`user_id` = ? AND u.`banned` IS FALSE",
+				[uid],
+			);
+			return resSet.map((elem) => {
+				return { userId: elem["userId"], name: elem["name"] };
 			});
 		} finally {
 			db.close();
@@ -1638,6 +1685,185 @@ ORDER BY m.date_created DESC
 		const res = await db.query(qry, [forUserId]);
 		await db.close();
 		return res;
+	},
+
+	async isUserFollowing(userId: number, followingId: number): Promise<boolean> {
+		const db = new Database();
+		const qry = `
+SELECT
+	CASE
+		WHEN EXISTS(SELECT
+	u.\`id\`
+FROM
+	\`UserFollow\` f,
+	\`User\` u
+WHERE
+	f.\`user_follow_id\` = ?
+	AND f.\`user_id\` = ?
+) THEN TRUE
+		ELSE FALSE
+	END AS \`0\`
+`;
+		const res = await db.query(qry, [followingId, userId]);
+		await db.close();
+		return res[0]["0"];
+	},
+
+	async isUserBookmarking(userId: number, gameId: number): Promise<boolean> {
+		const db = new Database();
+		const qry = `
+SELECT
+	CASE
+		WHEN EXISTS(SELECT
+	u.\`id\`
+FROM
+	\`Bookmark\` b,
+	\`User\` u
+WHERE
+	b.\`game_id\` = ?
+	AND b.\`user_id\` = ?
+) THEN TRUE
+		ELSE FALSE
+	END AS \`0\`
+`;
+		const res = await db.query(qry, [gameId, userId]);
+		await db.close();
+		return res[0]["0"];
+	},
+
+	async isUserCleared(userId: number, gameId: number): Promise<boolean> {
+		const db = new Database();
+		const qry = `
+SELECT
+	CASE
+		WHEN EXISTS(SELECT
+	u.\`id\`
+FROM
+	\`Clear\` c,
+	\`User\` u
+WHERE
+	c.\`game_id\` = ?
+	AND c.\`user_id\` = ?
+) THEN TRUE
+		ELSE FALSE
+	END AS \`0\`
+`;
+		const res = await db.query(qry, [gameId, userId]);
+		await db.close();
+		return res[0]["0"];
+	},
+
+	async isUserFavoriting(userId: number, gameId: number): Promise<boolean> {
+		const db = new Database();
+		const qry = `
+SELECT
+	CASE
+		WHEN EXISTS(SELECT
+	u.\`id\`
+FROM
+	\`Favorite\` f,
+	\`User\` u
+WHERE
+	f.\`game_id\` = ?
+	AND f.\`user_id\` = ?
+) THEN TRUE
+		ELSE FALSE
+	END AS \`0\`
+`;
+		const res = await db.query(qry, [gameId, userId]);
+		await db.close();
+		return res[0]["0"];
+	},
+
+	async bookmarkGame(userId: number, gameId: number): Promise<boolean> {
+		const db = new Database();
+		try {
+			await db.execute(
+				`INSERT IGNORE INTO \`Bookmark\` (user_id, game_id) VALUES (?, ?) `,
+				[userId, gameId],
+			);
+			return true;
+		} finally {
+			db.close();
+		}
+	},
+
+	async clearGame(userId: number, gameId: number): Promise<boolean> {
+		const db = new Database();
+		try {
+			await db.execute(
+				`INSERT IGNORE INTO \`Clear\` (user_id, game_id) VALUES (?, ?) `,
+				[userId, gameId],
+			);
+			return true;
+		} finally {
+			db.close();
+		}
+	},
+
+	async favoriteGame(userId: number, gameId: number): Promise<boolean> {
+		const db = new Database();
+		try {
+			await db.execute(
+				`INSERT IGNORE INTO \`Favorite\` (user_id, game_id) VALUES (?, ?) `,
+				[userId, gameId],
+			);
+			return true;
+		} finally {
+			db.close();
+		}
+	},
+
+	async unfollowUser(userId: number, userFollowedId: number): Promise<boolean> {
+		const db = new Database();
+		try {
+			await db.execute(
+				`DELETE FROM \`UserFollow\` f WHERE f.user_follow_id=? AND f.user_id=?`,
+				[userFollowedId, userId],
+			);
+			return true;
+		} finally {
+			db.close();
+		}
+	},
+	
+	async unbookmarkGame(userId: number, gameId: number): Promise<boolean> {
+		const db = new Database();
+		try {
+			await db.execute(
+				`DELETE FROM \`Bookmark\` b WHERE b.game_id=? AND b.user_id=?`,
+				[gameId, userId],
+			);
+			return true;
+		} finally {
+			db.close();
+		}
+	},
+	
+	async unfavoriteGame(userId: number, gameId: number): Promise<boolean> {
+		const db = new Database();
+		try {
+			await db.execute(
+				`DELETE FROM \`Favorite\` f WHERE f.game_id=? AND f.user_id=?`,
+				[gameId, userId],
+			);
+			return true;
+		} finally {
+			db.close();
+		}
+	},
+	
+	async unclearGame(userId: number, gameId: number): Promise<boolean> {
+		const db = new Database();
+		try {
+			await db.execute(
+				`DELETE FROM \`Clear\` c WHERE c.game_id=? AND c.user_id=?`,
+				[gameId, userId],
+			);
+			return true;
+		} finally {
+			db.close();
+		}
 	},
 };
 
