@@ -2,6 +2,7 @@ export interface Report {
 	id?: number;
 	type?:
 		| "game"
+		| "game_reported"
 		| "game_add"
 		| "game_remove"
 		| "game_update_url"
