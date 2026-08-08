@@ -999,6 +999,17 @@ ${whereList.getClause()}
 		}
 	},
 
+	async getAllTags() {
+		const db = new Database();
+		try {
+			return await db.query(
+				`SELECT /*+ MAX_EXECUTION_TIME(2500) */ t.id, t.name FROM Tag t LIMIT 0,100000`,
+			);
+		} finally {
+			db.close();
+		}
+	},
+
 	async setTags(gameId: number, userId: number, tags: number[]) {
 		const database = new Database();
 		try {
