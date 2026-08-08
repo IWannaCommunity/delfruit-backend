@@ -45,6 +45,13 @@ function extractBearerJWT(header_token: string): string | object {
 @Tags("Reports")
 @Route("reports")
 export class ReportController extends Controller {
+	@Security("bearerAuth", ["admin"])
+    @SuccessResponse(200, "Total amount of Reports")
+    @Get("/totalcount")
+    public async getReportCount2(@Request() req: RequestExt): Promise<{ totalCount: number }> {
+        return { totalCount: await datastore.countReports() };
+    }
+
 	/**
 	 * Report List (Admin Only)
 	 * @summary Repost List (Admin Only)
@@ -144,12 +151,5 @@ export class ReportController extends Controller {
 		delete report.dateAnswered;
 
 		return await datastore.addReport(report, uid);
-	}
-
-	@Security("bearerAuth", ["admin"])
-	@SuccessResponse(200, "Total amount of Reports")
-	@Get("/totalcount")
-	public async getReportCount(): Promise<{ totalCount: number }> {
-		return { totalCount: await datastore.countReports() };
 	}
 }
