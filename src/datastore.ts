@@ -1873,7 +1873,7 @@ WHERE
 				`SELECT can_message FROM User u WHERE u.id = ?`,
 				[userId],
 			);
-			return res["can_message"] as boolean;
+			return Boolean(Number(res[0].can_message));
 		} finally {
 			db.close();
 		}
@@ -1886,7 +1886,7 @@ WHERE
 				`SELECT can_screenshot FROM User u WHERE u.id = ?`,
 				[userId],
 			);
-			return res["can_screenshot"] as boolean;
+			return Boolean(Number(res[0].can_screenshot));
 		} finally {
 			db.close();
 		}
@@ -1899,7 +1899,7 @@ WHERE
 				`SELECT can_review FROM User u WHERE u.id = ?`,
 				[userId],
 			);
-			return res["can_review"] as boolean;
+			return Boolean(Number(res[0].can_review));
 		} finally {
 			db.close();
 		}
@@ -1912,7 +1912,7 @@ WHERE
 				`SELECT can_report FROM User u WHERE u.id = ?`,
 				[userId],
 			);
-			return res["can_report"] as boolean;
+			return Boolean(Number(res[0].can_report));
 		} finally {
 			db.close();
 		}
@@ -1925,7 +1925,7 @@ WHERE
 				`SELECT can_submit FROM User u WHERE u.id = ?`,
 				[userId],
 			);
-			return res["can_submit"] as boolean;
+			return Boolean(Number(res[0].can_submit));
 		} finally {
 			db.close();
 		}
@@ -1937,7 +1937,7 @@ WHERE
 			const res = await db.query(`SELECT banned FROM User u WHERE u.id = ?`, [
 				userId,
 			]);
-			return res["banned"] as boolean;
+			return Boolean(Number(res[0].banned));
 		} finally {
 			db.close();
 		}
