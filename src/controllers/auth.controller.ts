@@ -150,6 +150,14 @@ export class AuthController extends Controller {
 				this.setStatus(401);
 				return { error: "bad credentials" };
 			} else {
+				const banned = await datastore.isUserBanned(user.id);
+				if (banned) {
+					this.setStatus(401);
+					return {
+						error: "you are no longer allowed to login on this account",
+					};
+				}
+
 				await datastore.updateUser({
 					id: user.id,
 					dateLastLogin: moment().format("YYYY-MM-DD HH:mm:ss"),

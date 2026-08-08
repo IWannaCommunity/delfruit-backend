@@ -389,6 +389,13 @@ export class GameController extends Controller {
 			return humanAnalysis;
 		}
 
+		const banned = await datastore.isUserBanned(req.app_user.sub);
+		const cando = await datastore.canUserReview(req.app_user.sub);
+		if (banned || !cando) {
+			this.setStatus(401);
+			return { error: "your account is not permitted to add reviews" };
+		}
+
 		const hasPreviousReview =
 			(
 				await datastore.getReviews({
@@ -512,6 +519,14 @@ export class GameController extends Controller {
 		console.log(screenshot);
 		// NOTE: auth guard should make the error condition unreachable
 		const user = extractBearerJWT(authorization);
+
+		const banned = await datastore.isUserBanned(user.sub);
+		if (banned) {
+			this.setStatus(401);
+			return {
+				error: "your account is not permitted to post screenshots",
+			} as APIError;
+		}
 
 		if (isNaN(+id)) {
 			this.setStatus(400);

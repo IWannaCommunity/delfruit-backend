@@ -155,6 +155,13 @@ export class MessageController extends Controller {
 		// NOTE: auth guard should make the error condition unreachable
 		const user = extractBearerJWT(authorization);
 
+		const banned = await datastore.isUserBanned(user.sub);
+		const cando = await datastore.canUserMessage(user.sub);
+		if (banned || !cando) {
+			this.setStatus(401);
+			return { error: "your account is not permitted to send messages" };
+		}
+
 		const insertList = new InsertList();
 		insertList.add("user_from_id", user.sub);
 		insertList.add("user_to_id", requestBody.userToId);

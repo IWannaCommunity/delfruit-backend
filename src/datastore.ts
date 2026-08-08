@@ -1826,7 +1826,7 @@ WHERE
 			db.close();
 		}
 	},
-	
+
 	async unbookmarkGame(userId: number, gameId: number): Promise<boolean> {
 		const db = new Database();
 		try {
@@ -1839,7 +1839,7 @@ WHERE
 			db.close();
 		}
 	},
-	
+
 	async unfavoriteGame(userId: number, gameId: number): Promise<boolean> {
 		const db = new Database();
 		try {
@@ -1852,7 +1852,7 @@ WHERE
 			db.close();
 		}
 	},
-	
+
 	async unclearGame(userId: number, gameId: number): Promise<boolean> {
 		const db = new Database();
 		try {
@@ -1861,6 +1861,83 @@ WHERE
 				[gameId, userId],
 			);
 			return true;
+		} finally {
+			db.close();
+		}
+	},
+
+	async canUserMessage(userId: number): Promise<boolean> {
+		const db = new Database();
+		try {
+			const res = await db.query(
+				`SELECT can_message FROM User u WHERE u.id = ?`,
+				[userId],
+			);
+			return res["can_message"] as boolean;
+		} finally {
+			db.close();
+		}
+	},
+
+	async canUserScreenshot(userId: number): Promise<boolean> {
+		const db = new Database();
+		try {
+			const res = await db.query(
+				`SELECT can_screenshot FROM User u WHERE u.id = ?`,
+				[userId],
+			);
+			return res["can_screenshot"] as boolean;
+		} finally {
+			db.close();
+		}
+	},
+
+	async canUserReview(userId: number): Promise<boolean> {
+		const db = new Database();
+		try {
+			const res = await db.query(
+				`SELECT can_review FROM User u WHERE u.id = ?`,
+				[userId],
+			);
+			return res["can_review"] as boolean;
+		} finally {
+			db.close();
+		}
+	},
+
+	async canUserReport(userId: number): Promise<boolean> {
+		const db = new Database();
+		try {
+			const res = await db.query(
+				`SELECT can_report FROM User u WHERE u.id = ?`,
+				[userId],
+			);
+			return res["can_report"] as boolean;
+		} finally {
+			db.close();
+		}
+	},
+
+	async canUserSubmit(userId: number): Promise<boolean> {
+		const db = new Database();
+		try {
+			const res = await db.query(
+				`SELECT can_submit FROM User u WHERE u.id = ?`,
+				[userId],
+			);
+			return res["can_submit"] as boolean;
+		} finally {
+			db.close();
+		}
+	},
+
+	async isUserBanned(userId: number): Promise<boolean> {
+		const db = new Database();
+		try {
+			const res = await db.query(`SELECT banned FROM User u WHERE u.id = ?`, [
+				userId,
+			]);
+			return res["banned"] as boolean;
 		} finally {
 			db.close();
 		}

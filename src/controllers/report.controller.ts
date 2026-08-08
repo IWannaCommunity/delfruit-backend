@@ -130,6 +130,13 @@ export class ReportController extends Controller {
 		// NOTE: auth guard should make the error condition unreachable
 		const user = extractBearerJWT(authorization);
 
+		const banned = await datastore.isUserBanned(user.sub);
+		const cando = await datastore.canUserReport(user.sub);
+		if (banned || !cando) {
+			this.setStatus(401);
+			return { error: "your account is not permitted to submit reports" };
+		}
+
 		const uid = user.sub;
 
 		const report = requestBody;
