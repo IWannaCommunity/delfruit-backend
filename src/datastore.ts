@@ -24,6 +24,9 @@ import type { Review } from "./model/Review";
 import type { Screenshot } from "./model/Screenshot";
 import type { UserLoginParams } from "./model/UserLoginParams";
 
+import {escape} from
+mysql2;
+
 const config: Config = require("./config/config.json");
 
 import Memcached = require("memcached");
@@ -956,13 +959,16 @@ ${whereList.getClause()}
 SELECT t.name, gt.tag_id as "id", COUNT(*) AS "count"
 FROM GameTag AS gt
 RIGHT JOIN Tag AS t ON t.id = gt.tag_id
-WHERE gt.game_id IN (${gameId})
+WHERE gt.game_id IN (?)
 GROUP BY gt.game_id, gt.tag_id
 `;
 
 			const database = new Database();
 			try {
-				return await database.query_unsafe(query, whereList.getParams());
+				return await database.query_unsafe(query, [
+					...whereList.getParams(),
+					gameId,
+				]);
 			} finally {
 				database.close();
 			}
@@ -1176,7 +1182,7 @@ ${whereList.getClause()}
 SELECT game_id
 FROM GameTag gt
 JOIN Tag t ON t.id=gt.tag_id
-WHERE t.id IN (${params.tags.map((s) => `${s}`).join(",")})
+WHERE t.id IN (${params.tags.map((s) => `${escape(s)}`).join(",")})
 GROUP BY gt.game_id
 HAVING COUNT(DISTINCT t.id) = ${params.tags.length}
 )`);
@@ -1239,7 +1245,7 @@ ${havingList.getClause()}` +
 			(countOnly
 				? ``
 				: `
-ORDER BY ${orderCol} ${params.orderDir || "ASC"}
+ORDER BY ${orderCol} ${escape(params.orderDir) || "ASC"}
 LIMIT ?,?
 `);
 		console.log(`query: ${query}`);
