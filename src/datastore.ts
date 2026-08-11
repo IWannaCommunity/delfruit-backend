@@ -24,7 +24,7 @@ import type { Review } from "./model/Review";
 import type { Screenshot } from "./model/Screenshot";
 import type { UserLoginParams } from "./model/UserLoginParams";
 
-import {escape} from "mysql2";
+import { escape } from "mysql2";
 
 const config: Config = require("./config/config.json");
 
@@ -1219,6 +1219,11 @@ HAVING COUNT(DISTINCT t.id) = ${params.tags.length}
 			orderCol = sortWhitelist[params.orderCol] || "date_created";
 		}
 
+		let orderDir = "ASC";
+		if (params.orderDir) {
+			orderDir = params.orderDir.toUpperCase() === "ASC" ? "ASC" : "DESC";
+		}
+
 		const query =
 			`
 SELECT /*+ MAX_EXECUTION_TIME(19001) */` +
@@ -1244,7 +1249,7 @@ ${havingList.getClause()}` +
 			(countOnly
 				? ``
 				: `
-ORDER BY ${orderCol} ${escape(params.orderDir) || "ASC"}
+ORDER BY ${orderCol} ${orderDir}
 LIMIT ?,?
 `);
 		console.log(`query: ${query}`);
