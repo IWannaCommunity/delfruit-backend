@@ -24,8 +24,7 @@ import type { Review } from "./model/Review";
 import type { Screenshot } from "./model/Screenshot";
 import type { UserLoginParams } from "./model/UserLoginParams";
 
-import {escape} from
-mysql2;
+import {escape} from "mysql2";
 
 const config: Config = require("./config/config.json");
 
