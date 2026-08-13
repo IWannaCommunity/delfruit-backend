@@ -218,4 +218,15 @@ export class MessageController extends Controller {
 		const user = extractBearerJWT(authorization);
 		return await datastore.getMessagesOldFormat(Number(req.app_user.sub));
 	}
+
+	@Security("bearerAuth", ["user"])
+	@SuccessResponse(200, "Message")
+	@Get("/legacy/{id}")
+	public async getMessageById(
+		@Request() req: RequestExt,
+		@Header("Authorization") authorization: string,
+		@Path("id") msgId: number,
+	): Promise<any> {
+		return await datastore.getMessageById(msgId, Number(req.app_user.sub));
+	}
 }

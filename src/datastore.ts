@@ -1708,6 +1708,43 @@ ORDER BY m.date_created DESC
 		return res;
 	},
 
+	async getMessageById(
+		messageId: number,
+		forUserId: number,
+	): Promise<
+		Omit<
+			Message & { user_from_name: string; user_to_name: string },
+			"id" | "is_read" | "deleted"
+		>
+	> {
+		const db = new Database();
+		const qry = `
+SELECT
+	m.user_from_id,
+	m.user_to_id,
+	m.subject,
+	m.body,
+	m.date_created,
+	u_from.name AS user_from_name,
+	u_to.name AS user_to_name
+FROM
+	Message m
+LEFT JOIN User u_from ON u_from.id = m.user_from_id
+RIGHT JOIN User u_to ON u_to.id = m.user_to_id
+WHERE
+	m.id = ?
+	AND m.user_to_id = ?
+	AND m.deleted IS FALSE
+        `;
+
+		const res = await db.query(qry, [messageId, forUserId]);
+		await db.close();
+		if (res.length === 0) {
+			return void 0;
+		}
+		return res[0];
+	},
+
 	async isUserFollowing(userId: number, followingId: number): Promise<boolean> {
 		const db = new Database();
 		const qry = `
