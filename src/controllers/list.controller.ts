@@ -350,4 +350,42 @@ export class ListController extends Controller {
 		datastore.unclearGame(Number(req.app_user.sub), gid);
 		return;
 	}
+
+	/**
+	 * Get Bookmark List Contents
+	 * @summary Get Bookmark List Contents
+	 */
+	@SuccessResponse(200, "Found")
+    @Get("bookmarks")
+    public async getBookmarkedGames(
+        @Request() req: RequestExt,
+    ): Promise<
+        Array<{
+            gameId: number;
+            gameName: string;
+            difficulty: number;
+            rating: number;
+        }>
+    > {
+        this.setStatus(200);
+        return await datastore.getUserBookmarks(Number(req.app_user.sub))
+    }
+
+	/**
+	 * Get Following List Contents
+	 * @summary Get Following List Contents
+	 */
+	@SuccessResponse(200, "Found")
+    @Get("bookmarks")
+    public async getFollowingGames(
+        @Request() req: RequestExt,
+    ): Promise<
+        Array<{
+            userId: number;
+            name: string;
+        }>
+    > {
+        this.setStatus(200);
+        return await datastore.getUserFollowing(Number(req.app_user.sub))
+    }
 }
