@@ -376,7 +376,7 @@ export class ListController extends Controller {
 	 * @summary Get Following List Contents
 	 */
 	@SuccessResponse(200, "Found")
-    @Get("bookmarks")
+    @Get("following")
     public async getFollowingGames(
         @Request() req: RequestExt,
     ): Promise<
