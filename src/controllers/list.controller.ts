@@ -359,6 +359,7 @@ export class ListController extends Controller {
     @Get("bookmarks")
     public async getBookmarkedGames(
         @Request() req: RequestExt,
+		@Header("Authorization") authorization: string,
     ): Promise<
         Array<{
             gameId: number;
@@ -379,6 +380,7 @@ export class ListController extends Controller {
     @Get("following")
     public async getFollowingUsers(
         @Request() req: RequestExt,
+		@Header("Authorization") authorization: string,
     ): Promise<
         Array<{
             userId: number;
