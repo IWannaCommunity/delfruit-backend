@@ -8,7 +8,7 @@ executors:
   node:
     working_directory: /tmp/int_tests
     machine:
-        image: ubuntu-2004:2022.10.1
+        image: ubuntu-2204:2022.10.2
   docker:
     working_directory: /tmp/workspace
     docker:
