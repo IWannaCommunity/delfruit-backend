@@ -1622,7 +1622,7 @@ LIMIT ?,?
 
 		try {
 			const resSet = await db.execute(
-				"SELECT u.`id` AS `userId`, u.`name` FROM `UserFollow` f, `User` u WHERE u.`id` = f.`user_follow_id` AND f.`user_id` = ? AND u.`banned` IS FALSE",
+				"SELECT u.id AS userId, u.name FROM UserFollow f, User u WHERE f.user_follow_id = ? AND u.id = f.user_id AND u.banned IS FALSE",
 				[uid],
 			);
 			return resSet.map((elem) => {
