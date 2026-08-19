@@ -133,6 +133,7 @@ async function main(): Promise<number> {
 	app.use((req, res, next) => {
 		LOG.http(req, res, next);
 	});
+	app.set("trust proxy", ["loopback", "linklocal", "uniquelocal"]);
 
 	LOG.debug("Initializing Rate Limiting middleware for Express.js.");
 	const expressRateLimiter = rateLimit({
@@ -145,17 +146,17 @@ async function main(): Promise<number> {
 		identifier: "exprRateLmt-",
 		store: new MemcachedStore({ prefix: "exprRateLmt-", client: memcached }),
 	});
-	//app.use(expressRateLimiter);
+	app.use(expressRateLimiter);
 
-	LOG.debug("Initalizing Speed Limiter middleware for Express.js.");
+	LOG.debug("Initializing Speed Limiter middleware for Express.js.");
 	const expressSpeedLimiter = slowDown({
 		windowMs: 1000 * 60 * 15,
 		delayAfter: 1000,
-		delayMs: (hits) => (hits-1000) * 1.2935,
+		delayMs: (hits) => (hits - 1000) * 1.2935,
 		identifier: "exprSpdLmt-",
 		store: new MemcachedStore({ prefix: "exprSpdLmt-", client: memcached }),
 	});
-	//app.use(expressSpeedLimiter);
+	app.use(expressSpeedLimiter);
 
 	LOG.debug("Enabling CORS middleware for Express.js.");
 	app.use(
@@ -296,7 +297,7 @@ async function main(): Promise<number> {
 		return ExitCode.S3_INIT_FAIL;
 	}
 
-	LOG.debug("Initalizing Swagger UI middleware for Express.js.");
+	LOG.debug("Initializing Swagger UI middleware for Express.js.");
 	fs.readFile(
 		path.join(__dirname, "../build/swagger.json"),
 		{ encoding: "utf-8" },
