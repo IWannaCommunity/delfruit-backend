@@ -355,11 +355,13 @@ export class ListController extends Controller {
 	 * Get Bookmark List Contents
 	 * @summary Get Bookmark List Contents
 	 */
+	@Security("bearerAuth", ["user"])
 	@SuccessResponse(200, "Found")
-    @Get("bookmarks")
+    @Get("bookmarks/{a}")
     public async getBookmarkedGames(
         @Request() req: RequestExt,
 		@Header("Authorization") authorization: string,
+		@Path() a: number,
     ): Promise<
         Array<{
             gameId: number;
@@ -376,11 +378,13 @@ export class ListController extends Controller {
 	 * Get Following List Contents
 	 * @summary Get Following List Contents
 	 */
+	@Security("bearerAuth", ["user"])
 	@SuccessResponse(200, "Found")
-    @Get("following")
+    @Get("following/{a}")
     public async getFollowingUsers(
         @Request() req: RequestExt,
 		@Header("Authorization") authorization: string,
+		@Path() a: number,
     ): Promise<
         Array<{
             userId: number;
