@@ -288,7 +288,7 @@ workflows:
                     branches:
                         ignore:
                             - master
-                            - develop
+                            - staging
                             - release
             - docker:
                 name: Build & Publish
