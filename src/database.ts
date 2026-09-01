@@ -1,15 +1,28 @@
+import type {
+	FieldPacket,
+	PreparedStatementInfo,
+	QueryResult,
+} from "mysql2/promise";
 import mysql, {
 	type Connection,
 	ConnectionOptions,
+	type Pool,
 	type PrepareStatementInfo,
 	type QueryError,
-} from "mysql2";
+} from "mysql2/promise";
 import type Config from "./model/config";
 
 const config: Config = require("./config/config.json");
 
+export const pool = mysql.createPool({
+	...config.db,
+	waitForConnections: true,
+	connectionLimit: 4,
+	maxIdle: 4,
+});
+
 export class Database {
-	private connection: Connection;
+	private connection: Connection | Pool;
 
 	/**
 	 *
@@ -21,7 +34,7 @@ export class Database {
 		if (configOverride) {
 			useConfig = configOverride;
 		}
-		this.connection = mysql.createConnection(useConfig);
+		this.connection = pool;
 
 		this.connection.on("error", (err) => {
 			console.log("Error occurred on DB connection!");
@@ -29,20 +42,12 @@ export class Database {
 		});
 	}
 
-	prepare(sql: string): Promise<PrepareStatementInfo> {
-		// TODO: I'd hate to use promisify for these and others, but...
-		return new Promise((resolve, reject) => {
-			this.connection.prepare(
-				sql,
-				(e: QueryError, stmt: PrepareStatementInfo) => {
-					if (e) {
-						reject(e);
-					} else {
-						resolve(stmt);
-					}
-				},
-			);
-		});
+	prepare(sql: string): Promise<PreparedStatementInfo> {
+		return this.connection.prepare(sql);
+	}
+
+	__execute(sql: string, args: any[]): Promise<[QueryResult, FieldPacket[]]> {
+		return this.connection.execute(sql, args);
 	}
 
 	/**
@@ -72,33 +77,27 @@ export class Database {
 			console.warn("Argument passed in was not an array.");
 			args = [args];
 		}
-		return new Promise((resolve, reject) => {
-			this.connection.prepare(sql, (e, stmt) => {
-				if (e) reject(e);
-				else {
-					console.log("query");
-					console.log(args);
-					// WTF: unfixed prepared statement bug from 2020, wow (https://github.com/sidorares/node-mysql2/issues/1239#issuecomment-766867699)
-					// FIX: issue is fixed by wrapping numbers into strings, then letting a adapter driver resolve it's actual type
-					if (typeof args === "object") {
-						args = args.map((v) => {
-							if (typeof v === "number") {
-								return String(v);
-							} else {
-								return v;
-							}
-						});
-					}
-					console.log(args);
-
-					stmt.execute(args, (err, rows) => {
-						if (err) {
-							stmt.close();
-							reject(err);
-						} else resolve(rows as any[]);
-					});
+		console.log("query");
+		console.log(args);
+		// WTF: unfixed prepared statement bug from 2020, wow (https://github.com/sidorares/node-mysql2/issues/1239#issuecomment-766867699)
+		// FIX: issue is fixed by wrapping numbers into strings, then letting a adapter driver resolve it's actual type
+		if (typeof args === "object") {
+			args = args.map((v) => {
+				if (typeof v === "number") {
+					return String(v);
+				} else {
+					return v;
 				}
 			});
+		}
+		console.log(args);
+		return new Promise((resolve, reject) => {
+			this.execute(sql, args).then(
+				(rows: QueryResult) => {
+					resolve(rows as any[]);
+				},
+				() => {},
+			);
 		});
 	}
 
@@ -121,12 +120,12 @@ export class Database {
 		console.log(sql);
 
 		return new Promise((resolve, reject) => {
-			this.connection.query(sql, args, (e, rows) => {
-				if (e) reject(e);
-				else {
+			this.__execute(sql, args).then(
+				(rows: QueryResult) => {
 					resolve(rows as any[]);
-				}
-			});
+				},
+				() => {},
+			);
 		});
 	}
 
@@ -139,37 +138,33 @@ export class Database {
 
 		console.log(sql);
 		return new Promise((resolve, reject) => {
-			this.connection.prepare(sql, (e, stmt) => {
-				if (e) reject(e);
-				else {
-					console.log("execute");
-					console.log(args);
-					if (typeof args === "object") {
-						args = args.map((v) => {
-							if (typeof v === "number") {
-								return String(v);
-							} else {
-								return v;
-							}
-						});
+			console.log("execute");
+			console.log(args);
+			if (typeof args === "object") {
+				args = args.map((v) => {
+					if (typeof v === "number") {
+						return String(v);
+					} else {
+						return v;
 					}
-					stmt.execute(args, (err, rows) => {
-						if (err) {
-							stmt.close();
-							reject(err);
-						} else resolve(rows as any[]);
-					});
-				}
+				});
+			}
+			this.__execute(sql, args).then((rows: QueryResult) => {
+				resolve(rows as any[]);
 			});
 		});
 	}
 
 	close() {
-		return new Promise((resolve, reject) => {
-			this.connection.end((err) => {
-				if (err) reject(err);
-				else resolve({});
-			});
+		/*return new Promise((resolve, reject) => {
+        this.connection.end((err) => {
+            if (err) reject(err);
+            else resolve({});
+        });
+    });*/
+		// HACK: since everything is pooled, this probably shouldn't do anything
+		return new Promise((res, rej) => {
+			res(void 0);
 		});
 	}
 
