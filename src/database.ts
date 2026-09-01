@@ -94,7 +94,7 @@ export class Database {
 		return new Promise((resolve, reject) => {
 			this.execute(sql, args).then(
 				(rows: QueryResult) => {
-					resolve(rows as any[]);
+					resolve(rows[0] as any[]);
 				},
 				() => {},
 			);
@@ -122,7 +122,7 @@ export class Database {
 		return new Promise((resolve, reject) => {
 			this.__execute(sql, args).then(
 				(rows: QueryResult) => {
-					resolve(rows as any[]);
+					resolve(rows[0] as any[]);
 				},
 				() => {},
 			);
@@ -150,7 +150,7 @@ export class Database {
 				});
 			}
 			this.__execute(sql, args).then((rows: QueryResult) => {
-				resolve(rows as any[]);
+				resolve(rows[0] as any[]);
 			});
 		});
 	}
