@@ -113,7 +113,6 @@ jobs:
                 name: Install Node.js from fnm
                 command: |
                     __CI_REPO_NODEJS_VER=$(cat .node-version)
-                    __CI_REPO_NODEJS_VER="v20.2.0"
                     fnm install $__CI_REPO_NODEJS_VER && fnm use $__CI_REPO_NODEJS_VER --install-if-missing && fnm default $__CI_REPO_NODEJS_VER
             - restore_cache:
                 keys:
