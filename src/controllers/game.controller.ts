@@ -1,7 +1,7 @@
 import express from "express";
 import * as Minio from "minio";
 import multer from "multer";
-import datastore from "../datastore";
+import datastore, { cache } from "../datastore";
 import { adminCheck, userCheck } from "../lib/auth-check";
 import handle from "../lib/express-async-catch";
 import whitelist from "../lib/whitelist";
@@ -43,6 +43,7 @@ import type { GetGamesParams, PostGameParams } from "../model/params/game";
 import type { Review } from "../model/Review";
 import type { APIError } from "../model/response/error";
 import type { CFTurnstileVerifier } from "../utils/captcha";
+import { xxh64 } from "@node-rs/xxhash";
 
 function extractBearerJWT(header_token: string): string | object {
 	if (!header_token.includes("Bearer ")) {
@@ -217,7 +218,8 @@ export class GameController extends Controller {
 		params.difficultyTo = difficultyTo;
 		params.ownerUserId = ownerUserId;
 
-		const rows = await datastore.getGames(params);
+		const cacheKey = xxh64(JSON.stringify(params), 0);
+		const rows = cache(`http-getGames-${cacheKey}`, datastore.getGames(params));
 		// TODO: remove and replicate elsewhere.
 		// The only reason I'm leaving it around is because
 		// I want to implement this feature correctly. My hope is by

@@ -26,24 +26,61 @@ import type { UserLoginParams } from "./model/UserLoginParams";
 
 import { escape } from "mysql2";
 
-const config: Config = require("./config/config.json");
+import { Memcache } from "memcache";
 
-import Memcached = require("memcached");
+const config: Config = require("./config/config.json");
 
 import type { Message } from "./model/Message";
 import type { GetGameParams } from "./model/params/game";
-export const memcached: Memcached = new Memcached(
-	config.memcache.hosts,
-	config.memcache.options,
-);
 
-for (const host of config.memcache.hosts) {
-	memcached.connect(host, (err: Error, conn: any) => {
-		if (err) {
-			console.error(`memcached instance was unreachable: ${err}`);
+console.log("setting up memcached client");
+export const MCACHE: Memcache = new Memcache({ ...config.memcache });
+MCACHE.del = MCACHE.delete;
+console.log("client setup");
+
+MCACHE.on("connect", () => {
+	console.log("Connected to a Memcached node.");
+});
+MCACHE.on("close", () => {
+	console.log("Disconnected from a Memcached node.");
+});
+MCACHE.on("error", (e) => {
+	console.error("Memcached client or node threw an error:", e);
+});
+MCACHE.on("timeout", () => {
+	console.warn(
+		"Memcached client reached a timeout while connected or being connecting to a node.",
+	);
+});
+
+export async function cache<T>(
+	key: string,
+	supplier: () => Promise<T>,
+): Promise<T> {
+	// TODO: check the cache and run function at the same time, return whichever finishes first
+	let miss = true;
+	try {
+		const val = await MCACHE.get(key);
+		if (val !== undefined) {
+			miss = false;
+			return JSON.parse(val) as T;
 		}
-		console.log("memcached instance:", conn.server);
-	});
+	} catch (e) {
+		console.error(
+			`Memcached client or node threw an error when looking for key ${key};`,
+		);
+	} finally {
+		if (miss) {
+			const val = JSON.stringify(await supplier());
+			if (val !== undefined) {
+				MCACHE.set(key, val);
+			}
+		}
+	}
+}
+
+export function uncache(key: string) {
+	MCACHE.delete(key);
 }
 
 export default {
@@ -2001,26 +2038,3 @@ WHERE
 		}
 	},
 };
-
-async function cache<T>(key: string, supplier: () => Promise<T>): Promise<T> {
-	try {
-		const cached = await new Promise<T>((r, j) => {
-			memcached.get(key, (err: any, data: any) => {
-				if (err) j(err);
-				else r(data?.data);
-			});
-		});
-		if (cached) return cached;
-	} catch (err) {
-		console.log("Error occurred retrieving " + key + " from memcache!");
-		console.log(err);
-	}
-
-	const result = await supplier();
-	memcached.set(key, { data: result });
-	return result;
-}
-
-function uncache(key: string) {
-	memcached.del(key);
-}

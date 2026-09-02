@@ -17,7 +17,7 @@ import swaggerUi from "swagger-ui-express";
 import uuid from "uuid/v4";
 import { RegisterRoutes } from "../build/routes";
 import { Database } from "./database";
-import datastore, { memcached } from "./datastore";
+import datastore, { MCACHE } from "./datastore";
 import { refreshToken } from "./lib/auth-check";
 import { StdLogger } from "./logger";
 import Config from "./repository/config";
@@ -121,6 +121,9 @@ async function main(): Promise<number> {
 		LOG.debug(dbSetAdminRes, "Fallback CI account result.");
 	}
 
+	LOG.info("Initializing Memory Cache.");
+	await MCACHE.connect();
+
 	LOG.info("Creating a Cloudflare Turnstile Captcha verifier.");
 	const cfTurnstileVerifier = new CFTurnstileVerifier(
 		cfg.getConfig().captcha.cfTurnstileSecret,
@@ -144,7 +147,7 @@ async function main(): Promise<number> {
 		legacyHeaders: true,
 		ipv6Subnet: 48,
 		identifier: "exprRateLmt-",
-		store: new MemcachedStore({ prefix: "exprRateLmt-", client: memcached }),
+		store: new MemcachedStore({ prefix: "exprRateLmt-", client: MCACHE }),
 	});
 	app.use(expressRateLimiter);
 
@@ -154,7 +157,7 @@ async function main(): Promise<number> {
 		delayAfter: 1000,
 		delayMs: (hits) => (hits - 1000) * 1.2935,
 		identifier: "exprSpdLmt-",
-		store: new MemcachedStore({ prefix: "exprSpdLmt-", client: memcached }),
+		store: new MemcachedStore({ prefix: "exprSpdLmt-", client: MCACHE }),
 	});
 	app.use(expressSpeedLimiter);
 
@@ -344,7 +347,7 @@ async function main(): Promise<number> {
 	} catch (e) {
 		LOG.fatal(e, "Application unexpectantly terminated.");
 	} finally {
-		memcached.end();
+		MCACHE.quit();
 	}
 
 	LOG.info("Application finished, shutting down.");

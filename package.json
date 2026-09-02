@@ -24,6 +24,7 @@
     "author": "klazen108",
     "license": "ISC",
     "dependencies": {
+        "@node-rs/xxhash": "1.5.0",
         "@sinclair/typebox": "0.31.16",
         "@types/express-jwt": "0.0.42",
         "@types/jsonwebtoken": "8.3.2",
@@ -42,7 +43,7 @@
         "express-rate-limit": "6.7.1",
         "express-slow-down": "2.0.0",
         "jsonwebtoken": "8.2.1",
-        "memcached": "2.2.2",
+        "memcache": "1.1.0",
         "minio": "7.0.15",
         "moment": "2.22.2",
         "ms": "2.1.2",
