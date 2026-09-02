@@ -57,10 +57,11 @@ export async function cache<T>(
 	key: string,
 	supplier: () => Promise<T>,
 ): Promise<T> {
-	// TODO: check the cache and run function at the same time, return whichever finishes first
 	let miss = true;
+	const ckey = `${config.memcache._keyPrefix}-${key}`;
+	// TODO: check the cache and run function at the same time, return whichever finishes first
 	try {
-		const val = await MCACHE.get(key);
+		const val = await MCACHE.get(ckey);
 		if (val !== undefined) {
 			miss = false;
 			return JSON.parse(val) as T;
@@ -73,14 +74,14 @@ export async function cache<T>(
 		if (miss) {
 			const val = JSON.stringify(await supplier());
 			if (val !== undefined) {
-				MCACHE.set(key, val);
+				MCACHE.set(ckey, val);
 			}
 		}
 	}
 }
 
 export function uncache(key: string) {
-	MCACHE.delete(key);
+	MCACHE.delete(`${config.memcache._keyPrefix}-${key}`);
 }
 
 export default {
