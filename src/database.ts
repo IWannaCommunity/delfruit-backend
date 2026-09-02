@@ -1,7 +1,8 @@
 import type {
 	FieldPacket,
 	PreparedStatementInfo,
-	QueryResult,
+	ResultSetHeader,
+	RowDataPacket,
 } from "mysql2/promise";
 import mysql, {
 	type Connection,
@@ -46,7 +47,12 @@ export class Database {
 		return this.connection.prepare(sql);
 	}
 
-	__execute(sql: string, args: any[]): Promise<[QueryResult, FieldPacket[]]> {
+	__execute(
+		sql: string,
+		args: any[],
+	): Promise<
+		[RowDataPacket[] | RowDataPacket[][] | ResultSetHeader, FieldPacket[]]
+	> {
 		return this.connection.execute(sql, args);
 	}
 
@@ -92,8 +98,10 @@ export class Database {
 		}
 		console.log(args);
 		return new Promise((resolve, reject) => {
-			this.execute(sql, args).then(
-				(rows: QueryResult) => {
+			this.__execute(sql, args).then(
+				(rdp: RowDataPacket[][]) => {
+					const [rows, fields] = rdp;
+
 					resolve(rows as any[]);
 				},
 				() => {},
@@ -121,7 +129,9 @@ export class Database {
 
 		return new Promise((resolve, reject) => {
 			this.__execute(sql, args).then(
-				(rows: QueryResult) => {
+				(rdp: RowDataPacket[][]) => {
+					const [rows, fields] = rdp;
+
 					resolve(rows as any[]);
 				},
 				() => {},
@@ -149,7 +159,9 @@ export class Database {
 					}
 				});
 			}
-			this.__execute(sql, args).then((rows: QueryResult) => {
+			this.__execute(sql, args).then((rdp: RowDataPacket[][]) => {
+				const [rows, fields] = rdp;
+
 				resolve(rows as any[]);
 			});
 		});
