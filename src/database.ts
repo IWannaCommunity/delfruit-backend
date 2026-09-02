@@ -17,9 +17,6 @@ const config: Config = require("./config/config.json");
 
 export const pool = mysql.createPool({
 	...config.db,
-	waitForConnections: true,
-	connectionLimit: 4,
-	maxIdle: 4,
 });
 
 export class Database {
