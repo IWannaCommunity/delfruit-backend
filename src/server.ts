@@ -17,7 +17,7 @@ import swaggerUi from "swagger-ui-express";
 import uuid from "uuid/v4";
 import { RegisterRoutes } from "../build/routes";
 import { Database, startPool } from "./database";
-import datastore, { MCACHE } from "./datastore";
+import datastore, { MCACHE, startMemoryCache } from "./datastore";
 import { refreshToken } from "./lib/auth-check";
 import { StdLogger } from "./logger";
 import Config from "./repository/config";
@@ -125,6 +125,7 @@ async function main(): Promise<number> {
 	}
 
 	LOG.info("Initializing Memory Cache.");
+	startMemoryCache();
 	await MCACHE.connect();
 
 	LOG.info("Creating a Cloudflare Turnstile Captcha verifier.");

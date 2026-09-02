@@ -33,25 +33,31 @@ const config: Config = require("./config/config.json");
 import type { Message } from "./model/Message";
 import type { GetGameParams } from "./model/params/game";
 
-console.log("setting up memcached client");
-export const MCACHE: Memcache = new Memcache({ ...config.memcache });
-MCACHE.del = MCACHE.delete;
-console.log("client setup");
+export let MCACHE: Memcache = {};
 
-MCACHE.on("connect", () => {
-	console.log("Connected to a Memcached node.");
-});
-MCACHE.on("close", () => {
-	console.log("Disconnected from a Memcached node.");
-});
-MCACHE.on("error", (e) => {
-	console.error("Memcached client or node threw an error:", e);
-});
-MCACHE.on("timeout", () => {
-	console.warn(
-		"Memcached client reached a timeout while connected or being connecting to a node.",
-	);
-});
+export function startMemoryCache(): void {
+	console.log("setting up memcached client");
+	MCACHE = new Memcache({ ...config.memcache });
+	MCACHE.del = MCACHE.delete;
+	console.log("client setup");
+
+    console.log("setting up event handlers")
+	MCACHE.on("connect", () => {
+		console.log("Connected to a Memcached node.");
+	});
+	MCACHE.on("close", () => {
+		console.log("Disconnected from a Memcached node.");
+	});
+	MCACHE.on("error", (e) => {
+		console.error("Memcached client or node threw an error:", e);
+	});
+	MCACHE.on("timeout", () => {
+		console.warn(
+			"Memcached client reached a timeout while connected or being connecting to a node.",
+		);
+	});
+    console.log("memory cache fully setup")
+}
 
 export async function cache<T>(
 	key: string,
