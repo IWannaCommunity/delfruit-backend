@@ -15,9 +15,13 @@ import type Config from "./model/config";
 
 const config: Config = require("./config/config.json");
 
-export const pool = mysql.createPool({
-	...config.db,
-});
+export let DBPOOL: Pool = {};
+
+export function startPool(): void {
+	DBPOOL = mysql.createPool({
+		...config.db,
+	});
+}
 
 export class Database {
 	private connection: Connection | Pool;
@@ -32,7 +36,7 @@ export class Database {
 		if (configOverride) {
 			useConfig = configOverride;
 		}
-		this.connection = pool;
+		this.connection = DBPOOL;
 
 		this.connection.on("error", (err) => {
 			console.log("Error occurred on DB connection!");

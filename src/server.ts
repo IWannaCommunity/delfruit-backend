@@ -16,7 +16,7 @@ import swaggerJsdoc from "swagger-jsdoc";
 import swaggerUi from "swagger-ui-express";
 import uuid from "uuid/v4";
 import { RegisterRoutes } from "../build/routes";
-import { Database } from "./database";
+import { Database, startPool } from "./database";
 import datastore, { MCACHE } from "./datastore";
 import { refreshToken } from "./lib/auth-check";
 import { StdLogger } from "./logger";
@@ -69,6 +69,9 @@ async function main(): Promise<number> {
 	const LOG: StdLogger = new StdLogger(cfg.getConfig().logLevel, false);
 
 	LOG.info("Initiating Delicious Fruit NG 1.0.0-rc.0 server startup.");
+
+	LOG.info("Initializing Database Pool.");
+	startPool();
 
 	if (cfg.getConfig().initDatabase || process.env.__DF_TEST_RUN) {
 		LOG.debug("Database initialization requested.");
