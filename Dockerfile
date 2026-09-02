@@ -1,4 +1,4 @@
-FROM node:20.2.0-bookworm
+FROM node:20.2.0
 
 #ENV NODE_ENV=production
 
