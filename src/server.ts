@@ -151,7 +151,7 @@ async function main(): Promise<number> {
 		legacyHeaders: true,
 		ipv6Subnet: 48,
 		identifier: "exprRateLmt-",
-		store: new MemcachedStore({ prefix: "exprRateLmt-", client: MCACHE }),
+		//store: new MemcachedStore({ prefix: "exprRateLmt-", client: MCACHE }),
 	});
 	app.use(expressRateLimiter);
 
@@ -161,7 +161,7 @@ async function main(): Promise<number> {
 		delayAfter: 1000,
 		delayMs: (hits) => (hits - 1000) * 1.2935,
 		identifier: "exprSpdLmt-",
-		store: new MemcachedStore({ prefix: "exprSpdLmt-", client: MCACHE }),
+		//store: new MemcachedStore({ prefix: "exprSpdLmt-", client: MCACHE }),
 	});
 	app.use(expressSpeedLimiter);
 
