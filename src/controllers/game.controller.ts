@@ -218,7 +218,7 @@ export class GameController extends Controller {
 		params.difficultyTo = difficultyTo;
 		params.ownerUserId = ownerUserId;
 
-		const cacheKey = xxh64(JSON.stringify(params), 0);
+		const cacheKey = xxh64(JSON.stringify(params), BigInt(0));
 		const rows = cache(`http-getGames-${cacheKey}`, datastore.getGames(params));
 		// TODO: remove and replicate elsewhere.
 		// The only reason I'm leaving it around is because
