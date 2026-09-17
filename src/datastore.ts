@@ -59,10 +59,7 @@ export function startMemoryCache(): void {
     console.log("memory cache fully setup")
 }
 
-export async function cache<T>(
-	key: string,
-	supplier: () => Promise<T>,
-): Promise<T> {
+export async function cache<T>(key: string, supplier: Promise<T>): Promise<T> {
 	let miss = true;
 	const ckey = `${config.memcache._keyPrefix}-${key}`;
 	// TODO: check the cache and run function at the same time, return whichever finishes first
@@ -78,7 +75,7 @@ export async function cache<T>(
 		);
 	} finally {
 		if (miss) {
-			const val = JSON.stringify(await supplier());
+			const val = JSON.stringify(await Promise.resolve(supplier));
 			if (val !== undefined) {
 				MCACHE.set(ckey, val);
 			}
