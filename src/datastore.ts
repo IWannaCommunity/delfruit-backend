@@ -32,6 +32,7 @@ const config: Config = require("./config/config.json");
 
 import type { Message } from "./model/Message";
 import type { GetGameParams } from "./model/params/game";
+import { toBase64, fromBase64 } from "@jsonjoy.com/base64";
 
 export let MCACHE: Memcache = {};
 
@@ -59,32 +60,44 @@ export function startMemoryCache(): void {
     console.log("memory cache fully setup")
 }
 
-export async function cache<T>(key: string, supplier: Promise<T>): Promise<T> {
+export async function cache<T>(
+	key: string,
+	supplier: Promise<T>,
+	expr: number = 300,
+): Promise<T> {
 	let miss = true;
-	const ckey = `${config.memcache._keyPrefix}-${key}`;
+	const ckey = `${config.memcache._keyPrefix}:${key}`;
 	// TODO: check the cache and run function at the same time, return whichever finishes first
 	try {
 		const val = await MCACHE.get(ckey);
 		if (val !== undefined) {
 			miss = false;
-			return JSON.parse(val) as T;
+			const valComputed = JSON.parse(new TextDecoder().decode(fromBase64(val)));
+			//return JSON.parse(atob(val)) as T;
+			return valComputed as T;
 		}
 	} catch (e) {
 		console.error(
-			`Memcached client or node threw an error when looking for key ${key};`,
+			`Memcached client or node threw an error when looking for key ${key}; ${e}`,
 		);
 	} finally {
 		if (miss) {
-			const val = JSON.stringify(await Promise.resolve(supplier));
+			//const val = JSON.stringify(await Promise.resolve(supplier));
+			const val = await Promise.resolve(supplier);
+			const valComputed = toBase64(
+				new Uint8Array(new TextEncoder().encode(JSON.stringify(val))),
+			);
 			if (val !== undefined) {
-				MCACHE.set(ckey, val);
+				MCACHE.set(ckey, valComputed, expr);
+				// DANGER: should be safe to do since this branch only runs if the cache is vacant
+				return val as T;
 			}
 		}
 	}
 }
 
 export function uncache(key: string) {
-	MCACHE.delete(`${config.memcache._keyPrefix}-${key}`);
+	MCACHE.delete(`${config.memcache._keyPrefix}:${key}`);
 }
 
 export default {

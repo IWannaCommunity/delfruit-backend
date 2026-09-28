@@ -24,6 +24,7 @@
     "author": "klazen108",
     "license": "ISC",
     "dependencies": {
+        "@jsonjoy.com/base64": "17.67.0",
         "@node-rs/xxhash": "1.5.0",
         "@sinclair/typebox": "0.31.16",
         "@types/express-jwt": "0.0.42",
