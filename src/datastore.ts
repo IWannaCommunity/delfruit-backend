@@ -493,7 +493,7 @@ ${whereList.getClause()}
 			}
 			console.log("assembling the query");
 			var query = `
-SELECT r.*,
+SELECT /*+ MAX_EXECUTION_TIME(30000) */ r.*,
 u.name user_name,
 u.selected_badge,
 g.name game_name,
@@ -521,7 +521,7 @@ ${options.page !== undefined ? " LIMIT ?,? " : ""}
 
 			console.log(query);
 			console.log("running");
-			const results = await database.query_unsafe(
+			const results = await database.query(
 				query,
 				where.getParams().concat(params),
 			);
@@ -651,7 +651,7 @@ ${options.page !== undefined ? " LIMIT ?,? " : ""}
 	},
 
 	async isLiked(reviewId: number, userId: number): Promise<boolean> {
-		const users = await cache(`review-likes-${reviewId}`, async () => {
+		const users = await (async () => {
 			const database = new Database();
 
 			try {
@@ -663,7 +663,7 @@ ${options.page !== undefined ? " LIMIT ?,? " : ""}
 			} finally {
 				database.close();
 			}
-		});
+		})();
 		return users.includes(userId);
 	},
 
@@ -799,10 +799,9 @@ ${where.getClause()}
 	},
 
 	async getGame(id: number, database?: Database): Promise<Game | null> {
-		return await cache(`game-${id}`, async () => {
-			const doClose = !database;
-			const db = database || new Database();
-			const query = `
+		const doClose = !database;
+		const db = database || new Database();
+		const query = `
 SELECT g.*
 , g.date_created as dateCreated
 , g.owner_id as ownerId
@@ -813,43 +812,40 @@ FROM Game g
 LEFT JOIN Rating r ON r.game_id = g.id AND r.removed = 0
 WHERE g.id = ?
 `;
-			try {
-				const res = await db.query_unsafe(query, [id]);
-				if (!res || res.length == 0) return null;
+		try {
+			const res = await db.query(query, [id]);
+			if (!res || res.length == 0) return null;
 
-				const game = res[0];
-				//if zero date, we don't have it, so null it out
-				if (!moment(game.dateCreated).isValid()) game.dateCreated = undefined;
-				if (game.collab && game.author_raw)
-					game.author = game.author_raw.split(" ");
-				else game.author = game.author_raw ? [game.author_raw] : [];
-				delete game.author_raw;
+			const game = res[0];
+			//if zero date, we don't have it, so null it out
+			if (!moment(game.dateCreated).isValid()) game.dateCreated = undefined;
+			if (game.collab && game.author_raw)
+				game.author = game.author_raw.split(" ");
+			else game.author = game.author_raw ? [game.author_raw] : [];
+			delete game.author_raw;
 
-				game.urlSpdrn = game.url_spdrn;
-				delete game.url_spdrn;
+			game.urlSpdrn = game.url_spdrn;
+			delete game.url_spdrn;
 
-				delete game.date_created; //dateCreated
+			delete game.date_created; //dateCreated
 
-				return game;
-			} finally {
-				if (doClose) db.close();
-			}
-		});
+			return game;
+		} finally {
+			if (doClose) db.close();
+		}
 	},
 
 	async gameExists(id: number): Promise<boolean> {
-		return await cache(`game-exists-${id}`, async () => {
-			const db = new Database();
-			try {
-				const res = await db.query(
-					"SELECT 1 FROM Game g WHERE g.id = ? AND g.removed = 0",
-					[id],
-				);
-				return res && res.length == 1;
-			} finally {
-				db.close();
-			}
-		});
+		const db = new Database();
+		try {
+			const res = await db.query(
+				"SELECT 1 FROM Game g WHERE g.id = ? AND g.removed = 0",
+				[id],
+			);
+			return res && res.length == 1;
+		} finally {
+			db.close();
+		}
 	},
 
 	async getRandomGame() {
@@ -981,34 +977,31 @@ ORDER BY s.date_created DESC
 	},
 
 	async getTagsForGame(gameId: number, userId?: number) {
-		return await cache(`game-tag-${gameId}-${userId}`, async () => {
-			const whereList = new WhereList();
-			whereList.add("gt.game_id", gameId);
-			whereList.add("gt.user_id", userId);
+		const whereList = new WhereList();
+		whereList.add("gt.game_id", gameId);
+		whereList.add("gt.user_id", userId);
 
-			var query = `
-SELECT t.name, t.id
+		var query = `
+SELECT /*+ MAX_EXECUTION_TIME(1000) */ t.name, t.id
 FROM GameTag gt
 JOIN Game g on g.id = gt.game_id AND g.removed = 0
 JOIN Tag t on t.id = gt.tag_id
 ${whereList.getClause()}
 `;
 
-			const database = new Database();
-			try {
-				return await database.query(query, whereList.getParams());
-			} finally {
-				database.close();
-			}
-		});
+		const database = new Database();
+		try {
+			return await database.query(query, whereList.getParams());
+		} finally {
+			database.close();
+		}
 	},
 
 	async getTagSetsForGame(gameId: number) {
-		return await cache(`game-tag-sets-${gameId}`, async () => {
-			const whereList = new WhereList();
-			whereList.add("gt.game_id", gameId);
+		const whereList = new WhereList();
+		whereList.add("gt.game_id", gameId);
 
-			var query = `
+		var query = `
 SELECT t.name, gt.tag_id as "id", COUNT(*) AS "count"
 FROM GameTag AS gt
 RIGHT JOIN Tag AS t ON t.id = gt.tag_id
@@ -1016,16 +1009,12 @@ WHERE gt.game_id IN (?)
 GROUP BY gt.game_id, gt.tag_id
 `;
 
-			const database = new Database();
-			try {
-				return await database.query_unsafe(query, [
-					...whereList.getParams(),
-					gameId,
-				]);
-			} finally {
-				database.close();
-			}
-		});
+		const database = new Database();
+		try {
+			return await database.query(query, [...whereList.getParams(), gameId]);
+		} finally {
+			database.close();
+		}
 	},
 
 	async getTags(tagId?: number, q?: string, name?: string) {
