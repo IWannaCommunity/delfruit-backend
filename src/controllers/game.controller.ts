@@ -219,7 +219,11 @@ export class GameController extends Controller {
 		params.ownerUserId = ownerUserId;
 
 		const cacheKey = xxh64(JSON.stringify(params), BigInt(0));
-		const rows = cache(`http-getGames-${cacheKey}`, datastore.getGames(params));
+		const rows = await cache(
+			`http-getGames-${cacheKey}`,
+			datastore.getGames(params),
+			3600,
+		);
 		// TODO: remove and replicate elsewhere.
 		// The only reason I'm leaving it around is because
 		// I want to implement this feature correctly. My hope is by

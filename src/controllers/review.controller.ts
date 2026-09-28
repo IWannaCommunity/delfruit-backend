@@ -16,7 +16,7 @@ import {
 	SuccessResponse,
 	Tags,
 } from "tsoa";
-import datastore from "../datastore";
+import datastore, { cache } from "../datastore";
 import { userCheck } from "../lib/auth-check";
 import handle from "../lib/express-async-catch";
 import type { Review } from "../model/Review";
@@ -28,6 +28,7 @@ import type Config from "../model/config";
 
 const config: Config = require("../config/config.json");
 
+import { xxh64 } from "@node-rs/xxhash";
 import * as jwt from "jsonwebtoken";
 import type { RequestExt } from "../model/app/request";
 import type { GetReviewOptions } from "../model/GetReviewOptions";
@@ -107,7 +108,13 @@ export class ReviewController extends Controller {
 		params.removed = false;
 		params.page = params.page ?? 0;
 		params.limit = params.limit ?? 50;
-		const rows = await datastore.getReviews(params);
+
+		const cacheKey = xxh64(JSON.stringify(params), BigInt(0));
+		const rows = await cache(
+			`http-getReviews-${cacheKey}`,
+			datastore.getReviews(params),
+			300,
+		);
 		return rows;
 	}
 
