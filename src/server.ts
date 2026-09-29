@@ -1,3 +1,4 @@
+import { xxh64 } from "@node-rs/xxhash";
 import axios from "axios";
 import bodyParser from "body-parser";
 import cors from "cors";
@@ -17,9 +18,11 @@ import swaggerUi from "swagger-ui-express";
 import uuid from "uuid/v4";
 import { RegisterRoutes } from "../build/routes";
 import { Database, startPool } from "./database";
-import datastore, { MCACHE, startMemoryCache } from "./datastore";
+import datastore, { cache, MCACHE, startMemoryCache } from "./datastore";
 import { refreshToken } from "./lib/auth-check";
 import { StdLogger } from "./logger";
+import type { GetReviewOptions } from "./model/GetReviewOptions";
+import type { GetGamesParams } from "./model/params/game";
 import Config from "./repository/config";
 import { CFTurnstileVerifier } from "./utils/captcha";
 
@@ -344,6 +347,28 @@ async function main(): Promise<number> {
 				abrtCtrl.abort("Received process termination signal.");
 			});
 		});
+
+		// HACK: for some reason, some browsers will not wait long enough for these
+		// calls to finish, so we'll cache them ahead of time so they don't have to wait.
+		// This is mostly for the front page, and ALL search.
+		const fetchFPGameEntries = async () => {
+			await fetch("http://localhost:4201/games?page=0&limit=50");
+		};
+		const fetchFPReviewEntries = async () => {
+			await fetch("http://localhost:4201/reviews?page=0&limit=5");
+		};
+		const fetchSearchAllGameEntries = async () => {
+			await fetch(
+				"http://localhost:4201/games?removed=false&hasDownload=true&page=0&limit=25&orderCol=date_created&orderDir=desc",
+			);
+		};
+		await fetchFPGameEntries();
+		await fetchFPReviewEntries();
+		await fetchSearchAllGameEntries();
+
+		setInterval(fetchFPGameEntries, 1000 * 60 * 60);
+		setInterval(fetchFPReviewEntries, 1000 * 60 * 5);
+		setInterval(fetchSearchAllGameEntries, 1000 * 60 * 60);
 
 		while (server.listening) {
 			await sleep(4);
