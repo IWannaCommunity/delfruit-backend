@@ -1269,7 +1269,7 @@ HAVING COUNT(DISTINCT t.id) = ${params.tags.length}
 
 		const query =
 			`
-SELECT /*+ MAX_EXECUTION_TIME(19001) */` +
+SELECT /*+ MAX_EXECUTION_TIME(39001) */` +
 			(countOnly
 				? `COUNT(1) AS total_count`
 				: `g.*,
