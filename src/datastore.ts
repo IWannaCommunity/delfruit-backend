@@ -1642,8 +1642,8 @@ LIMIT ?,?
 
 		try {
 			const resSet = await db.execute(
-				"SELECT g.`id` AS `game_id`, g.`name`, COALESCE(r.`difficulty`, NULL) AS `difficulty`, COALESCE(r.`rating`, NULL) AS `rating` FROM `Bookmark` b, `Game` g JOIN `Rating` r ON r.`game_id` = g.`id` AND r.`user_id` = ? WHERE g.`id` = b.`game_id` AND b.`user_id` = ? AND g.`removed` IS FALSE",
-				[uid, uid],
+				"SELECT g.`id` AS `game_id`, g.`name`, COALESCE(r.`difficulty`, NULL) AS `difficulty`, COALESCE(r.`rating`, NULL) AS `rating` FROM `Bookmark` b INNER JOIN `Game` g ON b.`game_id` = g.`id` LEFT OUTER JOIN `Rating` r ON r.`user_id` = b.`user_id` AND r.`game_id` = b.`game_id` AND r.`removed` IS FALSE WHERE b.`user_id` = ? AND g.`removed` IS FALSE",
+				[uid],
 			);
 			return resSet.map((elem) => {
 				return {
