@@ -1220,12 +1220,12 @@ ${whereList.getClause()}
 		if (params.tags !== undefined) {
 			console.log(params);
 			console.log(params.tags);
+
 			whereList.addDirect(`g.id IN (
-SELECT game_id
+SELECT gt.game_id
 FROM GameTag gt
-JOIN Tag t ON t.id=gt.tag_id
-WHERE t.id IN (${params.tags.map((s) => `${escape(s)}`).join(",")})
-GROUP BY gt.game_id
+WHERE gt.tag_id IN (${params.tags.map((s) => `${escape(s)}`).join(",")})
+AND g.id = gt.game_id
 HAVING COUNT(DISTINCT t.id) = ${params.tags.length}
 )`);
 		}
