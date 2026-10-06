@@ -1226,7 +1226,7 @@ SELECT gt.game_id
 FROM GameTag gt
 WHERE gt.tag_id IN (${params.tags.map((s) => `${escape(s)}`).join(",")})
 AND g.id = gt.game_id
-HAVING COUNT(DISTINCT t.id) = ${params.tags.length}
+HAVING COUNT(DISTINCT gt.tag_id) = ${params.tags.length}
 )`);
 		}
 
