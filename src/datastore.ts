@@ -998,9 +998,6 @@ ${whereList.getClause()}
 	},
 
 	async getTagSetsForGame(gameId: number) {
-		const whereList = new WhereList();
-		whereList.add("gt.game_id", gameId);
-
 		var query = `
 SELECT t.name, gt.tag_id as "id", COUNT(*) AS "count"
 FROM GameTag AS gt
@@ -1011,7 +1008,7 @@ GROUP BY gt.game_id, gt.tag_id
 
 		const database = new Database();
 		try {
-			return await database.query(query, [...whereList.getParams(), gameId]);
+			return await database.query(query, [gameId]);
 		} finally {
 			database.close();
 		}
