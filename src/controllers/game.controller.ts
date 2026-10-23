@@ -407,12 +407,14 @@ export class GameController extends Controller {
 				await datastore.getReviews({
 					game_id: id,
 					user_id: Number(req.app_user.sub),
+					removed: false,
 				})
 			).length >= 1;
 		if (hasPreviousReview) {
 			this.setStatus(401);
 			return {
-				error: "cannot publish a new review when the previous one was removed.",
+				error:
+					"cannot publish a new review when the previous one wasn't removed.",
 			} as APIError;
 		}
 
