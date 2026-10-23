@@ -148,8 +148,8 @@ async function main(): Promise<number> {
 	LOG.debug("Initializing Rate Limiting middleware for Express.js.");
 	const expressRateLimiter = rateLimit({
 		windowMs: 1000 * 60 * 5,
-		max: 500, // TODO: remove this on a newer version of this library
-		limit: 500, // TODO: lower this on release
+		max: 500 * 20, // TODO: remove this on a newer version of this library
+		limit: 500 * 20, // TODO: lower this on release
 		standardHeaders: "draft-8",
 		legacyHeaders: true,
 		ipv6Subnet: 48,
@@ -161,8 +161,8 @@ async function main(): Promise<number> {
 	LOG.debug("Initializing Speed Limiter middleware for Express.js.");
 	const expressSpeedLimiter = slowDown({
 		windowMs: 1000 * 60 * 15,
-		delayAfter: 1000,
-		delayMs: (hits) => (hits - 1000) * 1.2935,
+		delayAfter: 1000 * 10,
+		delayMs: (hits) => (hits - 1000 * 10) * 1.2935,
 		identifier: "exprSpdLmt-",
 		//store: new MemcachedStore({ prefix: "exprSpdLmt-", client: MCACHE }),
 	});
