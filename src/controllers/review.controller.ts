@@ -150,6 +150,16 @@ export class ReviewController extends Controller {
 			delete review.removed;
 		}
 
+		if (requestBody.rating) {
+			requestBody.rating = Math.min(Math.max(requestBody.rating, 0), 100);
+		}
+		if (requestBody.difficulty) {
+			requestBody.difficulty = Math.min(
+				Math.max(requestBody.difficulty, 0),
+				100,
+			);
+		}
+
 		await datastore.updateReview(review);
 		// TODO: I'M LAZY, THIS JUST NEEDS TO BE IN THE REPO OR UPDATEREVIEW
 		if (requestBody.tags) {
