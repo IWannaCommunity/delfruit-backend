@@ -16,5 +16,8 @@
 	"routes": {
 		"routesDir": "build",
 		"authenticationModule": "src/lib/security.ts"
+	},
+	"compilerOptions": {
+		"strictNullChecks": true
 	}
 }
