@@ -510,7 +510,7 @@ GROUP BY r.id
 ${
 	options.textReviewsFirst
 		? `ORDER BY CASE WHEN (r.comment IS NULL OR r.comment='') THEN 0 ELSE 1 END DESC,
-COUNT(l.id) DESC,
+COUNT(l.id) ASC,
 r.date_created DESC`
 		: options.orderCol
 			? `ORDER BY ${options.orderCol} ${options.orderDir ?? "DESC"}`
