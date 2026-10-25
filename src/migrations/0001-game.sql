@@ -1,17 +1,17 @@
 CREATE TABLE IF NOT EXISTS `Game` (
-        id int(11) NOT NULL AUTO_INCREMENT,
-        name varchar(200) NOT NULL,
-        sortname varchar(150) NOT NULL,
-        url varchar(400) CHARACTER SET latin1 DEFAULT NULL,
-        url_spdrn varchar(400) DEFAULT NULL,
-        author varchar(300) DEFAULT NULL,
-        collab tinyint(1) NOT NULL DEFAULT '0',
-        date_created timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        adder_id int(11) DEFAULT NULL,
-        removed tinyint(1) NOT NULL DEFAULT '0',
-        owner_id int(11) DEFAULT NULL,
-        owner_bio varchar(5000) DEFAULT NULL,
-        PRIMARY KEY (id),
-        KEY removed (removed),
-        KEY date_created (date_created)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+	`id` INT NOT NULL AUTO_INCREMENT,
+	`name` VARCHAR(1200) NOT NULL,
+	`sortname` VARCHAR(800) NOT NULL,
+	`url` VARCHAR(400) NULL DEFAULT NULL,
+	`url_spdrn` VARCHAR(400) NULL DEFAULT NULL,
+	`author` VARCHAR(2400) NULL DEFAULT NULL,
+	`collab` TINYINT(1) NOT NULL DEFAULT '0',
+	`date_created` TIMESTAMP NULL DEFAULT (CURRENT_TIMESTAMP),
+	`adder_id` INT NULL DEFAULT NULL,
+	`removed` TINYINT(1) NOT NULL DEFAULT '0',
+	`owner_id` INT NULL DEFAULT NULL,
+	`owner_bio` VARCHAR(5000) NULL DEFAULT NULL,
+	PRIMARY KEY (`id`) USING BTREE,
+    KEY removed (removed),
+    KEY date_created (date_created)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;

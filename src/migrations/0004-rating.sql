@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS `Rating` (
         game_id int(11) NOT NULL,
         rating tinyint(4) DEFAULT NULL,
         difficulty tinyint(4) DEFAULT NULL,
-        comment text,
+        comment mediumtext,
         date_created timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
         removed tinyint(1) NOT NULL DEFAULT '0',
         PRIMARY KEY (id),

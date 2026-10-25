@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS `User` (
   id int(11) NOT NULL AUTO_INCREMENT,
-  name varchar(50) CHARACTER SET latin1 NOT NULL,
+  `name` VARCHAR(100) CHARACTER SET latin1 NOT NULL,
 
   phash varchar(128) CHARACTER SET latin1 DEFAULT NULL,
   salt varchar(100) DEFAULT NULL,
