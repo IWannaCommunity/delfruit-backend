@@ -1022,6 +1022,9 @@ GROUP BY gt.game_id, gt.tag_id
 				"t.name LIKE ? ORDER BY (t.name = ?) DESC, (t.name LIKE ?) DESC, CHAR_LENGTH(?) ASC",
 				"%" + q + "%",
 			);
+			whereList.addParams(q);
+			whereList.addParams(q + "%");
+			whereList.addParams(q);
 		}
 		whereList.add("t.name", name);
 
@@ -1037,7 +1040,7 @@ ${whereList.getClause()}
 			console.log(query.slice(0, -3).replace("WHERE (", "WHERE "));
 			return await database.query(
 				query.slice(0, -3).replace("WHERE (", "WHERE "),
-				[...whereList.getParams(), q, q + "%", q],
+				[...whereList.getParams()],
 			);
 		} finally {
 			database.close();

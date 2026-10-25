@@ -32,6 +32,11 @@ export default class WhereList {
         this.columns.push("("+phrase+")");
         return true;
     }
+	
+	public addParams(p: string): boolean {
+		this.params.push(p);
+		return true;
+	}
 
     public addIf(column: string, value: any, condition: boolean): boolean {
         if (!condition) return false;
