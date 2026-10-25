@@ -25,7 +25,7 @@ export default class AuthModule {
         {
           //after this much time, the token needs to be discarded and the
           //user must log in again with username/password
-          expiresIn: "7 days",
+          expiresIn: "45 days",
           subject: ""+id
         }
     );
