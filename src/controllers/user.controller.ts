@@ -402,7 +402,7 @@ To finish registration, please enter the key on the register finalization page, 
 	public async patchUser(
 		@Header("Authorization") authorization: string,
 		@Path() id: number,
-		@Body() requestBody: Partial<PatchUserParams & User>,
+		@Body() requestBody: Partial<PatchUserParams> & Partial<User>,
 	): Promise<User> {
 		// NOTE: auth guard should make the error condition unreachable
 		const authuser: { isAdmin: boolean } = extractBearerJWT(
@@ -415,6 +415,7 @@ To finish registration, please enter the key on the register finalization page, 
 			this.setStatus(403);
 			return { error: "unauthorized access to this user" };
 		}
+		delete requestBody.name;
 
 		const user: UserEntity = requestBody as unknown as any;
 		user.id = id;
