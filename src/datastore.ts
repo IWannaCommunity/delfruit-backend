@@ -811,7 +811,7 @@ SELECT g.*
 , COUNT(DISTINCT f.user_id) favorited
 FROM Game g
 LEFT JOIN Rating r ON r.game_id = g.id AND r.removed = 0
-JOIN Favorite f ON f.game_id = g.id
+LEFT JOIN Favorite f ON f.game_id = g.id
 WHERE g.id = ?
 GROUP BY g.id
 `;
