@@ -95,17 +95,6 @@ const REGKEYGEN = customAlphabet(
 	8,
 );
 
-export type PatchUserTemporary = {
-	password?: string;
-	currentPassword?: string;
-	email?: string;
-	twitchLink?: string;
-	nicoLink?: string;
-	youtubeLink?: string;
-	bio?: string;
-	locale?: string;
-};
-
 @Tags("Users")
 @Route("users")
 export class UserController extends Controller {
@@ -413,7 +402,7 @@ To finish registration, please enter the key on the register finalization page, 
 	public async patchUser(
 		@Header("Authorization") authorization: string,
 		@Path() id: number,
-		@Body() requestBody: PatchUserTemporary,
+		@Body() requestBody: Patch<PatchUserParams & User>,
 	): Promise<User> {
 		// NOTE: auth guard should make the error condition unreachable
 		const authuser: { isAdmin: boolean } = extractBearerJWT(
@@ -426,6 +415,7 @@ To finish registration, please enter the key on the register finalization page, 
 			this.setStatus(403);
 			return { error: "unauthorized access to this user" };
 		}
+		delete requestBody.name;
 
 		const user: UserEntity = requestBody as unknown as any;
 		user.id = id;
