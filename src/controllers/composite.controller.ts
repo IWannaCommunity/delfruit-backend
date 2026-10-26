@@ -43,6 +43,7 @@ interface GameExtTag {
 }
 
 interface GameExt extends Game {
+	favorited: number;
 	ratings: {
 		rating: number;
 		difficulty: number;

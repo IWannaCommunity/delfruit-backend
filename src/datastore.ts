@@ -808,8 +808,10 @@ SELECT g.*
 , g.author as author_raw
 , COALESCE((SELECT AVG(r.rating) FROM Rating r RIGHT OUTER JOIN User u ON u.id = r.user_id WHERE r.removed = FALSE AND u.banned = FALSE AND r.game_id IN (g.id)), NULL) AS rating
 , COALESCE((SELECT AVG(r.difficulty) FROM Rating r RIGHT OUTER JOIN User u ON u.id = r.user_id WHERE r.removed = FALSE AND u.banned = FALSE AND r.game_id IN (g.id)), NULL) AS difficulty
+, COUNT(DISTINCT f.user_id) favorited
 FROM Game g
 LEFT JOIN Rating r ON r.game_id = g.id AND r.removed = 0
+JOIN Favorite f ON f.game_id = g.id
 WHERE g.id = ?
 `;
 		try {
