@@ -402,7 +402,7 @@ To finish registration, please enter the key on the register finalization page, 
 	public async patchUser(
 		@Header("Authorization") authorization: string,
 		@Path() id: number,
-		@Body() requestBody: Patch<PatchUserParams & User>,
+		@Body() requestBody: Partial<PatchUserParams & User>,
 	): Promise<User> {
 		// NOTE: auth guard should make the error condition unreachable
 		const authuser: { isAdmin: boolean } = extractBearerJWT(
