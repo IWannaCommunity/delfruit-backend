@@ -813,6 +813,7 @@ FROM Game g
 LEFT JOIN Rating r ON r.game_id = g.id AND r.removed = 0
 JOIN Favorite f ON f.game_id = g.id
 WHERE g.id = ?
+GROUP BY g.id
 `;
 		try {
 			const res = await db.query(query, [id]);
