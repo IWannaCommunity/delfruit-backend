@@ -703,6 +703,16 @@ export class GameController extends Controller {
 			this.setStatus(400);
 			return { error: "id must be a number" };
 		}
+		if (isNaN(Number(game.ownerId))) {
+			const users = await datastore.getUsers({ name: game.ownerId });
+			if (users.length === 0) {
+				this.setStatus(400);
+				return {
+					error: "owner id must be a number or an existing user by name",
+				};
+			}
+			game.ownerId = users[0].id;
+		}
 
 		game.id = id;
 		try {
