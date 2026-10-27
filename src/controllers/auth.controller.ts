@@ -143,12 +143,17 @@ export class AuthController extends Controller {
 			// TODO: disable logins for user after a certain amount of unsuccessful attempts
 			if (!verified) {
 				const u = await datastore.getUser(user.id);
-				await datastore.updateUser({
-					id: user.id,
-					unsuccessful_logins: u.unsuccessful_logins + 1,
-				});
-				this.setStatus(401);
-				return { error: "bad credentials" };
+				try {
+					await datastore.updateUser({
+						id: user.id,
+						unsuccessful_logins: u.unsuccessful_logins + 1,
+					});
+				} catch (e) {
+					console.log(e);
+				} finally {
+					this.setStatus(401);
+					return { error: "bad credentials" };
+				}
 			} else {
 				const banned = await datastore.isUserBanned(user.id);
 				if (banned) {
@@ -158,12 +163,18 @@ export class AuthController extends Controller {
 					};
 				}
 
-				await datastore.updateUser({
-					id: user.id,
-					dateLastLogin: moment().format("YYYY-MM-DD HH:mm:ss"),
-					lastIp: this.getHeaders()["x-forwarded-for"],
-					unsuccessful_logins: 0,
-				});
+				try {
+					await datastore.updateUser({
+						id: user.id,
+						dateLastLogin: moment().format("YYYY-MM-DD HH:mm:ss"),
+						lastIp: this.getHeaders()["x-forwarded-for"],
+						unsuccessful_logins: 0,
+					});
+				} catch (e) {
+					console.log(e);
+					this.setStatus(401);
+					return { error: "server refused your ip or locale" };
+				}
 				user.token = auth.getToken(user.name, user.id, user.isAdmin);
 				delete user.phash2; // HACK: need a proper user model badly
 				this.setHeader("token", user.token);
