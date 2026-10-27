@@ -705,11 +705,16 @@ export class GameController extends Controller {
 		}
 
 		game.id = id;
-
-		const gameFound = await datastore.updateGame(game, user.isAdmin);
-		if (!gameFound) {
-			this.setStatus(404);
-			return { error: "no game with this id currently exists" };
+		try {
+			const gameFound = await datastore.updateGame(game, user.isAdmin);
+			if (!gameFound) {
+				this.setStatus(404);
+				return { error: "no game with this id currently exists" };
+			}
+		} catch (e) {
+			console.log(e);
+			this.setStatus(400);
+			return { error: "update not applied for other reasons" };
 		}
 
 		const newGame = await datastore.getGame(id);
