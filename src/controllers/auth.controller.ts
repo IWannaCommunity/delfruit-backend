@@ -143,7 +143,7 @@ export class AuthController extends Controller {
 			// TODO: disable logins for user after a certain amount of unsuccessful attempts
 			if (!verified) {
 				const u = await datastore.getUser(user.id);
-				u.unsuccessfulLogins += 1;
+				//u.unsuccessful_logins += 1;
 				try {
 					await datastore.updateUser(u);
 				} catch (e) {
