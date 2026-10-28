@@ -429,10 +429,10 @@ export class GameController extends Controller {
 			return { error: "no game with this id currently exists" };
 		}
 
-		if (requestBody.rating) {
+		if (requestBody !== null && requestBody.rating) {
 			requestBody.rating = Math.min(Math.max(requestBody.rating, 0), 100);
 		}
-		if (requestBody.difficulty) {
+		if (requestBody !== null && requestBody.difficulty) {
 			requestBody.difficulty = Math.min(
 				Math.max(requestBody.difficulty, 0),
 				100,
@@ -704,7 +704,11 @@ export class GameController extends Controller {
 			return { error: "id must be a number" };
 		}
 		if (isNaN(Number(game.ownerId))) {
-			const users = await datastore.getUsers({ name: game.ownerId, page: 0, limit: 1 });
+			const users = await datastore.getUsers({
+				name: game.ownerId,
+				page: 0,
+				limit: 1,
+			});
 			if (users.length === 0) {
 				this.setStatus(400);
 				return {

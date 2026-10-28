@@ -150,10 +150,10 @@ export class ReviewController extends Controller {
 			delete review.removed;
 		}
 
-		if (requestBody.rating) {
+		if (requestBody.rating !== null && requestBody.rating) {
 			requestBody.rating = Math.min(Math.max(requestBody.rating, 0), 100);
 		}
-		if (requestBody.difficulty) {
+		if (requestBody.difficulty !== null && requestBody.difficulty) {
 			requestBody.difficulty = Math.min(
 				Math.max(requestBody.difficulty, 0),
 				100,
@@ -163,7 +163,11 @@ export class ReviewController extends Controller {
 		await datastore.updateReview(review);
 		// TODO: I'M LAZY, THIS JUST NEEDS TO BE IN THE REPO OR UPDATEREVIEW
 		if (requestBody.tags) {
-			await datastore.setTags(ogReview.game_id, Number(req.app_user.sub), requestBody.tags); // TODO: make this a async job
+			await datastore.setTags(
+				ogReview.game_id,
+				Number(req.app_user.sub),
+				requestBody.tags,
+			); // TODO: make this a async job
 		}
 		return this.setStatus(204);
 	}
