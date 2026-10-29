@@ -1590,7 +1590,7 @@ LIMIT ?,?
 
 		try {
 			const resultSet = await db.execute(
-				"SELECT g.`id` AS `game_id`, g.`name`, COALESCE(r.`difficulty`, NULL) AS `difficulty`, COALESCE(r.`rating`, NULL) AS `rating` FROM `Favorite` f, INNER JOIN `Game` g ON g.`id` = f.`game_id` LEFT OUTER JOIN `Rating` r ON r.`game_id` = g.`id` AND r.`user_id` = ? WHERE g.`id` = f.`game_id` AND f.`user_id` = ? AND g.`removed` IS FALSE",
+				"SELECT g.`id` AS `game_id`, g.`name`, COALESCE(r.`difficulty`, NULL) AS `difficulty`, COALESCE(r.`rating`, NULL) AS `rating` FROM `Favorite` f INNER JOIN `Game` g ON g.`id` = f.`game_id` LEFT OUTER JOIN `Rating` r ON r.`game_id` = g.`id` AND r.`user_id` = ? WHERE g.`id` = f.`game_id` AND f.`user_id` = ? AND g.`removed` IS FALSE",
 				[uid, uid],
 			);
 
@@ -1621,7 +1621,7 @@ LIMIT ?,?
 
 		try {
 			const resultSet = await db.execute(
-				"SELECT g.`id` AS `game_id`, g.`name`, COALESCE(r.`difficulty`, NULL) AS `difficulty`, COALESCE(r.`rating`, NULL) AS `rating` FROM `Clear` c, INNER JOIN `Game` g ON g.`id` = c.`game_id` LEFT OUTER JOIN `Rating` r ON r.`game_id` = g.`id` AND r.`user_id` = ? WHERE g.`id` = c.`game_id` AND c.`user_id` = ? AND g.`removed` IS FALSE",
+				"SELECT g.`id` AS `game_id`, g.`name`, COALESCE(r.`difficulty`, NULL) AS `difficulty`, COALESCE(r.`rating`, NULL) AS `rating` FROM `Clear` c INNER JOIN `Game` g ON g.`id` = c.`game_id` LEFT OUTER JOIN `Rating` r ON r.`game_id` = g.`id` AND r.`user_id` = ? WHERE g.`id` = c.`game_id` AND c.`user_id` = ? AND g.`removed` IS FALSE",
 				[uid, uid],
 			);
 
