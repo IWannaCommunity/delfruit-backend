@@ -4,7 +4,7 @@ export type PostGameParams = {
 	urlSpdrn?: string;
 	author: string[];
 	collab: boolean;
-	dateCreated?: Date;
+	dateCreated?: Date | string;
 	ownerId?: string;
 };
 
