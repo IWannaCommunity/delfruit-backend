@@ -222,7 +222,7 @@ VALUES ( ?, ?, ?, ? )
 			insertList.add("url_spdrn", game.urlSpdrn);
 			insertList.add("author", game.author.join(" "));
 			insertList.add("collab", game.collab ? 1 : 0);
-			//insertList.add('date_created',);
+			insertList.add('date_created', new Date(game.dateCreated ?? Date.now()));
 			insertList.add("adder_id", adderId);
 			insertList.add("removed", 0);
 			insertList.add("owner_id", game.ownerId);
