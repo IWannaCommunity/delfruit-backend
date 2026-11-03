@@ -113,7 +113,7 @@ export class ScreenshotController extends Controller {
 		// NOTE: auth guard should make the error condition unreachable
 		const user = req.app_user;
 
-		let screenshot = await datastore.getScreenshots({id, page: 0, limit: 1, approved: false, removed: false});
+		let screenshot = await datastore.getScreenshots({id, page: 0, limit: 1});
 
 		if (!screenshot) return this.setStatus(404);
 		screenshot = screenshot!;
