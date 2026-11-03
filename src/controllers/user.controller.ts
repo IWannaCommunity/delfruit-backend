@@ -534,4 +534,34 @@ To finish registration, please enter the key on the register finalization page, 
 		await datastore.removeFollowFromUser(+followerId, user.sub);
 		return this.setStatus(204);
 	}
+
+	@Security("bearerAuth", ["admin"])
+	@Post("{id}/resend_registration_email")
+	public async postUserResendRegistrationEmail(
+		@Request() req: RequestExt,
+		@Path() id: number,
+	) {
+		const users = await datastore.getUsers({
+			id,
+			page: 0,
+			limit: 1,
+		} as GetUsersParms);
+		if (users == null || users.length == 0) return this.setStatus(404);
+		const user = users[0];
+
+		const appCfg: Config = req.app.locals.appConfig.getConfig();
+
+		const mailer = nodemailer.createTransport(appCfg.smtp);
+		const message = `The registration key for your account is: "${key}", and the ID of your account is "${user.id}".
+        
+        To finish registration, please enter the key on the register finalization page, or you can just click here: https://delicious-fruit.com/register/finalize?key=${key}&id=${user.id}`;
+		await mailer.sendMail({
+			from: appCfg.smtp.auth.user,
+			to: requestBody.email,
+			subject: "Account Registration Key",
+			text: message,
+		});
+
+		return {};
+	}
 }
