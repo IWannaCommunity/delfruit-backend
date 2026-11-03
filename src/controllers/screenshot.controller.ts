@@ -111,7 +111,7 @@ export class ScreenshotController extends Controller {
 		// NOTE: auth guard should make the error condition unreachable
 		const user = extractBearerJWT(authorization);
 
-		let screenshot = await datastore.getScreenshot(id);
+		let screenshot = await datastore.getScreenshots({id, page: 0, limit: 1, approved: false, removed: false});
 
 		if (!screenshot) return this.setStatus(404);
 		screenshot = screenshot!;
