@@ -561,7 +561,7 @@ export class GameController extends Controller {
 			description: description,
 		};
 
-		const ssres = await datastore.addScreenshot(ss, user.sub, autoApprove);
+		const ssres = await datastore.addScreenshot(ss, user.sub, false);
 
 		//TODO: stream images straight into s3 via multer-s3 storage?
 		var metaData = {
