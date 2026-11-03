@@ -10,6 +10,7 @@ import {
 	Queries,
 	Query,
 	Response,
+	Request,
 	Route,
 	Security,
 	SuccessResponse,
@@ -29,6 +30,7 @@ import type Config from "../model/config";
 const config: Config = require("../config/config.json");
 
 import * as jwt from "jsonwebtoken";
+import type { RequestExt } from "../model/app/request";
 import type { APIError } from "../model/response/error";
 function extractBearerJWT(header_token: string): string | object {
 	if (!header_token.includes("Bearer ")) {
@@ -105,11 +107,11 @@ export class ScreenshotController extends Controller {
 	@Response<void>(404, "Not Found")
 	@Delete("{id}")
 	public async deleteScreenshot(
-		@Header("authorization") authorization: string,
+		@Request() req: RequestExt,
 		@Path() id: number,
 	): Promise<void> {
 		// NOTE: auth guard should make the error condition unreachable
-		const user = extractBearerJWT(authorization);
+		const user = req.app_user;
 
 		let screenshot = await datastore.getScreenshots({id, page: 0, limit: 1, approved: false, removed: false});
 
