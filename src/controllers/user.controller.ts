@@ -564,4 +564,24 @@ To finish registration, please enter the key on the register finalization page, 
 
 		return {};
 	}
+
+	@Security("bearerAuth", ["admin"])
+	@Post("{id}/email")
+	public async patchUserEmail(
+		@Request() req: RequestExt,
+		@Path() id: number,
+		@Body() body: {newEmail: string},
+	) {
+		const users = await datastore.getUsers({
+			id,
+			page: 0,
+			limit: 1,
+		} as GetUsersParms);
+		if (users == null || users.length == 0) return this.setStatus(404);
+		const user = users[0];
+
+		await datastore.updateUserEmail(user.id, body.newEmail);
+
+		return {};
+	}
 }

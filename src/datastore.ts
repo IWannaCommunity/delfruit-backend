@@ -165,6 +165,26 @@ VALUES ( ?, ?, ?, ? )
 			database.close();
 		}
 	},
+	
+	async updateUserEmail(uid: number, em: string): Promise<boolean> {
+		const database = new Database();
+
+		const updateList = new UpdateList();
+
+		updateList.add("email", em);
+
+		try {
+			const params = updateList.getParams();
+			params.push(uid);
+			const rows = await database.execute(
+				` UPDATE User ${updateList.getSetClause()} WHERE id = ?`,
+				params,
+			);
+			return rows.affectedRows == 1;
+		} finally {
+			database.close();
+		}
+	},
 
 	async updateGame(game: Game, isAdmin: boolean): Promise<boolean> {
 		const database = new Database();
