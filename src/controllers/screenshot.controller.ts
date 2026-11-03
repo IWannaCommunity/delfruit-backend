@@ -113,10 +113,10 @@ export class ScreenshotController extends Controller {
 		// NOTE: auth guard should make the error condition unreachable
 		const user = req.app_user;
 
-		let screenshot = await datastore.getScreenshots({id, page: 0, limit: 1});
+		let screenshots = await datastore.getScreenshots({id, page: 0, limit: 1});
 
-		if (!screenshot) return this.setStatus(404);
-		screenshot = screenshot!;
+		if (screenshots.length === 0 || !screenshots[0]) return this.setStatus(404);
+		let screenshot = (screenshot[0])!;
 
 		if (screenshot.removed) return { error: "Screenshot is already deleted" };
 
