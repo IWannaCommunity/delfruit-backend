@@ -116,7 +116,7 @@ export class ScreenshotController extends Controller {
 		let screenshots = await datastore.getScreenshots({id, page: 0, limit: 1});
 
 		if (screenshots.length === 0 || !screenshots[0]) return this.setStatus(404);
-		let screenshot = (screenshot[0])!;
+		let screenshot = (screenshots[0])!;
 
 		if (screenshot.removed) return { error: "Screenshot is already deleted" };
 
