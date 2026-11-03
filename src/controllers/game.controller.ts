@@ -582,7 +582,7 @@ export class GameController extends Controller {
 			},
 		);
 
-		if (autoApprove) {
+		/*if (autoApprove) {
 			datastore.addReport(
 				{
 					type: "screenshot",
@@ -591,7 +591,7 @@ export class GameController extends Controller {
 				},
 				user.sub,
 			);
-		} else {
+		} else {*/
 			datastore.addReport(
 				{
 					type: "screenshot",
@@ -600,7 +600,7 @@ export class GameController extends Controller {
 				},
 				user.sub,
 			);
-		}
+		//}
 
 		return ssres;
 	}
