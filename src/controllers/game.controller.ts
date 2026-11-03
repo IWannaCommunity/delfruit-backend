@@ -544,15 +544,11 @@ export class GameController extends Controller {
 			this.setStatus(400);
 			return { error: "id must be a number" };
 		}
-		const permissions = await datastore.getPermissions(user.sub);
-		const autoApprove = hasPermission(
-			permissions,
-			Permission.AUTO_APPROVE_SCREENSHOT,
-		);
-		const canScreenshot = hasPermission(permissions, Permission.CAN_SCREENSHOT);
-		if (!canScreenshot) {
-			this.setStatus(403);
-			return { error: "screenshot capability revoked" };
+
+		const cando = await datastore.canUserScreenshot(user.sub);
+		if (!cando) {
+			this.setStatus(401);
+			return { error: "your account is not permitted to upload screenshots" };
 		}
 
 		const game = await datastore.gameExists(id);
