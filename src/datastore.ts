@@ -206,7 +206,7 @@ VALUES ( ?, ?, ?, ? )
 			const newdate = moment(game.dateCreated).format("YYYY-MM-DD 00:00:00");
 			updateList.add("date_created", newdate);
 		}
-		if (game.ownerId) {
+		if (game.ownerId !== undefined) {
 			updateList.add("owner_id", game.ownerId);
 		}
 		//updateList.add('owner_bio',game.ownerBio);
