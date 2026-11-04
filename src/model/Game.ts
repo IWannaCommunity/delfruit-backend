@@ -13,6 +13,6 @@ export interface Game {
 	dateCreated?: string;
 	adderId?: string;
 	removed?: boolean;
-	ownerId?: string;
+	ownerId?: string | null;
 	ownerBio?: string;
 }
