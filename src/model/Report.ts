@@ -16,13 +16,13 @@ export interface Report {
 		| "review"
 		| "review_restore"
 		| "review_reported"
-		| "review_removed"
+		| "review_remove"
 		| "screenshot"
 		| "screenshot_remove"
-		| "screenshot_added"
+		| "screenshot_add"
 		| "screenshot_reported"
-		| "screenshot_approved"
-		| "screenshot_denied";
+		| "screenshot_approve"
+		| "screenshot_deny";
 	targetId?: number;
 	report?: string;
 	reporterId?: number;
