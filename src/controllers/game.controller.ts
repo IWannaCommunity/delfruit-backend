@@ -594,7 +594,7 @@ export class GameController extends Controller {
 		} else {*/
 			datastore.addReport(
 				{
-					type: "screenshot",
+					type: "screenshot_add",
 					targetId: "" + ssres.id,
 					report: "Screenshot added, awaiting approval",
 				},
