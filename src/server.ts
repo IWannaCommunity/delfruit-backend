@@ -374,7 +374,7 @@ async function main(): Promise<number> {
 			await sleep(4);
 		}
 	} catch (e) {
-		LOG.fatal(e, "Application unexpectantly terminated.");
+		LOG.fatal(e, "Application unexpectedly terminated.");
 	} finally {
 		MCACHE.quit();
 	}
