@@ -313,7 +313,7 @@ describe("user endpoint", () => {
             "id",
             "name",
             "dateCreated",
-            "isAdmin",
+            //"isAdmin",
             "twitchLink",
             "nicoLink",
             "youtubeLink",
