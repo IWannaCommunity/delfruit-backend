@@ -93,7 +93,10 @@ export class GameController extends Controller {
 		if (Number(req.app_user.sub) !== 11298) {
 			const cfTurnstileVerifier: CFTurnstileVerifier =
 				req.app.locals.cfTurnstileVerifier;
-			const humanAnalysis = await cfTurnstileVerifier.verifyWithReq(this, proof);
+			const humanAnalysis = await cfTurnstileVerifier.verifyWithReq(
+				this,
+				proof,
+			);
 			if (humanAnalysis !== undefined) {
 				return humanAnalysis;
 			}
@@ -396,7 +399,10 @@ export class GameController extends Controller {
 		if (Number(req.app_user.sub) !== 11298) {
 			const cfTurnstileVerifier: CFTurnstileVerifier =
 				req.app.locals.cfTurnstileVerifier;
-			const humanAnalysis = await cfTurnstileVerifier.verifyWithReq(this, proof);
+			const humanAnalysis = await cfTurnstileVerifier.verifyWithReq(
+				this,
+				proof,
+			);
 			if (humanAnalysis !== undefined) {
 				return humanAnalysis;
 			}
@@ -594,14 +600,14 @@ export class GameController extends Controller {
 				user.sub,
 			);
 		} else {*/
-			datastore.addReport(
-				{
-					type: "screenshot_add",
-					targetId: "" + ssres.id,
-					report: "Screenshot added, awaiting approval",
-				},
-				user.sub,
-			);
+		datastore.addReport(
+			{
+				type: "screenshot_add",
+				targetId: "" + ssres.id,
+				report: "Screenshot added, awaiting approval",
+			},
+			user.sub,
+		);
 		//}
 
 		return ssres;
@@ -705,7 +711,7 @@ export class GameController extends Controller {
 			this.setStatus(400);
 			return { error: "id must be a number" };
 		}
-		if ((isNaN(Number(game.ownerId))) && (game.ownerId !== null)){
+		if (isNaN(Number(game.ownerId)) && game.ownerId !== null) {
 			const users = await datastore.getUsers({
 				name: game.ownerId,
 				page: 0,

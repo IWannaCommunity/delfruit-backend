@@ -1,5 +1,7 @@
 import * as jwt from "jsonwebtoken";
 import moment from "moment";
+import { customAlphabet } from "nanoid";
+import nodemailer from "nodemailer";
 import { objectToCamel, objectToSnake } from "ts-case-convert";
 import {
 	Body,
@@ -25,22 +27,21 @@ import datastore from "../datastore";
 import AuthModule from "../lib/auth";
 import { userCheck } from "../lib/auth-check";
 import handle from "../lib/express-async-catch";
-import { type StdLogger, getLoggerFromRequest } from "../logger";
+import { getLoggerFromRequest, type StdLogger } from "../logger";
+import type { RequestExt } from "../model/app/request";
 import type { Badge } from "../model/Badge";
-import type { GetUsersParms } from "../model/GetUsersParms";
-import type { Permission } from "../model/Permission";
-import type { Review } from "../model/Review";
 import type Config from "../model/config";
 import type { User as UserEntity } from "../model/entity/user";
+import type { GetUsersParms } from "../model/GetUsersParms";
+import type { Permission } from "../model/Permission";
 import type { GetUsersParams, PatchUserParams } from "../model/params/user";
+import type { Review } from "../model/Review";
 import type { APIError } from "../model/response/error";
 import type { Problem } from "../model/response/problem";
 import { Result } from "../model/response/result";
 import type { User, UserRegistrationResponse } from "../model/response/user";
-import { RequestExt } from "../model/app/request";
-import { CFTurnstileVerifier } from "../utils/captcha";
-import { customAlphabet } from "nanoid";
-import nodemailer from "nodemailer";
+import type { CFTurnstileVerifier } from "../utils/captcha";
+
 const config: Config = require("../config/config.json");
 const auth = new AuthModule();
 
