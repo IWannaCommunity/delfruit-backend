@@ -1,8 +1,0 @@
-{
-    "mocha.files.glob": "**/*.test.ts",
-    "mocha.options": { "compilers": "ts-node/register" }, 
-    "mocha.requires": [
-        "ts-node/register"
-    ],
-    "editor.foldingStrategy": "indentation"
-}
