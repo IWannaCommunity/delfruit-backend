@@ -4,6 +4,7 @@ import type mysql from "mysql2";
 export type Config = {
 	db: mysql.ConnectionOptions;
 
+	developerMode?: boolean;
 	app_port: number;
 	app_jwt_secret: string;
 	bcrypt_rounds: number;
