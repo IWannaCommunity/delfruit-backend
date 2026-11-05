@@ -36,6 +36,24 @@ function git(cmd: string): string | null {
 	}
 }
 
+const VERSIONINFO = (() => {
+	const devMode = config.developerMode ?? false;
+	return Object.freeze({
+		app: new SemVer(process.env.npm_package_version).toString(),
+		env: devMode ? process.env.NODE_ENV : void 0,
+		git: devMode
+			? {
+					commit: git("rev-parse HEAD"),
+					shortCommit: git("rev-parse --short HEAD"),
+					branch: git("rev-parse --abbrev-ref HEAD"),
+					tag: git("describe --tags --exact-match"),
+					nearestTag: git("describe --tags --abbrev=0"),
+					dirty: git("status --porcelain").length > 0,
+				}
+			: void 0,
+	});
+})();
+
 @Route("ping")
 export class PingController extends Controller {
 	@SuccessResponse(200, "Pong")
@@ -47,21 +65,7 @@ export class PingController extends Controller {
 	@SuccessResponse(200, "Version of the application.")
 	@Get("/version")
 	public async getVersion(): Promise<VersionInfo> {
-		const devMode = config.developerMode ?? false;
-		return {
-			app: new SemVer(process.env.npm_package_version).toString(),
-			env: devMode ? process.env.NODE_ENV : void 0,
-			git: devMode
-				? {
-						commit: git("rev-parse HEAD"),
-						shortCommit: git("rev-parse --short HEAD"),
-						branch: git("rev-parse --abbrev-ref HEAD"),
-						tag: git("describe --tags --exact-match"),
-						nearestTag: git("describe --tags --abbrev=0"),
-						dirty: git("status --porcelain").length > 0,
-					}
-				: void 0,
-		};
+		return VERSIONINFO;
 	}
 
 	@Response(400, "Oops!")
