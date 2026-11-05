@@ -18,10 +18,12 @@ services:
     volumes:
       - ./src:/app/src
     healthcheck:
-        test: [ "CMD", "curl", "localhost:4201/ping/" ]
-        timeout: 5s
-        interval: 3s
-        retries: 10
+        test: [ "CMD", "curl", "-f", "localhost:4201/ping/" ]
+        interval: 47s
+        timeout: 13s
+        retries: 2
+        start_period: 40s
+        start_interval: 5s
     #command: ["ls", "-al", "src"]
   mysql:
     image: mysql:8.0.33-debian
