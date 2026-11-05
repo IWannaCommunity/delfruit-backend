@@ -174,7 +174,11 @@ export class GameController extends Controller {
 			orderCol,
 			orderDir,
 		};
-		if (!isAdmin) params.removed = false;
+		if (!isAdmin) {
+			params.removed = false;
+		} else {
+			params.removed = removed;
+		}
 
 		params.q = q; // QUEST: what the hell is Q?
 		params.id = id;
