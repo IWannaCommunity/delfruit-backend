@@ -575,6 +575,7 @@ export class GameController extends Controller {
 		//TODO: stream images straight into s3 via multer-s3 storage?
 		var metaData = {
 			"Content-Type": "image/png",
+			"x-amz-acl": "public-read",
 			gameId: ssres.gameId,
 			id: ssres.id,
 		};
