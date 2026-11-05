@@ -1,3 +1,5 @@
+import { UserId } from "../ids";
+
 export type GetUsersParams = {
 	page: number;
 	limit: number;
