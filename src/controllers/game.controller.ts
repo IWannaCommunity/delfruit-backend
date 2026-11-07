@@ -582,7 +582,7 @@ export class GameController extends Controller {
 		// Using fPutObject API upload your file to the bucket europetrip.
 		minioClient.putObject(
 			config.s3_bucket,
-			`${ssres.id}.png`,
+			`${ssres.gameId}_${Number(ssres.id).toString(16).padStart(8, '0')}`,
 			screenshot.buffer,
 			metaData,
 			(err, etag) => {
