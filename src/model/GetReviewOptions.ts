@@ -7,6 +7,7 @@ export interface GetReviewOptions {
     textReviewsFirst?: boolean;
     includeOwnerReview?: boolean;
     removed?: boolean;
+	selfUserId?: number;
     orderCol?: string;
     orderDir?: "ASC" | "DESC";
 }

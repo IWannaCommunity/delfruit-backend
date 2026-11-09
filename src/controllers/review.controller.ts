@@ -79,6 +79,7 @@ export class ReviewController extends Controller {
 	@SuccessResponse(200, "List of matching Reviews")
 	@Get()
 	public async getReviews(
+		@Request() req: RequestExt,
 		@Query() gameId?: number,
 		@Query() userId?: number,
 		@Query() id?: number,
@@ -87,10 +88,16 @@ export class ReviewController extends Controller {
 		@Query() textReviewsFirst: boolean = false,
 		@Query() includeOwnerReview: boolean = false,
 		@Query() removed: boolean = false,
+		@Query() includeSelfReviews: boolean = false,
 		@Query() orderCol?: string,
 		@Query() orderDir?: "ASC" | "DESC",
 	): Promise<Review[]> {
 		limit = Math.min(Math.max(limit, 1), 50);
+		
+		let selfUserId = undefined;
+		if (includeSelfReviews && req.app_user) {
+			selfUserId = req.app_user.sub;
+		}
 
 		// TODO: allow admins to toggle removed reviews
 		const params: GetReviewOptions = {
@@ -102,6 +109,8 @@ export class ReviewController extends Controller {
 			textReviewsFirst,
 			includeOwnerReview,
 			removed,
+			selfUserId,
+			includeSelfReviews,
 			orderCol,
 			orderDir,
 		};

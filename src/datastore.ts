@@ -501,7 +501,11 @@ ${whereList.getClause()}
 			where.add("r.game_id", options.game_id);
 			where.add("r.user_id", options.user_id);
 			where.add("r.id", options.id);
-			where.add("r.removed", options.removed);
+			if (options.selfUserId) {
+				where.addDirect(`(r.removed IS ${options.removed}) OR (r.user_id = ${options.selfUserId})`);
+			} else {
+				where.add("r.removed", options.removed);
+			}
 			where.add("u.banned", 0);
 			where.add("g.removed", options.removed);
 			if (options.includeOwnerReview === false) {
