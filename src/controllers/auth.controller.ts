@@ -119,7 +119,7 @@ export class AuthController extends Controller {
 		try {
 			// check if they finished registration
 			const emailVerified: Array<boolean> = await database.query(
-				"SELECT IF(ali_token IS NULL, TRUE, FALSE) FROM User",
+				"SELECT IF(ali_token IS NULL, TRUE, FALSE) FROM User u WHERE u.name = ?", [username]
 			);
 			if (emailVerified.length === 0) {
 				this.setStatus(401);
