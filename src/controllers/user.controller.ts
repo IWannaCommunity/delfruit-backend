@@ -541,7 +541,7 @@ To finish registration, please enter the key on the register finalization page, 
 	public async postUserResendRegistrationEmail(
 		@Request() req: RequestExt,
 		@Path() id: number,
-	) {
+	): Promise<null | APIError> {
 		const users = await datastore.getUsers({
 			id,
 			page: 0,
@@ -550,18 +550,59 @@ To finish registration, please enter the key on the register finalization page, 
 		if (users == null || users.length == 0) return this.setStatus(404);
 		const user = users[0];
 
+		// if they finished registration, then there is no point in sending an email
+		const db = new Database();
+		try {
+			const emailVerified: Array<boolean> = await db.query(
+				"SELECT IF(ali_token IS NULL, TRUE, FALSE) FROM User u WHERE u.id = ?",
+				[id],
+			);
+			if (emailVerified.length === 0) {
+				this.setStatus(401);
+				return { error: "user somehow may not exist" };
+			} else if (emailVerified[0] === true) {
+				this.setStatus(401);
+				return { error: "user is already verified" };
+			}
+		} catch (e) {
+			console.log("user verification status could not be checked");
+			console.error(e);
+			this.setStatus(400);
+			return { error: "user verification checks could not be retrieved" };
+		} finally {
+			db.close();
+		}
+
 		const appCfg: Config = req.app.locals.appConfig.getConfig();
 
-		const mailer = nodemailer.createTransport(appCfg.smtp);
-		const message = `The registration key for your account is: "${key}", and the ID of your account is "${user.id}".
+		const db2 = new Database();
+		try {
+			const qry: any = (
+				await db2.query(
+					"SELECT u.ali_token, u.email FROM User u WHERE u.id = ?",
+					[id],
+				)
+			)[0];
+			const key: string = qry.ali_token;
+			const email: string = qry.email;
+			const mailer = nodemailer.createTransport(appCfg.smtp);
+			const message = `The registration key for your account is: "${key}", and the ID of your account is "${id}".
         
-        To finish registration, please enter the key on the register finalization page, or you can just click here: https://delicious-fruit.com/register/finalize?key=${key}&id=${user.id}`;
-		await mailer.sendMail({
-			from: appCfg.smtp.auth.user,
-			to: requestBody.email,
-			subject: "Account Registration Key",
-			text: message,
-		});
+        To finish registration, please enter the key on the register finalization page, or you can just click here: https://delicious-fruit.com/register/finalize?key=${key}&id=${id}`;
+			await mailer.sendMail({
+				from: appCfg.smtp.auth.user,
+				to: email,
+				subject: "Account Registration Key",
+				text: message,
+			});
+		} catch (e) {
+			console.log("verification email did not send");
+			console.error(e);
+			this.setStatus(400);
+			return { error: "verification email was not sent" };
+		} finally {
+			db2.close();
+		}
 
 		return {};
 	}
