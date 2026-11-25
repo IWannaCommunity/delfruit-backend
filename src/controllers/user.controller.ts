@@ -375,7 +375,7 @@ To finish registration, please enter the key on the register finalization page, 
 		const users = await datastore.getUsers(params);
 		if (users == null || users.length == 0) return this.setStatus(404);
 		const user = users[0];
-		if (user && (!authuser || authuser.sub != id)) {
+		if (user && (!authuser || authuser.sub != id || !authuser.isAdmin)) {
 			delete user.email;
 			delete user.banned;
 		}
