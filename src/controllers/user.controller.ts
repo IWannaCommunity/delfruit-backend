@@ -162,12 +162,29 @@ export class UserController extends Controller {
 		const message = `The registration key for your account is: "${key}", and the ID of your account is "${user.id}".
 
 To finish registration, please enter the key on the register finalization page, or you can just click here: https://delicious-fruit.com/register/finalize?key=${key}&id=${user.id}`;
-		await mailer.sendMail({
-			from: appCfg.smtp.auth.user,
-			to: requestBody.email,
-			subject: "Account Registration Key",
-			text: message,
-		});
+
+		try {
+			const info = await mailer.sendMail({
+				from: appCfg.smtp.auth.user,
+				to: requestBody.email,
+				subject: "Account Registration Key",
+				text: message,
+			});
+			console.log("mailer info after registration:");
+			console.log(info);
+		} catch (e) {
+			console.error("registration email was unsent");
+			console.error(e);
+			this.setStatus(400);
+			return {
+				type: new URL("about:blank"),
+				title: "Registration keys undelievered.",
+				status: 400,
+				detail:
+					"Mailing registration keys to user's specified email did not send.",
+				instance: new URL("about:blank"),
+			};
+		}
 
 		return {};
 	}
