@@ -1,3 +1,4 @@
+import Axios from "axios";
 import * as jwt from "jsonwebtoken";
 import moment from "moment";
 import { customAlphabet } from "nanoid";
@@ -158,20 +159,29 @@ export class UserController extends Controller {
 			user.id,
 		);
 
-		const mailer = nodemailer.createTransport(appCfg.smtp);
 		const message = `The registration key for your account is: "${key}", and the ID of your account is "${user.id}".
 
 To finish registration, please enter the key on the register finalization page, or you can just click here: https://delicious-fruit.com/register/finalize?key=${key}&id=${user.id}`;
 
 		try {
-			const info = await mailer.sendMail({
-				from: appCfg.smtp.auth.user,
-				to: requestBody.email,
-				subject: "Account Registration Key",
-				text: message,
-			});
+			const resp = await Axios.post(
+				"https://smtpfa.st/api/v1/emails",
+				{
+					from: appCfg.smtp.auth.user,
+					to: requestBody.email,
+					subject: "Account Registration Key",
+					text: message,
+					category: "transactional",
+				},
+				{
+					headers: {
+						Authorization: `Bearer ${appCfg.smtp.auth.pass}`,
+						"Content-Type": "application/json",
+					},
+				},
+			);
 			console.log("mailer info after registration:");
-			console.log(info);
+			console.log(resp.data);
 		} catch (e) {
 			console.error("registration email was unsent");
 			console.error(e);
@@ -602,16 +612,27 @@ To finish registration, please enter the key on the register finalization page, 
 			)[0];
 			const key: string = qry.ali_token;
 			const email: string = qry.email;
-			const mailer = nodemailer.createTransport(appCfg.smtp);
+
 			const message = `The registration key for your account is: "${key}", and the ID of your account is "${id}".
         
         To finish registration, please enter the key on the register finalization page, or you can just click here: https://delicious-fruit.com/register/finalize?key=${key}&id=${id}`;
-			await mailer.sendMail({
-				from: appCfg.smtp.auth.user,
-				to: email,
-				subject: "Account Registration Key",
-				text: message,
-			});
+			const resp = await Axios.post(
+				"https://smtpfa.st/api/v1/emails",
+				{
+					from: appCfg.smtp.auth.user,
+					to: email,
+					subject: "Account Registration Key",
+					text: message,
+					category: "transactional",
+				},
+				{
+					headers: {
+						Authorization: `Bearer ${appCfg.smtp.auth.pass}`,
+						"Content-Type": "application/json",
+					},
+				},
+			);
+			console.log(resp.data);
 		} catch (e) {
 			console.log("verification email did not send");
 			console.error(e);
